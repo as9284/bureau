@@ -1,0 +1,105 @@
+.resizable-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.resizable-panel--horizontal {
+  width: var(--resizable-panel-size);
+  flex: 0 0 var(--resizable-panel-size);
+}
+
+.resizable-panel--vertical {
+  height: var(--resizable-panel-size);
+  flex: 0 0 var(--resizable-panel-size);
+}
+
+.resizable-panel__handle {
+  position: absolute;
+  z-index: var(--z-sidebar-resize);
+  touch-action: none;
+}
+
+.resizable-panel--horizontal > .resizable-panel__handle {
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  cursor: col-resize;
+}
+
+.resizable-panel--vertical > .resizable-panel__handle {
+  left: 0;
+  right: 0;
+  height: 9px;
+  cursor: row-resize;
+}
+
+.resizable-panel--horizontal.resizable-panel--edge-end > .resizable-panel__handle {
+  right: -5px;
+}
+
+.resizable-panel--horizontal.resizable-panel--edge-start > .resizable-panel__handle {
+  left: -5px;
+}
+
+.resizable-panel--vertical.resizable-panel--edge-end > .resizable-panel__handle {
+  bottom: -5px;
+}
+
+.resizable-panel--vertical.resizable-panel--edge-start > .resizable-panel__handle {
+  top: -5px;
+}
+
+.resizable-panel__handle::after {
+  content: '';
+  position: absolute;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  opacity: 0;
+  transition: opacity var(--motion-duration-state) ease;
+}
+
+.resizable-panel--horizontal > .resizable-panel__handle::after {
+  top: 50%;
+  left: 4px;
+  width: 2px;
+  height: 28px;
+  transform: translateY(-50%);
+}
+
+.resizable-panel--vertical > .resizable-panel__handle::after {
+  top: 4px;
+  left: 50%;
+  width: 28px;
+  height: 2px;
+  transform: translateX(-50%);
+}
+
+.resizable-panel__handle:hover::after,
+.resizable-panel__handle:focus-visible::after,
+.resizable-panel.is-resizing > .resizable-panel__handle::after {
+  background: var(--color-accent-primary);
+  opacity: 1;
+}
+
+.resizable-panel__handle:focus-visible {
+  outline: none;
+}
+
+body.is-resizing-horizontal,
+body.is-resizing-horizontal * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.is-resizing-vertical,
+body.is-resizing-vertical * {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resizable-panel__handle::after {
+    transition: none;
+  }
+}

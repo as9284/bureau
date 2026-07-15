@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-windows:
+    name: Publish Windows release
+    runs-on: windows-latest
+    env:
+      BUREAU_UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify the tag matches the application version
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -notmatch '^v\d+\.\d+\.\d+$') {
+            throw "Release tags must use vMAJOR.MINOR.PATCH."
+          }
+          $version = node -p "require('./package.json').version"
+          if ($tag -ne "v$version") {
+            throw "Tag $tag does not match package.json version $version."
+          }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify the release candidate
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run test:security
+          npm run test:unit
+          npm run test:integration
+          npm run test:component
+
+      - name: Build the NSIS installer and update manifest
+        run: npx electron-forge make --platform=win32 --arch=x64
+
+      - name: Publish the installer and updater assets
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path out/make/nsis -Recurse -Filter '*.exe' -File | Select-Object -First 1
+          $blockmap = Get-ChildItem -Path out/make/nsis -Recurse -Filter '*.blockmap' -File | Select-Object -First 1
+          $manifest = Get-ChildItem -Path out/make/nsis -Recurse -Filter 'latest.yml' -File | Select-Object -First 1
+          if (!$installer -or !$blockmap -or !$manifest) {
+            throw 'The NSIS maker must produce an installer, blockmap, and latest.yml update manifest.'
+          }
+          & gh release create $env:GITHUB_REF_NAME $installer.FullName $blockmap.FullName $manifest.FullName --title "Bureau $env:GITHUB_REF_NAME" --generate-notes

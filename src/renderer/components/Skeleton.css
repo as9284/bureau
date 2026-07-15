@@ -1,0 +1,31 @@
+.sg-skeleton {
+  background-color: var(--color-surface-raised);
+  border-radius: var(--radius-control);
+  animation: sg-skeleton-pulse 2s ease-in-out infinite;
+}
+
+.sg-skeleton--text {
+  height: var(--line-height-body);
+  width: 100%;
+}
+
+.sg-skeleton--circle {
+  border-radius: 50%;
+}
+
+@keyframes sg-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-skeleton {
+    animation: none;
+    opacity: 0.5;
+  }
+}

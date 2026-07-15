@@ -1,0 +1,103 @@
+.worktrees-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.worktrees-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
+  flex-shrink: 0;
+}
+
+.worktrees-panel__header h2 {
+  margin: 0;
+  font-size: var(--font-size-section-title);
+  font-weight: var(--font-weight-semibold);
+}
+
+.worktrees-panel__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.worktrees-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.worktrees-panel__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  min-height: var(--size-list-row);
+}
+
+.worktrees-panel__item--current {
+  background: var(--color-surface-selected);
+}
+
+.worktrees-panel__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.worktrees-panel__path {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worktrees-panel__meta {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-label);
+  color: var(--color-text-muted);
+}
+
+.worktrees-panel__item-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.worktrees-panel__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.worktrees-panel__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.worktrees-panel__path-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.worktrees-panel__path-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}

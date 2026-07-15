@@ -1,0 +1,65 @@
+.git-branch-confirmation {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.git-branch-confirmation__current,
+.git-branch-confirmation__target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--size-control);
+}
+
+.git-branch-confirmation__current > span,
+.git-branch-confirmation__target > span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+}
+
+.git-branch-confirmation__current code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-accent-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-supporting);
+}
+
+.git-branch-confirmation__target .sg-select {
+  width: min(240px, 55vw);
+}
+
+.git-branch-confirmation__switch-note,
+.git-branch-confirmation__error {
+  margin: 0;
+  font-size: var(--font-size-supporting);
+  line-height: var(--line-height-body);
+}
+
+.git-branch-confirmation__switch-note {
+  color: var(--color-text-secondary);
+}
+
+.git-branch-confirmation__switch-note code {
+  color: var(--color-accent-primary);
+  font-family: var(--font-family-mono);
+}
+
+.git-branch-confirmation__error {
+  color: var(--color-status-danger);
+}
+
+@media (max-width: 420px) {
+  .git-branch-confirmation__current,
+  .git-branch-confirmation__target {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .git-branch-confirmation__target .sg-select {
+    width: 100%;
+  }
+}

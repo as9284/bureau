@@ -1,0 +1,33 @@
+.sg-pane-separator {
+  flex-shrink: 0;
+  background: var(--color-border-subtle);
+  transition: background-color var(--motion-duration-press) ease-out;
+}
+
+.sg-pane-separator--vertical {
+  width: 1px;
+  cursor: col-resize;
+}
+
+.sg-pane-separator--vertical::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  margin-left: -2px;
+}
+
+.sg-pane-separator--horizontal {
+  height: 1px;
+  cursor: row-resize;
+}
+
+.sg-pane-separator:hover,
+.sg-pane-separator:focus-visible {
+  background: var(--color-accent-primary);
+}
+
+.sg-pane-separator:focus-visible {
+  outline: none;
+}

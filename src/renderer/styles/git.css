@@ -1,0 +1,15 @@
+﻿@import '../features/git/branches/BranchesPanel.css';
+@import '../features/git/changes/ChangesPanel.css';
+@import '../features/git/commit/CommitPanel.css';
+@import '../features/git/diff/DiffPanel.css';
+@import '../features/git/github/PublishToGitHubDialog.css';
+@import '../features/git/history/HistoryPanel.css';
+@import '../features/git/lifecycle/LifecycleDialog.css';
+@import '../features/git/operations/OperationsDrawer.css';
+@import '../features/git/recovery/ConflictResolveBar.css';
+@import '../features/git/stash/StashPanel.css';
+@import '../features/git/submodules/SubmodulesPanel.css';
+@import '../features/git/sync/SyncBar.css';
+@import '../features/git/tags/TagsPanel.css';
+@import '../features/git/workbench/GitWorkbench.css';
+@import '../features/git/worktrees/WorktreesPanel.css';

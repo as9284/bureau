@@ -1,0 +1,346 @@
+/* Project Overview — actionable dashboard */
+
+.overview {
+  max-width: var(--layout-page-max-width, 1440px);
+  margin: 0 auto;
+  padding: 28px 40px 56px;
+  width: 100%;
+}
+
+/* ---------- Hero ---------- */
+.overview-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.overview-hero__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.overview-hero__titlerow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.overview-hero__name {
+  margin: 0;
+  font-size: var(--font-size-page-title);
+  line-height: var(--line-height-page-title);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.overview-livepill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-status-success-soft);
+  color: var(--color-status-success);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+}
+
+.overview-livepill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-status-success);
+  animation: dot-pulse 1.4s ease-in-out infinite;
+}
+
+.overview-hero__path {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 640px;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+  cursor: pointer;
+}
+
+.overview-hero__path:hover {
+  color: var(--color-text-secondary);
+}
+
+.overview-hero__path svg {
+  opacity: 0;
+  flex: 0 0 auto;
+  transition: opacity 100ms ease;
+}
+
+.overview-hero__path:hover svg {
+  opacity: 1;
+}
+
+.overview-hero__pathtext {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 18px;
+  align-items: center;
+}
+
+.overview-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.overview-muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+}
+
+/* ---------- Card grid ---------- */
+.overview-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Secondary cards share one grid; `1fr` auto-rows equalize every card's height. */
+.overview-subgrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-rows: 1fr;
+}
+
+.overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-overlay);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.overview-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.overview-card__title {
+  margin: 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.overview-card__headicon {
+  color: var(--color-text-disabled);
+}
+
+.overview-count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+}
+
+.overview-card__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+  line-height: 1.5;
+}
+
+.overview-card__foot {
+  display: flex;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.overview-link {
+  padding: 0;
+  color: var(--color-accent-primary);
+  font-size: var(--font-size-supporting);
+  font-weight: var(--font-weight-medium);
+}
+
+.overview-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Processes card ---------- */
+.overview-proclist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.overview-procline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: var(--radius-control);
+}
+
+.overview-procline + .overview-procline {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.overview-procline:hover {
+  background: var(--color-surface-hover);
+}
+
+.overview-procline__label {
+  font-size: var(--font-size-body);
+  color: var(--color-text-primary);
+  flex: 0 0 auto;
+}
+
+.overview-procline__meta {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex: 1;
+  min-width: 0;
+}
+
+.overview-procline__pending {
+  color: var(--color-accent-primary);
+}
+
+.overview-procline__url {
+  font-size: 11px;
+  color: var(--color-accent-primary);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+}
+
+.overview-procline__url:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Git card ---------- */
+.overview-git {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overview-git__branch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+}
+
+.overview-git__branch svg {
+  color: var(--color-text-secondary);
+}
+
+.overview-git__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.overview-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+}
+
+.overview-chip.success {
+  background: var(--color-status-success-soft);
+  color: var(--color-status-success);
+}
+.overview-chip.warning {
+  background: var(--color-status-warning-soft);
+  color: var(--color-status-warning);
+}
+.overview-chip.muted {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-secondary);
+}
+
+/* ---------- Preview card ---------- */
+.overview-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.overview-preview__url {
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-accent-primary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: left;
+}
+
+.overview-preview__url:hover {
+  border-color: var(--color-border-default);
+}
+
+/* ---------- Details card ---------- */
+.overview-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.overview-details dt {
+  font-size: var(--font-size-label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 3px;
+}
+
+.overview-details dd {
+  margin: 0;
+  font-size: var(--font-size-supporting);
+  color: var(--color-text-primary);
+}

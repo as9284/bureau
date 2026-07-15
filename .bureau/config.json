@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "name": "bureau",
+  "stack": [
+    "node"
+  ],
+  "packageManager": "npm",
+  "processes": [
+    {
+      "id": "dev",
+      "label": "npm run dev",
+      "command": "npm",
+      "args": [
+        "run",
+        "dev"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "start",
+      "label": "npm run start",
+      "command": "npm",
+      "args": [
+        "run",
+        "start"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "lint",
+      "label": "npm run lint",
+      "command": "npm",
+      "args": [
+        "run",
+        "lint"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "package",
+      "label": "npm run package",
+      "command": "npm",
+      "args": [
+        "run",
+        "package"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "make",
+      "label": "npm run make",
+      "command": "npm",
+      "args": [
+        "run",
+        "make"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "publish",
+      "label": "npm run publish",
+      "command": "npm",
+      "args": [
+        "run",
+        "publish"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "icons-build",
+      "label": "npm run icons:build",
+      "command": "npm",
+      "args": [
+        "run",
+        "icons:build"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    },
+    {
+      "id": "typecheck",
+      "label": "npm run typecheck",
+      "command": "npm",
+      "args": [
+        "run",
+        "typecheck"
+      ],
+      "cwd": ".",
+      "env": {},
+      "runMode": "log",
+      "autoRestart": false,
+      "runOnOpen": false
+    }
+  ]
+}
