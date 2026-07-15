@@ -13,7 +13,7 @@ describe('validateSettings', () => {
     expect(settings.appearance.theme).toBe('dark');
     expect(settings.appearance.density).toBe('compact');
     expect(settings.appearance.immersiveMode).toBe(false);
-    expect(settings.layout.sidebarWidth).toBe(220);
+    expect(settings.layout.paneWidths).toMatchObject({ files: 340, commit: 280 });
     expect(settings.android).toMatchObject({
       reactNativeMetroPort: 8081,
       reactNativeAutoReverse: true,
@@ -50,6 +50,14 @@ describe('validateSettings', () => {
       immersiveMode: true,
     });
   });
+
+  it('silently removes the retired workspace sidebar width from v1 settings', () => {
+    const settings = validateSettings({ layout: { sidebarWidth: 320 } });
+
+    expect(settings.layout).toEqual({
+      paneWidths: { files: 340, commit: 280, filesExplorer: 280 },
+    });
+  });
 });
 
 describe('settingsPatchSchema', () => {
@@ -60,6 +68,10 @@ describe('settingsPatchSchema', () => {
     expect(
       settingsPatchSchema.safeParse({ appearance: { immersiveEdgeWidthPx: 8 } }).success
     ).toBe(false);
+  });
+
+  it('rejects the retired workspace sidebar width', () => {
+    expect(settingsPatchSchema.safeParse({ layout: { sidebarWidth: 220 } }).success).toBe(false);
   });
 });
 

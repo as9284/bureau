@@ -7,32 +7,22 @@ export const MIN_FILES = 320;
 export const MIN_COMMIT = 200;
 export const MIN_DIFF = 280;
 export const DEFAULT_PANE_WIDTHS = DEFAULT_LAYOUT_SETTINGS.paneWidths;
-export const DEFAULT_SIDEBAR_WIDTH = DEFAULT_LAYOUT_SETTINGS.sidebarWidth;
 
 /** One-time migration from legacy localStorage layout keys into settings. */
 export function readLegacyLayoutMigration(): {
-  sidebarWidth?: number;
   paneWidths?: PaneWidths;
 } | null {
   try {
-    const sidebarRaw = localStorage.getItem('bureau.ui.sidebarWidth');
     const panesRaw = localStorage.getItem('bureau.ui.paneWidths');
-    if (!sidebarRaw && !panesRaw) return null;
+    if (!panesRaw) return null;
 
-    const result: { sidebarWidth?: number; paneWidths?: PaneWidths } = {};
-    if (sidebarRaw) {
-      const n = Number(sidebarRaw);
-      if (Number.isFinite(n)) {
-        result.sidebarWidth = Math.max(160, Math.min(360, Math.round(n)));
-      }
-    }
-    if (panesRaw) {
-      const parsed = JSON.parse(panesRaw) as PaneWidths;
-      result.paneWidths = {
+    const parsed = JSON.parse(panesRaw) as PaneWidths;
+    const result: { paneWidths?: PaneWidths } = {
+      paneWidths: {
         files: Math.max(MIN_FILES, parsed.files ?? DEFAULT_PANE_WIDTHS.files),
         commit: Math.max(MIN_COMMIT, parsed.commit ?? DEFAULT_PANE_WIDTHS.commit),
-      };
-    }
+      },
+    };
     return result;
   } catch {
     return null;
@@ -52,4 +42,3 @@ export function clampPaneWidths(widths: PaneWidths, containerWidth: number): Pan
     commit: Math.round(Math.min(Math.max(widths.commit, MIN_COMMIT), maxCommit)),
   };
 }
-

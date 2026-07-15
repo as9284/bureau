@@ -2,7 +2,6 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@renderer/store/appStore';
-import { Sidebar } from '@renderer/layout/Sidebar';
 import { SettingsPage } from '@renderer/pages/SettingsPage';
 import type { PublicSettings } from '@shared/contracts/settings';
 import type { AppCapabilities } from '@shared/contracts/capabilities';
@@ -24,7 +23,7 @@ const SETTINGS: PublicSettings = {
     immersiveMode: false,
   },
   tools: { showOpenInEditor: true, showOpenInTerminal: true, showOpenInExplorer: true },
-  layout: { sidebarWidth: 220, paneWidths: { files: 340, commit: 280 } },
+  layout: { paneWidths: { files: 340, commit: 280 } },
   notifications: { enabled: false, longRunningOnly: true },
   android: {
     defaultLogcatPriority: 'V',
@@ -87,12 +86,13 @@ afterEach(() => {
 });
 
 describe('settings navigation', () => {
-  it('switches the settings section when a sidebar item is clicked', async () => {
-    render(<Sidebar />);
+  it('switches the settings section from the page navigation', async () => {
+    render(<SettingsPage />);
     expect(useAppStore.getState().settingsSection).toBe('general');
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Appearance' }));
     expect(useAppStore.getState().settingsSection).toBe('appearance');
+    expect(screen.getByRole('navigation', { name: 'Settings sections' })).toBeInTheDocument();
   });
 
   it('renders the section that matches settingsSection', () => {

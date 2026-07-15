@@ -97,7 +97,6 @@ export const settingsFileSchema = z.object({
     showOpenInExplorer: z.boolean(),
   }),
   layout: z.object({
-    sidebarWidth: z.number().int().min(160).max(360),
     paneWidths: z.object({
       files: z.number().int().min(320),
       commit: z.number().int().min(200),

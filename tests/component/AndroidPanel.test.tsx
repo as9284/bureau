@@ -120,7 +120,7 @@ beforeEach(() => {
         immersiveMode: false,
       },
       tools: { showOpenInEditor: true, showOpenInTerminal: true, showOpenInExplorer: true },
-      layout: { sidebarWidth: 220, paneWidths: { files: 340, commit: 280 } },
+      layout: { paneWidths: { files: 340, commit: 280 } },
       notifications: { enabled: false, longRunningOnly: true },
       android: {
         defaultLogcatPriority: 'V',

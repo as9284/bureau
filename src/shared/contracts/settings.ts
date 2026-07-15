@@ -88,7 +88,7 @@ export type AppearanceSettings = {
   theme: ThemePreference;
   density: DensityPreference;
   accentColor: string;
-  /** Auto-hide the activity rail and Projects sidebar; reveal from the workspace edge. */
+  /** Auto-hide the project rail; reveal it from the workspace edge. */
   immersiveMode: boolean;
 };
 
@@ -99,7 +99,6 @@ export type ToolsVisibilitySettings = {
 };
 
 export type LayoutSettings = {
-  sidebarWidth: number;
   paneWidths: PaneWidthSettings;
 };
 
@@ -165,7 +164,6 @@ export type SettingsPatch = {
   gitBehavior?: Partial<GitBehaviorSettings>;
   tools?: Partial<ToolsVisibilitySettings>;
   layout?: {
-    sidebarWidth?: number;
     paneWidths?: Partial<PaneWidthSettings>;
   };
   history?: Partial<HistorySettings>;
@@ -224,7 +222,6 @@ export const DEFAULT_TOOLS_SETTINGS: ToolsVisibilitySettings = {
 };
 
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
-  sidebarWidth: 220,
   paneWidths: { files: 340, commit: 280, filesExplorer: 280 },
 };
 

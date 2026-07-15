@@ -10,13 +10,11 @@ afterEach(() => {
 
 function renderHost({ edgeRevealDisabled = false }: { edgeRevealDisabled?: boolean } = {}) {
   const result = render(
-    <ImmersiveNavigationHost sidebarWidth={220} edgeRevealDisabled={edgeRevealDisabled}>
+    <ImmersiveNavigationHost edgeRevealDisabled={edgeRevealDisabled}>
       <nav aria-label="Primary navigation">
         <button type="button">Projects</button>
-      </nav>
-      <aside aria-label="Projects sidebar">
         <button type="button">Project Atlas</button>
-      </aside>
+      </nav>
     </ImmersiveNavigationHost>
   );
   const edge = screen.getByRole('button', { name: 'Show navigation' });
@@ -26,7 +24,7 @@ function renderHost({ edgeRevealDisabled = false }: { edgeRevealDisabled?: boole
 }
 
 describe('ImmersiveNavigationHost', () => {
-  it('reveals the combined navigation surface after a deliberate edge dwell', () => {
+  it('reveals the project rail after a deliberate edge dwell', () => {
     vi.useFakeTimers();
     const { edge, navigation } = renderHost();
 
@@ -44,7 +42,6 @@ describe('ImmersiveNavigationHost', () => {
     expect(navigation).toHaveAttribute('aria-hidden', 'false');
     expect(navigation).not.toHaveAttribute('inert');
     expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Projects sidebar' })).toBeInTheDocument();
   });
 
   it('hides 350ms after the pointer leaves the navigation surface', () => {
@@ -96,7 +93,9 @@ describe('ImmersiveNavigationHost', () => {
     expect(navigation).not.toHaveClass('is-revealed');
 
     fireEvent.pointerLeave(edge);
-    act(() => workspace.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 24 })));
+    act(() =>
+      workspace.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 24 }))
+    );
     fireEvent.pointerEnter(edge);
     act(() => vi.advanceTimersByTime(150));
     expect(navigation).toHaveClass('is-revealed');

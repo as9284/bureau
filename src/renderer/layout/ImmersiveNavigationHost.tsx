@@ -3,14 +3,12 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type FocusEvent as ReactFocusEvent,
   type ReactNode,
 } from 'react';
 import { IMMERSIVE_NAVIGATION_REVEAL_EVENT } from '../lib/immersiveNavigation';
 
 type ImmersiveNavigationHostProps = {
-  sidebarWidth: number;
   edgeRevealDisabled?: boolean;
   children: ReactNode;
 };
@@ -20,12 +18,10 @@ const REVEAL_DWELL_MS = 150;
 const REARM_DISTANCE_PX = 24;
 
 /**
- * Navigation host for immersive mode. The rail and sidebar share one overlay and
- * one edge target, so transitions between the two cannot race independent hover
- * handlers or leave timers.
+ * Navigation host for immersive mode. The project rail occupies no workspace
+ * width while hidden and uses one deterministic edge target.
  */
 export function ImmersiveNavigationHost({
-  sidebarWidth,
   edgeRevealDisabled = false,
   children,
 }: ImmersiveNavigationHostProps) {
@@ -151,10 +147,6 @@ export function ImmersiveNavigationHost({
     if (!navigationRef.current?.contains(event.relatedTarget)) scheduleHide();
   };
 
-  const navigationStyle = {
-    '--immersive-sidebar-width': `${sidebarWidth}px`,
-  } as CSSProperties;
-
   return (
     <div
       ref={navigationRef}
@@ -173,7 +165,6 @@ export function ImmersiveNavigationHost({
       />
       <div
         className={['immersive-navigation', revealed ? 'is-revealed' : ''].filter(Boolean).join(' ')}
-        style={navigationStyle}
         aria-hidden={!revealed}
         inert={!revealed}
         onPointerEnter={onNavigationPointerEnter}

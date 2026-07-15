@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAppStore } from '../store/appStore';
+import { useAppStore, type SettingsSection } from '../store/appStore';
 import { AccentColorPicker } from '../components/ColorPicker';
 import { Button } from '../components/Button';
 import { Checkbox } from '../components/Checkbox';
@@ -20,6 +20,16 @@ const THEMES: ThemePreference[] = ['dark', 'light', 'system'];
 const DENSITIES: DensityPreference[] = ['compact', 'comfortable'];
 const STARTUP_VIEWS: StartupViewPreference[] = ['hub', 'lastOpened'];
 const PRESET_ACCENTS = ['#7c9cff', '#6db87a', '#c9a24d', '#d46a6a', '#b98cff', '#4fb3c4'];
+
+const SETTINGS_NAV: Array<{ id: SettingsSection; label: string }> = [
+  { id: 'general', label: 'General' },
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'tools', label: 'Editors' },
+  { id: 'toolchains', label: 'Toolchains' },
+  { id: 'files', label: 'Files' },
+  { id: 'git', label: 'Git' },
+  { id: 'android', label: 'Android' },
+];
 
 const EDITOR_LABELS: Record<EditorPreset, string> = {
   vscode: 'VS Code',
@@ -42,11 +52,25 @@ const TERMINAL_LABELS: Record<TerminalPreset, string> = {
 
 export function SettingsPage() {
   const section = useAppStore((s) => s.settingsSection);
+  const setSettingsSection = useAppStore((s) => s.setSettingsSection);
 
   return (
     <div className="stage-inner">
       <h1 className="page-title">Settings</h1>
       <p className="page-subtitle">Preferences are stored locally and applied instantly.</p>
+      <nav className="settings-nav" aria-label="Settings sections">
+        {SETTINGS_NAV.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={section === item.id ? 'active' : ''}
+            aria-current={section === item.id ? 'page' : undefined}
+            onClick={() => setSettingsSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
       {section === 'general' && <GeneralSection />}
       {section === 'appearance' && <AppearanceSection />}
       {section === 'tools' && <ToolsSection />}
@@ -700,8 +724,8 @@ function AppearanceSection() {
         <div>
           <div className="settings-row__label">Immersive mode</div>
           <div className="settings-row__desc">
-            Auto-hide the navigation rail and Projects sidebar so the workspace uses the full width.
-            Reveal them from the left workspace edge. Toggle with Ctrl+B.
+            Auto-hide the project rail so the workspace uses the full width. Reveal it from the left
+            workspace edge. Toggle with Ctrl+B.
           </div>
         </div>
         <Checkbox

@@ -24,7 +24,7 @@ function settings(sdkPath?: string): SettingsStore {
       immersiveMode: false,
     },
     tools: { showOpenInEditor: true, showOpenInTerminal: true, showOpenInExplorer: true },
-    layout: { sidebarWidth: 220 },
+    layout: { paneWidths: { files: 340, commit: 280 } },
     notifications: { enabled: false, longRunningOnly: true },
     android: { sdkPath, defaultLogcatPriority: 'V', defaultLogcatFilter: '' },
   } as PublicSettings;

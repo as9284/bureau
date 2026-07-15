@@ -1,7 +1,6 @@
 import type { MouseEvent } from 'react';
 import { useAppStore, type ContextMenuItem } from '../store/appStore';
-import { ActivityRail } from './ActivityRail';
-import { Sidebar } from './Sidebar';
+import { ProjectRail } from './ProjectRail';
 import { ImmersiveNavigationHost } from './ImmersiveNavigationHost';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
@@ -11,7 +10,6 @@ import { ToastStack } from '../components/ToastStack';
 import { ContextMenu } from '../components/ContextMenu';
 import { ContextMenuProvider as GitContextMenuProvider } from '../components/GitContextMenu';
 import { ShutdownOverlay } from '../components/ShutdownOverlay';
-import { ResizablePanel } from '../components/ResizablePanel';
 import { QuitConfirmDialog } from '../components/QuitConfirmDialog';
 import { ProjectRemoveDialog } from '../components/ProjectRemoveDialog';
 import { HubOverview } from '../pages/HubOverview';
@@ -27,7 +25,6 @@ import { buildEditMenuItems } from '../lib/contextMenu';
 export function WorkbenchShell() {
   const view = useAppStore((s) => s.view);
   const projectTab = useAppStore((s) => s.projectTab);
-  const sidebarWidth = useAppStore((s) => s.settings?.layout.sidebarWidth ?? 220);
   const immersiveMode = useAppStore((s) => s.settings?.appearance.immersiveMode ?? false);
   const openContextMenu = useAppStore((s) => s.openContextMenu);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
@@ -35,7 +32,6 @@ export function WorkbenchShell() {
   const setSection = useAppStore((s) => s.setSection);
   const openPalette = useAppStore((s) => s.openPalette);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
-  const updateSettings = useAppStore((s) => s.updateSettings);
 
   const onContextMenu = (event: MouseEvent): void => {
     const editable = (event.target as HTMLElement).closest<HTMLElement>(
@@ -74,33 +70,11 @@ export function WorkbenchShell() {
   };
 
   const navigationChrome = immersiveMode ? (
-    <ImmersiveNavigationHost
-      sidebarWidth={sidebarWidth}
-      edgeRevealDisabled={view === 'project' && projectTab === 'files'}
-    >
-      <ActivityRail />
-      <div className="workspace-sidebar-panel">
-        <Sidebar />
-      </div>
+    <ImmersiveNavigationHost edgeRevealDisabled={view === 'project' && projectTab === 'files'}>
+      <ProjectRail />
     </ImmersiveNavigationHost>
   ) : (
-    <>
-      <ActivityRail />
-      <ResizablePanel
-        axis="horizontal"
-        className="workspace-sidebar-panel"
-        defaultSize={220}
-        size={sidebarWidth}
-        minSize={160}
-        maxSize={360}
-        minSiblingSize={420}
-        storageKey="workspace-sidebar"
-        resizeLabel="Resize navigation sidebar"
-        onSizeCommit={(nextSize) => void updateSettings({ layout: { sidebarWidth: nextSize } })}
-      >
-        <Sidebar />
-      </ResizablePanel>
-    </>
+    <ProjectRail />
   );
 
   return (

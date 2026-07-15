@@ -119,7 +119,6 @@ export const settingsPatchSchema = z
       .optional(),
     layout: z
       .object({
-        sidebarWidth: z.number().int().min(160).max(360).optional(),
         paneWidths: z
           .object({
             files: z.number().int().min(320).optional(),

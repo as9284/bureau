@@ -115,6 +115,7 @@
   --size-list-row: 32px;
   --size-list-row-compact: 28px;
   --size-hub-row: 44px;
+  --size-project-rail: 144px;
   --size-sidebar-default: 220px;
   --size-sidebar-min: 160px;
   --size-sidebar-max: 360px;
@@ -126,6 +127,7 @@
   --motion-duration-dialog-enter: 160ms;
   --motion-duration-dialog-exit: 100ms;
   --motion-duration-loading: 1400ms;
+  --ease-state: cubic-bezier(0.2, 0, 0, 1);
 
   /* Elevation */
   --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -143,7 +145,6 @@
   --z-app-chrome: 550;
 
   /* Layout */
-  --layout-sidebar-width: var(--size-sidebar-default);
   --layout-titlebar-height: var(--size-titlebar);
   --layout-statusbar-height: var(--size-statusbar);
   --layout-page-max-width: 1440px;

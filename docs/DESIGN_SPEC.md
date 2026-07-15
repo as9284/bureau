@@ -109,6 +109,7 @@ uses `--font-family-mono` with `font-variant-numeric: tabular-nums`.
 --size-control-compact: 28px;  --size-control: 32px;  --size-target-minimum: 28px;
 --size-titlebar: 36px;  --size-statusbar: 24px;
 --size-list-row: 32px;  --size-list-row-compact: 28px;  --size-hub-row: 44px;
+--size-project-rail: 144px;
 --size-sidebar-default: 220px;  --size-sidebar-min: 160px;  --size-sidebar-max: 360px;
 ```
 
@@ -156,20 +157,18 @@ Provide `[data-theme='light']` with StarGit's light values (canvas `#f4f4f5`, ba
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
 │ TitleBar (36px)  ⬡ Bureau        [⌘K command bar]        — ▢ ✕          │  drag region
-├──┬────────────────────────────────────────────────────────────────────┤
-│  │ Sidebar (220px, resizable)   │  Main workspace                      │
-│A │  ── PROJECTS ──              │  ┌─ tab strip: Overview │ Processes  │
-│c │  • bureau            ● 2     │  │  │ Preview │ Android │ Ports ─────┐│
-│t │  • my-app            ● 1     │  │                                  ││
-│i │  • api-service               │  │   (active tab content)           ││
-│v │  ── GROUPS ──                │  │                                  ││
-│i │  ▸ Client work               │  └──────────────────────────────────┘│
-│l │                              │                                       │
-│  │                              │                                       │
-├──┴──────────────────────────────┴───────────────────────────────────────┤
+├──────────────────┬──────────────────────────────────────────────────────┤
+│ Project rail     │  Main workspace                                      │
+│ Projects       + │  ┌─ tab strip: Overview │ Files │ Processes ─────────┐│
+│   bureau         │  │                                                    ││
+│   my-app         │  │                                                    ││
+│   api-service    │  │   (active tab content)                             ││
+│                  │  │                                                    ││
+│                  │  └────────────────────────────────────────────────────┘│
+│ Settings         │                                                        │
+├──────────────────┴───────────────────────────────────────────────────────┤
 │ StatusBar (24px)  ● 3 running   :3000 :8080   node 20.11   ⎇ main        │
 └───────────────────────────────────────────────────────────────────────┘
- A = Activity rail (44px)
 ```
 
 ### 4.1 TitleBar (36px, `-webkit-app-region: drag`)
@@ -178,13 +177,15 @@ Provide `[data-theme='light']` with StarGit's light values (canvas `#f4f4f5`, ba
   hint chip. Width `min(360px, 42vw)`, hover → `--color-surface-hover`.
 - Right: window controls (46px each; close hover `#c42b1c`). Everything is `no-drag`.
 
-### 4.2 Activity rail (44px) + collapsible sidebar
-- Rail buttons (34px, `--radius-control`) with active state = `--color-surface-selected` + a 2px accent
-  bar on the left edge (Monocle's `.rail-button.active::before`).
-- **Rail sections:** Projects (hub) · (per-project) Processes · Preview · Android · Ports · Toolchains ·
-  Settings (bottom). Rail shows global nav; the sidebar shows contextual lists.
-- Sidebar (`--color-surface-base`) with an uppercase header, count meta pill, resizable 160–360px,
-  overlay behavior < 900px (from Monocle).
+### 4.2 Project rail (144px)
+- One fixed-width global navigation surface replaces the former activity rail plus resizable Projects sidebar.
+- Header: Projects home action and Add project IconButton. Body: compact project rows with
+  truncation, a soft full-row selected fill and medium-weight selected labels. Active destination icons use the
+  accent color. Footer: Settings.
+- Settings categories live inside the Settings page as compact horizontal local navigation. They do not create
+  another application sidebar.
+- In immersive mode the whole project rail becomes one edge-revealed overlay and occupies no workspace width
+  while hidden.
 
 ### 4.3 Tab strip (36px)
 - Per-project workspace tabs (Overview/Files/Processes/Preview/Android/Toolchains/Ports/Git), Monocle's tab visuals:
@@ -213,7 +214,7 @@ Port these from StarGit/Monocle with only cosmetic renaming:
 NumberField, Tooltip, Menu/DropdownMenu, ContextMenu, Dialog, ScrollArea, Separator, Badge, Banner,
 Skeleton, EmptyState, StatusLine, Toast stack.
 
-**Layout:** TitleBar, ActivityRail, Sidebar, TabStrip, StatusBar, CommandPalette, PaneSeparator
+**Layout:** TitleBar, ProjectRail, TabStrip, StatusBar, CommandPalette, PaneSeparator
 (resizable splitters), WorkbenchShell.
 
 Button variants: `primary` (accent bg, `--color-text-on-accent`), `secondary` (raised + border), `ghost`,
