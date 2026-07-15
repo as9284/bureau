@@ -1,7 +1,7 @@
 {
   "name": "bureau",
   "productName": "Bureau",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Local-first desktop mission control for development projects",
   "main": "./.vite/build/main.js",
   "scripts": {
