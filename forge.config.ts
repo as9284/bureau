@@ -35,7 +35,7 @@ const config: ForgeConfig = {
           }
         : undefined,
       getAppBuilderConfig: async () => ({
-        artifactName: '${productName} Setup ${version}.${ext}',
+        artifactName: '${productName}-Setup-${version}.${ext}',
         nsis: {
           oneClick: false,
           allowToChangeInstallationDirectory: true,

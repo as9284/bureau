@@ -14,7 +14,6 @@ jobs:
     runs-on: windows-latest
     env:
       BUREAU_UPDATE_URL: https://github.com/${{ github.repository }}/releases/latest/download
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out the release tag
         uses: actions/checkout@v4
@@ -54,6 +53,8 @@ jobs:
 
       - name: Publish the installer and updater assets
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $installer = Get-ChildItem -Path out/make/nsis -Recurse -Filter '*.exe' -File | Select-Object -First 1
           $blockmap = Get-ChildItem -Path out/make/nsis -Recurse -Filter '*.blockmap' -File | Select-Object -First 1
@@ -61,4 +62,24 @@ jobs:
           if (!$installer -or !$blockmap -or !$manifest) {
             throw 'The NSIS maker must produce an installer, blockmap, and latest.yml update manifest.'
           }
-          & gh release create $env:GITHUB_REF_NAME $installer.FullName $blockmap.FullName $manifest.FullName --title "Bureau $env:GITHUB_REF_NAME" --generate-notes
+
+          $manifestText = Get-Content -LiteralPath $manifest.FullName -Raw
+          if (!$manifestText.Contains("url: $($installer.Name)") -or !$manifestText.Contains("path: $($installer.Name)")) {
+            throw "latest.yml does not reference the installer filename $($installer.Name)."
+          }
+
+          & gh release create $env:GITHUB_REF_NAME $installer.FullName $blockmap.FullName $manifest.FullName --title "Bureau $env:GITHUB_REF_NAME" --generate-notes --latest
+          if ($LASTEXITCODE -ne 0) {
+            throw 'GitHub Release creation failed.'
+          }
+
+          $release = & gh release view $env:GITHUB_REF_NAME --json assets,isDraft,isPrerelease | ConvertFrom-Json
+          if ($release.isDraft -or $release.isPrerelease) {
+            throw 'The update channel requires a published, non-prerelease GitHub Release.'
+          }
+          $remoteAssets = @($release.assets | ForEach-Object { $_.name })
+          foreach ($expectedAsset in @($installer.Name, $blockmap.Name, $manifest.Name)) {
+            if ($expectedAsset -notin $remoteAssets) {
+              throw "GitHub renamed or omitted release asset $expectedAsset; latest.yml would be invalid."
+            }
+          }

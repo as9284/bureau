@@ -137,7 +137,7 @@ npm run make
 The Windows installer is written to:
 
 ```text
-out/make/nsis/x64/Bureau Setup <version>.exe
+out/make/nsis/x64/Bureau-Setup-<version>.exe
 ```
 
 ## Architecture
@@ -155,14 +155,7 @@ src/shared     Zod contracts, validation, IPC channels, error codes, and pure he
 ## Releases
 
 Releases are automated with Git tags and GitHub Actions. The version in `package.json` must match the tag.
-To publish the existing `1.0.0` version for the first time:
-
-```powershell
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-For later patch releases:
+For a patch release:
 
 ```powershell
 npm run release:patch
@@ -171,8 +164,8 @@ git push origin main --follow-tags
 
 Use `release:minor` or `release:major` for the corresponding semantic-version bump. `npm version` updates
 `package.json` and `package-lock.json`, creates the release commit and tag, and the tag triggers the Windows
-release workflow. CI verifies the candidate, builds the NSIS installer and updater metadata, then publishes
-the assets to GitHub Releases.
+release workflow. CI verifies the candidate, builds the NSIS installer and updater metadata, confirms that
+the manifest and remote asset names agree, then publishes the assets to GitHub Releases.
 
 ## Project status
 
