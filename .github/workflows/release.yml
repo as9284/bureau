@@ -49,9 +49,11 @@ jobs:
           npm run test:component
 
       - name: Build the NSIS installer and update manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: npx electron-forge make --platform=win32 --arch=x64
 
-      - name: Publish the installer and updater assets
+      - name: Validate and publish the NSIS draft release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,18 +70,63 @@ jobs:
             throw "latest.yml does not reference the installer filename $($installer.Name)."
           }
 
-          & gh release create $env:GITHUB_REF_NAME $installer.FullName $blockmap.FullName $manifest.FullName --title "Bureau $env:GITHUB_REF_NAME" --generate-notes --latest
+          $releasesJson = & gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100"
           if ($LASTEXITCODE -ne 0) {
-            throw 'GitHub Release creation failed.'
+            throw 'Could not inspect the draft release created by the NSIS maker.'
+          }
+          $drafts = @($releasesJson | ConvertFrom-Json | Where-Object {
+            $_.tag_name -eq $env:GITHUB_REF_NAME -and $_.draft
+          })
+          if ($drafts.Count -ne 1) {
+            throw "Expected exactly one draft release for $env:GITHUB_REF_NAME, found $($drafts.Count)."
           }
 
-          $release = & gh release view $env:GITHUB_REF_NAME --json assets,isDraft,isPrerelease | ConvertFrom-Json
-          if ($release.isDraft -or $release.isPrerelease) {
-            throw 'The update channel requires a published, non-prerelease GitHub Release.'
-          }
-          $remoteAssets = @($release.assets | ForEach-Object { $_.name })
+          $draft = $drafts[0]
+          $remoteAssets = @($draft.assets | ForEach-Object { $_.name })
           foreach ($expectedAsset in @($installer.Name, $blockmap.Name, $manifest.Name)) {
             if ($expectedAsset -notin $remoteAssets) {
+              throw "The NSIS draft omitted release asset $expectedAsset; latest.yml would be invalid."
+            }
+          }
+
+          $remoteManifestAsset = $draft.assets | Where-Object { $_.name -eq $manifest.Name } | Select-Object -First 1
+          $remoteManifestText = & gh api "repos/$env:GITHUB_REPOSITORY/releases/assets/$($remoteManifestAsset.id)" -H 'Accept: application/octet-stream' | Out-String
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Could not validate the uploaded latest.yml.'
+          }
+          if (!$remoteManifestText.Contains("url: $($installer.Name)") -or !$remoteManifestText.Contains("path: $($installer.Name)")) {
+            throw "The uploaded latest.yml does not reference $($installer.Name)."
+          }
+
+          $notesRequest = @{
+            tag_name = $env:GITHUB_REF_NAME
+            target_commitish = $env:GITHUB_SHA
+          } | ConvertTo-Json -Compress
+          $notesJson = $notesRequest | & gh api --method POST "repos/$env:GITHUB_REPOSITORY/releases/generate-notes" --input -
+          if ($LASTEXITCODE -ne 0) {
+            throw 'GitHub could not generate the release notes.'
+          }
+          $notes = $notesJson | ConvertFrom-Json
+
+          $publishRequest = @{
+            name = "Bureau $env:GITHUB_REF_NAME"
+            body = $notes.body
+            draft = $false
+            prerelease = $false
+            make_latest = 'true'
+          } | ConvertTo-Json -Compress
+          $releaseJson = $publishRequest | & gh api --method PATCH "repos/$env:GITHUB_REPOSITORY/releases/$($draft.id)" --input -
+          if ($LASTEXITCODE -ne 0) {
+            throw 'GitHub Release publication failed.'
+          }
+
+          $release = $releaseJson | ConvertFrom-Json
+          if ($release.draft -or $release.prerelease) {
+            throw 'The update channel requires a published, non-prerelease GitHub Release.'
+          }
+          $publishedAssets = @($release.assets | ForEach-Object { $_.name })
+          foreach ($expectedAsset in @($installer.Name, $blockmap.Name, $manifest.Name)) {
+            if ($expectedAsset -notin $publishedAssets) {
               throw "GitHub renamed or omitted release asset $expectedAsset; latest.yml would be invalid."
             }
           }

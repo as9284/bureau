@@ -165,7 +165,8 @@ git push origin main --follow-tags
 Use `release:minor` or `release:major` for the corresponding semantic-version bump. `npm version` updates
 `package.json` and `package-lock.json`, creates the release commit and tag, and the tag triggers the Windows
 release workflow. CI verifies the candidate, builds the NSIS installer and updater metadata, confirms that
-the manifest and remote asset names agree, then publishes the assets to GitHub Releases.
+the draft release's manifest and remote asset names agree, then publishes that same draft as the latest
+GitHub Release.
 
 ## Project status
 
