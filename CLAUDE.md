@@ -12,10 +12,10 @@ always in context. Read it before writing code; do not duplicate its contents he
 
 These supplement AGENTS.md (the canonical guide) and your global `~/.claude/CLAUDE.md`.
 
-- **Ground every task in the docs.** For anything non-trivial, read the relevant section of
-  [PLAN.md](./docs/PLAN.md) and [DESIGN_SPEC.md](./docs/DESIGN_SPEC.md) first, then the code. State assumptions and
-  surface tradeoffs before implementing (per your global guidelines) — especially for anything that looks
-  like a product decision (what a "conflict" means, whether to auto-run a config command, etc.).
+- **Ground every task in repository evidence.** For anything non-trivial, inspect the relevant contracts,
+  implementation, and tests; read [DESIGN_SPEC.md](./docs/DESIGN_SPEC.md) before interface work. State assumptions
+  and surface tradeoffs before implementing (per your global guidelines) — especially for anything that
+  looks like a product decision (what a "conflict" means, whether to auto-run a config command, etc.).
 
 - **Be thorough and verify end-to-end.** Confirm a feature is wired the whole way
   (main → IPC → preload → contract → store → component); flag main-only or renderer-only orphans. When

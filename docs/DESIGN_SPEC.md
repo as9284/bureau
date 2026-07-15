@@ -3,7 +3,6 @@
 > Bureau adopts the **graphite, Cursor-like** design language shared by StarGit and Monocle, *exactly*.
 > This document captures the tokens, theme, shell layout, and the Bureau-specific components layered on
 > top. Values below are lifted verbatim from the sibling apps so the three read as one product family.
-> Companion: [PLAN.md](./PLAN.md).
 
 ---
 
@@ -333,5 +332,3 @@ data, compact rows, subtle elevation only on overlays, functional 80–160ms mot
 inline/resting elements, use rounded-heavy cards, animate longer than ~200ms, or mix in a non-Geist font.
 
 ---
-
-*Companion document:* [PLAN.md](./PLAN.md) — scope, architecture, feature pillars, and phased roadmap.

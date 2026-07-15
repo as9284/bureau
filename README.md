@@ -92,7 +92,7 @@ boundary is deliberately narrow:
 - Files operations are project-relative, while Markdown, Mermaid, remote images, and exports pass through
   dedicated sanitization and isolation paths.
 
-The detailed threat model and invariants live in [the master plan](./docs/PLAN.md#6-security-model--threat-surface).
+The complete development-time security invariants live in [AGENTS.md](./AGENTS.md#3-ipc-security--invariants-non-negotiable).
 
 ## Development
 
@@ -149,8 +149,8 @@ src/renderer   React 19 interface and Zustand workspace state
 src/shared     Zod contracts, validation, IPC channels, error codes, and pure helpers
 ```
 
-The full system design is documented in [PLAN.md](./docs/PLAN.md), while
-[DESIGN_SPEC.md](./docs/DESIGN_SPEC.md) defines the interface tokens and component language.
+[DESIGN_SPEC.md](./docs/DESIGN_SPEC.md) defines the interface tokens and component language, while
+[AGENTS.md](./AGENTS.md) documents the implementation boundaries and working agreement.
 
 ## Releases
 
@@ -178,7 +178,7 @@ the assets to GitHub Releases.
 
 Bureau 1.0 is Windows-first and under active development. macOS and Linux makers exist in the build
 configuration, but official release automation and packaged-update support currently target Windows x64.
-Issues and focused pull requests are welcome. Please read [PLAN.md](./docs/PLAN.md) and
+Issues and focused pull requests are welcome. Please read [AGENTS.md](./AGENTS.md) and
 [DESIGN_SPEC.md](./docs/DESIGN_SPEC.md) before changing architecture or interface behavior.
 
 ## License

@@ -8,16 +8,16 @@ It is the source of truth for how work gets done here; `CLAUDE.md` imports it ve
 > of a three-app suite (with **StarGit** for git and **Monocle** for docs) and shares their graphite,
 > Cursor-like design system *exactly*. Windows-first, cross-platform-ready.
 
-**Two companion documents are authoritative — do not contradict them:**
-- [PLAN.md](./docs/PLAN.md) — scope, architecture, every feature pillar, edge cases, phased roadmap, DoD.
+**The design companion is authoritative — do not contradict it:**
 - [DESIGN_SPEC.md](./docs/DESIGN_SPEC.md) — the exact design tokens, shell layout, and component inventory.
 
 ---
 
 ## 1. Golden rules (read first)
 
-1. **Read `docs/PLAN.md` and `docs/DESIGN_SPEC.md` for the area you touch before coding.** They define intended
- behavior, edge cases, and the visual language. Most "not thorough enough" failures come from skipping them.
+1. **Read `docs/DESIGN_SPEC.md` before changing interface behavior.** It defines the visual language and
+   component rules. For product behavior, inspect the existing contracts, implementation, and tests before
+   deciding what the app intends. Most "not thorough enough" failures come from skipping that evidence.
 2. **State assumptions, surface tradeoffs, ask when ambiguous** — don't silently pick one interpretation
    or invent product behavior (e.g. what counts as a "port conflict"). Fix contained bugs; flag design decisions.
 3. **Verify end-to-end, not just types.** A feature must be wired the whole way:
@@ -36,7 +36,7 @@ It is the source of truth for how work gets done here; `CLAUDE.md` imports it ve
 
 ## 2. Architecture
 
-Four layers, strict boundaries. Full detail in [PLAN.md §4](./docs/PLAN.md).
+Four layers, strict boundaries.
 
 ```
 src/
@@ -71,8 +71,7 @@ src/
 
 ## 3. IPC, security & invariants (non-negotiable)
 
-Bureau spawns real OS processes and renders untrusted localhost content, so security is first-class
-([PLAN.md §5–6](./docs/PLAN.md)).
+Bureau spawns real OS processes and renders untrusted localhost content, so security is first-class.
 
 - **Result envelope:** domain services return `{ ok: true, ... } | { ok: false, error: BureauError }`.
   **Only bugs throw.** Every handler is wrapped by `register(channel, operation, handler)` which asserts a
@@ -160,8 +159,7 @@ button shows machine text.
 
 ## 6. Testing & Definition of Done
 
-Vitest 3, four suites by config + directory (`tests/` mirrors `src/`), plus the security script. See
-[PLAN.md §10](./docs/PLAN.md).
+Vitest 3, four suites by config + directory (`tests/` mirrors `src/`), plus the security script.
 
 | Command | Scope |
 |---|---|
@@ -219,7 +217,7 @@ Phases 0–4 are implemented (projects hub, process manager, web preview, deep A
 tasks, monorepo roots, terminal attach, live metrics, orphan adopt, preview polish, CI, and the StarGit
 fold-in as a per-project **Git** tab). Phase 4 is complete: the per-project **Files** workspace (secure
 explorer, CodeMirror editor, Monocle reader, search, drafts, conflict-safe saves, export, settings and Git
-handoff) plus its 2026-07-14 security/design follow-ups. See [PLAN.md §12](./docs/PLAN.md).
+handoff) plus its 2026-07-14 security/design follow-ups.
 
 **Phase 3 notes:** Git runs only in main (`src/main/git/**`, `github/`); renderer uses `gitStore` +
 `features/git/**`. Bureau Projects hub owns tracking — do not reintroduce StarGit’s multi-repo catalogue.
