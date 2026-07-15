@@ -18,6 +18,7 @@ import {
   DEFAULT_TOOLCHAINS_SETTINGS,
   DEFAULT_HUB_SETTINGS,
   DEFAULT_FILES_SETTINGS,
+  DEFAULT_ONBOARDING_SETTINGS,
 } from '@shared/contracts/settings';
 
 const MAX_DISPLAY_NAME_LENGTH = 256;
@@ -151,6 +152,9 @@ export const settingsFileSchema = z.object({
     tabSize: z.union([z.literal(2), z.literal(4)]),
     readerWidth: z.enum(['narrow', 'standard', 'wide']),
   }),
+  onboarding: z.object({
+    completedVersion: z.string().max(64).nullable(),
+  }),
 });
 
 export const trackedProjectSchema = z.object({
@@ -206,6 +210,7 @@ export function createDefaultSettings(): SettingsFileV1 {
     toolchains: { ...DEFAULT_TOOLCHAINS_SETTINGS },
     hub: { ...DEFAULT_HUB_SETTINGS },
     files: { ...DEFAULT_FILES_SETTINGS },
+    onboarding: { ...DEFAULT_ONBOARDING_SETTINGS },
   };
 }
 
@@ -272,6 +277,10 @@ export function validateSettings(value: unknown): SettingsFileV1 {
     },
     hub: { ...defaults.hub, ...(isRecord(incoming.hub) ? incoming.hub : {}) },
     files: { ...defaults.files, ...(isRecord(incoming.files) ? incoming.files : {}) },
+    onboarding: {
+      ...defaults.onboarding,
+      ...(isRecord(incoming.onboarding) ? incoming.onboarding : {}),
+    },
   };
 
   if (isRecord(incoming.window)) {
@@ -314,6 +323,7 @@ export function settingsFileToPublic(file: SettingsFileV1): PublicSettings {
     toolchains: file.toolchains,
     hub: file.hub,
     files: file.files,
+    onboarding: file.onboarding,
   };
 }
 

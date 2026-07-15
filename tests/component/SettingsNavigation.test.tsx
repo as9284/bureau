@@ -46,6 +46,7 @@ const SETTINGS: PublicSettings = {
   },
   commit: { defaultSignOff: false, signingPreference: 'off' },
   hub: { defaultSort: 'attention', recentCount: 8 },
+  onboarding: { completedVersion: '1.0.0' },
 };
 
 const CAPABILITIES: AppCapabilities = {

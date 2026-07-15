@@ -20,6 +20,7 @@ import type {
 import type { OkResult, Result } from '@shared/contracts/errors';
 import type {
   PreviewBounds,
+  PreviewConsoleMessage,
   PreviewHotkey,
   PreviewNavigateRequest,
   PreviewOpenExternalRequest,
@@ -144,6 +145,7 @@ export const bureauApi = Object.freeze({
     setBounds: (bounds: PreviewBounds) => invoke<void>(IPC_CHANNELS.PREVIEW_SET_BOUNDS, bounds),
     navigate: (input: PreviewNavigateRequest) => invoke<void>(IPC_CHANNELS.PREVIEW_NAVIGATE, input),
     reload: () => invoke<void>(IPC_CHANNELS.PREVIEW_RELOAD),
+    reloadHard: () => invoke<void>(IPC_CHANNELS.PREVIEW_RELOAD_HARD),
     back: () => invoke<void>(IPC_CHANNELS.PREVIEW_BACK),
     forward: () => invoke<void>(IPC_CHANNELS.PREVIEW_FORWARD),
     setVisible: (input: PreviewSetVisibleRequest) =>
@@ -157,6 +159,8 @@ export const bureauApi = Object.freeze({
       subscribe<PreviewState>(IPC_CHANNELS.PREVIEW_STATE_EVENT, listener),
     onHotkey: (listener: (hotkey: PreviewHotkey) => void) =>
       subscribe<PreviewHotkey>(IPC_CHANNELS.PREVIEW_HOTKEY_EVENT, listener),
+    onConsole: (listener: (messages: PreviewConsoleMessage[]) => void) =>
+      subscribe<PreviewConsoleMessage[]>(IPC_CHANNELS.PREVIEW_CONSOLE_EVENT, listener),
   },
   system: {
     chooseDirectory: (input: ChooseDirectoryRequest) =>

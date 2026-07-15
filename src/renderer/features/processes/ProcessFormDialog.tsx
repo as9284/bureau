@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ProcessDefinition, ProcessRunMode } from '@shared/contracts/projects';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
 import { Dropdown } from '../../components/Dropdown';
 import { Checkbox } from '../../components/Checkbox';
+import { useModalDismiss } from '../../lib/useModalDismiss';
 
 type ProcessFormDialogProps = {
   title: string;
@@ -89,9 +90,13 @@ export function ProcessFormDialog({
     });
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDismiss(onCancel, dialogRef);
+
   return (
     <div className="overlay-root" onMouseDown={onCancel}>
       <div
+        ref={dialogRef}
         className="dialog process-form-dialog"
         role="dialog"
         aria-modal="true"

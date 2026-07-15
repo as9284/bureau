@@ -73,6 +73,35 @@ describe('FileApplicationService', () => {
     expect(git.ok).toBe(false);
   });
 
+  it('re-reads a cached .gitignore after it changes on disk', async () => {
+    await fs.writeFile(path.join(root, 'keep.txt'), 'keep\n');
+    await fs.writeFile(path.join(root, 'later.txt'), 'later\n');
+    await fs.writeFile(path.join(root, '.gitignore'), 'keep.txt\n');
+
+    const first = await service.listDirectory({ projectId, relativePath: '' });
+    expect(first.ok).toBe(true);
+    if (first.ok) {
+      const names = first.entries.map((entry) => entry.name);
+      expect(names).toContain('later.txt');
+      expect(names).not.toContain('keep.txt');
+    }
+
+    // Rewrite the rules to ignore the other file. The compiled-matcher cache is
+    // keyed by mtime, so a stale cache would keep hiding keep.txt; bump the mtime
+    // deterministically (no sleep) to guarantee the change is observed.
+    await fs.writeFile(path.join(root, '.gitignore'), 'later.txt\n');
+    const future = new Date(Date.now() + 2000);
+    await fs.utimes(path.join(root, '.gitignore'), future, future);
+
+    const second = await service.listDirectory({ projectId, relativePath: '' });
+    expect(second.ok).toBe(true);
+    if (second.ok) {
+      const names = second.entries.map((entry) => entry.name);
+      expect(names).toContain('keep.txt');
+      expect(names).not.toContain('later.txt');
+    }
+  });
+
   it('preserves UTF-8 BOM and CRLF, then rejects a stale revision', async () => {
     const filePath = path.join(root, 'README.md');
     await fs.writeFile(filePath, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('# Hello\r\nWorld\r\n')]));

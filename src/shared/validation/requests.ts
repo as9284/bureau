@@ -194,6 +194,12 @@ export const settingsPatchSchema = z
       })
       .strict()
       .optional(),
+    onboarding: z
+      .object({
+        completedVersion: z.string().max(64).nullable().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

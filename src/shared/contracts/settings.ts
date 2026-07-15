@@ -130,6 +130,11 @@ export type WindowBounds = {
   maximized?: boolean;
 };
 
+/** First-run onboarding state. `completedVersion` is null until the tour is finished. */
+export type OnboardingSettings = {
+  completedVersion: string | null;
+};
+
 /** Settings shape sent to the renderer (file-only fields like updatedAt are stripped). */
 export type PublicSettings = {
   schemaVersion: number;
@@ -152,6 +157,7 @@ export type PublicSettings = {
   toolchains: ToolchainsSettings;
   hub: HubSettings;
   files?: FilesSettings;
+  onboarding: OnboardingSettings;
 };
 
 /** Deep-partial patch from the renderer. */
@@ -174,9 +180,14 @@ export type SettingsPatch = {
   toolchains?: Partial<ToolchainsSettings>;
   hub?: Partial<HubSettings>;
   files?: Partial<FilesSettings>;
+  onboarding?: Partial<OnboardingSettings>;
 };
 
 export const DEFAULT_ACCENT_COLOR = '#7c9cff';
+
+export const DEFAULT_ONBOARDING_SETTINGS: OnboardingSettings = {
+  completedVersion: null,
+};
 
 export const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
   startupView: 'hub',

@@ -70,6 +70,7 @@ export const IPC_CHANNELS = {
   PREVIEW_SET_BOUNDS: 'bureau:preview:setBounds',
   PREVIEW_NAVIGATE: 'bureau:preview:navigate',
   PREVIEW_RELOAD: 'bureau:preview:reload',
+  PREVIEW_RELOAD_HARD: 'bureau:preview:reloadHard',
   PREVIEW_BACK: 'bureau:preview:back',
   PREVIEW_FORWARD: 'bureau:preview:forward',
   PREVIEW_SET_VISIBLE: 'bureau:preview:setVisible',
@@ -79,6 +80,7 @@ export const IPC_CHANNELS = {
   PREVIEW_CLEAR_CONSOLE: 'bureau:preview:clearConsole',
   PREVIEW_STATE_EVENT: 'bureau:preview:state',
   PREVIEW_HOTKEY_EVENT: 'bureau:preview:hotkey',
+  PREVIEW_CONSOLE_EVENT: 'bureau:preview:console',
 
   PROCESSES_PTY_WRITE: 'bureau:processes:ptyWrite',
   PROCESSES_PTY_RESIZE: 'bureau:processes:ptyResize',

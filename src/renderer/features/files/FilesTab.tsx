@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { ArrowSquareOutIcon } from '@phosphor-icons/react/ArrowSquareOut';
 import { ArrowsInSimpleIcon } from '@phosphor-icons/react/ArrowsInSimple';
 import { ArrowsOutIcon } from '@phosphor-icons/react/ArrowsOut';
@@ -154,7 +154,11 @@ function focusRelativeRow(current: HTMLElement, offset: number): void {
 type ExplorerTreeProps = {
   projectId: string;
   projectRoot: string;
-  project: FilesProjectState;
+  directoryCache: FilesProjectState['directoryCache'];
+  selectedPath: string | null;
+  expandedPaths: string[];
+  dirtyPaths: ReadonlySet<string>;
+  conflictPaths: ReadonlySet<string>;
   parentPath: string;
   gitStates: ReadonlyMap<string, string>;
   filterQuery: string;
@@ -295,7 +299,11 @@ function ExplorerWorkingSet({
 function ExplorerTree({
   projectId,
   projectRoot,
-  project,
+  directoryCache,
+  selectedPath,
+  expandedPaths,
+  dirtyPaths,
+  conflictPaths,
   parentPath,
   gitStates,
   filterQuery,
@@ -312,9 +320,9 @@ function ExplorerTree({
   const setSelection = useAppStore((state) => state.setFilesSelection);
   const openContextMenu = useAppStore((state) => state.openContextMenu);
   const pushToast = useAppStore((state) => state.pushToast);
-  const entries = project.directoryCache[parentPath] ?? [];
+  const entries = directoryCache[parentPath] ?? [];
   const visibleEntries = filterQuery
-    ? entries.filter((entry) => entryMatchesExplorerFilter(entry, filterQuery, project.directoryCache))
+    ? entries.filter((entry) => entryMatchesExplorerFilter(entry, filterQuery, directoryCache))
     : entries;
 
   const openMenu = (event: MouseEvent, entry: FileEntry) => {
@@ -322,7 +330,7 @@ function ExplorerTree({
     event.stopPropagation();
     setSelection(projectId, entry.relativePath);
     const existing = new Set(
-      Object.values(project.directoryCache).flatMap((list) => list.map((item) => item.relativePath))
+      Object.values(directoryCache).flatMap((list) => list.map((item) => item.relativePath))
     );
     openContextMenu({
       x: event.clientX,
@@ -381,12 +389,13 @@ function ExplorerTree({
         />
       ) : null}
       {visibleEntries.map((entry) => {
-        const selected = project.selectedPath === entry.relativePath;
+        const selected = selectedPath === entry.relativePath;
         const isDirectory = entry.kind === 'directory';
-        const persistedExpanded = project.expandedPaths.includes(entry.relativePath);
-        const filterExpanded = hasMatchingExplorerDescendant(entry, filterQuery, project.directoryCache);
+        const persistedExpanded = expandedPaths.includes(entry.relativePath);
+        const filterExpanded = hasMatchingExplorerDescendant(entry, filterQuery, directoryCache);
         const expanded = persistedExpanded || filterExpanded;
-        const buffer = project.buffers[entry.relativePath];
+        const isDirty = dirtyPaths.has(entry.relativePath);
+        const isConflict = conflictPaths.has(entry.relativePath);
         return (
           <div
             key={entry.relativePath}
@@ -427,15 +436,19 @@ function ExplorerTree({
               <span className="files-tree__caret" aria-hidden>{isDirectory ? expanded ? <CaretDownIcon /> : <CaretRightIcon /> : null}</span>
               <span className="files-tree__icon" aria-hidden>{isDirectory ? <FolderIcon weight={expanded ? 'fill' : 'regular'} /> : <FileIcon />}</span>
               <span className="files-tree__name">{entry.name}</span>
-              {buffer?.kind === 'text' && buffer.dirty ? <span className="files-tree__state" aria-label="Unsaved">M</span> : null}
-              {buffer?.kind === 'text' && buffer.conflict ? <span className="files-tree__state is-danger" aria-label="Conflict">!</span> : null}
-              {(buffer?.kind !== 'text' || !buffer.dirty) && gitStates.has(entry.relativePath) ? <span className="files-tree__state is-git" aria-label="Git changed">{gitStates.get(entry.relativePath)}</span> : null}
+              {isDirty ? <span className="files-tree__state" aria-label="Unsaved">M</span> : null}
+              {isConflict ? <span className="files-tree__state is-danger" aria-label="Conflict">!</span> : null}
+              {!isDirty && gitStates.has(entry.relativePath) ? <span className="files-tree__state is-git" aria-label="Git changed">{gitStates.get(entry.relativePath)}</span> : null}
             </button>
             {isDirectory && expanded ? (
               <ExplorerTree
                 projectId={projectId}
                 projectRoot={projectRoot}
-                project={project}
+                directoryCache={directoryCache}
+                selectedPath={selectedPath}
+                expandedPaths={expandedPaths}
+                dirtyPaths={dirtyPaths}
+                conflictPaths={conflictPaths}
                 parentPath={entry.relativePath}
                 gitStates={gitStates}
                 filterQuery={filterQuery}
@@ -454,6 +467,13 @@ function ExplorerTree({
     </>
   );
 }
+
+// Single memo boundary for the whole recursive tree: FilesTab re-renders on
+// every keystroke (buffer content lives in the store), but the tree only
+// depends on stable slices (directoryCache/selection/expansion) plus dirty and
+// conflict path sets that change reference only when membership changes — so
+// typing no longer re-renders the explorer.
+const ExplorerTreeMemo = memo(ExplorerTree);
 
 function ImageViewer({ projectId, relativePath, objectUrl, size }: { projectId: string; relativePath: string; objectUrl: string; size: number }) {
   const [zoom, setZoom] = useState<'fit' | number>('fit');
@@ -590,6 +610,39 @@ export function FilesTab({ projectId }: { projectId: string }) {
       file.unmerged ? '!' : file.untracked ? 'U' : file.staged && !file.unstaged ? 'S' : 'M',
     ])
   ), [gitRepo?.snapshot?.changedFiles]);
+  // Dirty/conflict markers for the explorer, derived from the OPEN buffers. The
+  // Set identity is kept stable across keystrokes (only membership changes bust
+  // the signature) so the memoized tree doesn't re-render while typing.
+  const dirtySignature = JSON.stringify(
+    Object.entries(project?.buffers ?? {})
+      .filter(([, buffer]) => buffer.kind === 'text' && buffer.dirty)
+      .map(([relativePath]) => relativePath)
+      .sort()
+  );
+  const conflictSignature = JSON.stringify(
+    Object.entries(project?.buffers ?? {})
+      .filter(([, buffer]) => buffer.kind === 'text' && buffer.conflict)
+      .map(([relativePath]) => relativePath)
+      .sort()
+  );
+  const dirtyPaths = useMemo(
+    () => new Set(JSON.parse(dirtySignature) as string[]),
+    [dirtySignature]
+  );
+  const conflictPaths = useMemo(
+    () => new Set(JSON.parse(conflictSignature) as string[]),
+    [conflictSignature]
+  );
+  // Stable create-flow callbacks (identity never changes) that forward to the
+  // latest handlers via refs, so passing them into the memoized tree is cheap.
+  const beginCreateRef = useRef<(kind: 'file' | 'directory', parentPath: string) => void>(() => undefined);
+  const commitCreateRef = useRef<() => void>(() => undefined);
+  const handleBeginCreate = useCallback(
+    (kind: 'file' | 'directory', parentPath: string) => beginCreateRef.current(kind, parentPath),
+    []
+  );
+  const handleCommitCreate = useCallback(() => commitCreateRef.current(), []);
+  const handleCancelCreate = useCallback(() => setCreateDraft(null), []);
   const normalizedExplorerFilter = useMemo(() => normalizeExplorerFilter(explorerFilter), [explorerFilter]);
   const openFiles = useMemo<ExplorerWorkingSetEntry[]>(() => {
     const tabs = project?.tabs ?? [];
@@ -744,6 +797,11 @@ export function FilesTab({ projectId }: { projectId: string }) {
     }
   };
 
+  // Keep the stable tree callbacks pointing at the latest create handlers
+  // without changing their identity (which would defeat the tree's memoization).
+  beginCreateRef.current = beginCreate;
+  commitCreateRef.current = commitCreate;
+
   const openDiff = () => {
     if (!activePath || !changedFile) return;
     useGitStore.getState().setRepoPanel('changes');
@@ -850,19 +908,23 @@ export function FilesTab({ projectId }: { projectId: string }) {
               }}
             >
               {explorerHasMatches ? (
-                <ExplorerTree
+                <ExplorerTreeMemo
                   projectId={projectId}
                   projectRoot={projectRecord?.canonicalPath ?? ''}
-                  project={project}
+                  directoryCache={directoryCache}
+                  selectedPath={project.selectedPath}
+                  expandedPaths={project.expandedPaths}
+                  dirtyPaths={dirtyPaths}
+                  conflictPaths={conflictPaths}
                   parentPath=""
                   gitStates={gitStates}
                   filterQuery={normalizedExplorerFilter}
                   createDraft={createDraft}
                   onMutation={setMutation}
-                  onBeginCreate={(kind, parentPath) => void beginCreate(kind, parentPath)}
+                  onBeginCreate={handleBeginCreate}
                   onCreateDraftChange={setCreateDraft}
-                  onCommitCreate={() => void commitCreate()}
-                  onCancelCreate={() => setCreateDraft(null)}
+                  onCommitCreate={handleCommitCreate}
+                  onCancelCreate={handleCancelCreate}
                 />
               ) : <div className="files-tree__empty">No matching files or folders in the loaded tree.</div>}
             </div>

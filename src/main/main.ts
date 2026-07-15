@@ -56,6 +56,10 @@ app
       if (mainWindow.isDestroyed()) return;
       mainWindow.webContents.send(IPC_CHANNELS.PREVIEW_HOTKEY_EVENT, hotkey);
     });
+    services.preview.onConsole((messages) => {
+      if (mainWindow.isDestroyed()) return;
+      mainWindow.webContents.send(IPC_CHANNELS.PREVIEW_CONSOLE_EVENT, messages);
+    });
     services.android.onLogcat((event) => {
       if (!mainWindow.isDestroyed())
         mainWindow.webContents.send(IPC_CHANNELS.ANDROID_LOGCAT_EVENT, event);

@@ -21,6 +21,16 @@ const VIEWPORT_LABEL: Record<ViewportPreset, string> = {
 
 type Frame = { left: number; top: number; width: number; height: number } | null;
 
+function sourceLabel(source: string): string {
+  try {
+    const url = new URL(source);
+    const parts = url.pathname.split('/').filter(Boolean);
+    return parts[parts.length - 1] || url.host;
+  } catch {
+    return source.split('/').pop() || source;
+  }
+}
+
 export function PreviewTab() {
   const previewUrl = useAppStore((s) => s.previewUrl);
   const previewState = useAppStore((s) => s.previewState);
@@ -32,12 +42,17 @@ export function PreviewTab() {
   );
   const previewNavigate = useAppStore((s) => s.previewNavigate);
   const previewReload = useAppStore((s) => s.previewReload);
+  const previewReloadHard = useAppStore((s) => s.previewReloadHard);
+  const previewRecents = useAppStore((s) => s.previewRecents);
   const previewBack = useAppStore((s) => s.previewBack);
   const previewForward = useAppStore((s) => s.previewForward);
   const previewOpenExternal = useAppStore((s) => s.previewOpenExternal);
   const previewOpenDevTools = useAppStore((s) => s.previewOpenDevTools);
   const setPreviewZoom = useAppStore((s) => s.setPreviewZoom);
   const clearPreviewConsole = useAppStore((s) => s.clearPreviewConsole);
+  const previewConsole = useAppStore((s) => s.previewConsole);
+  const previewConsoleOpen = useAppStore((s) => s.previewConsoleOpen);
+  const togglePreviewConsole = useAppStore((s) => s.togglePreviewConsole);
   const setPreviewViewport = useAppStore((s) => s.setPreviewViewport);
   const togglePreviewRotate = useAppStore((s) => s.togglePreviewRotate);
   const fullscreen = useAppStore((s) => s.previewFullscreen);
@@ -46,8 +61,18 @@ export function PreviewTab() {
   const pushToast = useAppStore((s) => s.pushToast);
 
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const consoleListRef = useRef<HTMLDivElement>(null);
   const [address, setAddress] = useState('');
   const [frame, setFrame] = useState<Frame>(null);
+  const [consoleErrorsOnly, setConsoleErrorsOnly] = useState(false);
+
+  const consoleMessages = useMemo(
+    () =>
+      consoleErrorsOnly
+        ? previewConsole.filter((m) => m.level === 'error' || m.level === 'warning')
+        : previewConsole,
+    [previewConsole, consoleErrorsOnly]
+  );
 
   const failed = previewState?.failed ?? null;
   const showView = Boolean(previewUrl) && !failed;
@@ -63,8 +88,9 @@ export function PreviewTab() {
     for (const definition of processes?.definitions ?? []) {
       if (definition.urlPattern) urls.add(definition.urlPattern);
     }
+    for (const recent of previewRecents) urls.add(recent);
     return [...urls];
-  }, [previewUrl, processes]);
+  }, [previewUrl, processes, previewRecents]);
 
   const applyLayout = useCallback(() => {
     const el = surfaceRef.current;
@@ -97,7 +123,14 @@ export function PreviewTab() {
 
   useLayoutEffect(() => {
     if (showView) applyLayout();
-  }, [showView, applyLayout, fullscreen]);
+  }, [showView, applyLayout, fullscreen, previewConsoleOpen]);
+
+  // Keep the console pinned to the latest output while it's open.
+  useEffect(() => {
+    if (!previewConsoleOpen) return;
+    const list = consoleListRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [consoleMessages, previewConsoleOpen]);
 
   useEffect(() => {
     // Handles F11/Escape when focus is in the app chrome. When focus is inside the embedded
@@ -167,7 +200,11 @@ export function PreviewTab() {
         >
           <ChevronIcon size={16} />
         </IconButton>
-        <IconButton label="Reload" disabled={!previewUrl} onClick={() => previewReload()}>
+        <IconButton
+          label="Reload (Shift-click to ignore cache)"
+          disabled={!previewUrl}
+          onClick={(e) => (e.shiftKey ? previewReloadHard() : previewReload())}
+        >
           <RestartIcon size={14} />
         </IconButton>
 
@@ -200,7 +237,15 @@ export function PreviewTab() {
           >
             −
           </IconButton>
-          <span className="preview-zoom__value mono">{Math.round(zoom * 100)}%</span>
+          <button
+            type="button"
+            className="preview-zoom__value mono"
+            disabled={!previewUrl}
+            title="Reset zoom to 100%"
+            onClick={() => setPreviewZoom(1)}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
           <IconButton
             label="Zoom in"
             disabled={!previewUrl}
@@ -241,13 +286,17 @@ export function PreviewTab() {
         </IconButton>
         <button
           type="button"
-          className={['preview-console-badge', consoleErrors > 0 ? 'active' : ''].join(' ')}
+          className={[
+            'preview-console-badge',
+            previewConsoleOpen ? 'is-open' : '',
+            consoleErrors > 0 ? 'active' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           disabled={!previewUrl}
-          title="Console errors — click to clear count, open DevTools for details"
-          onClick={() => {
-            previewOpenDevTools();
-            clearPreviewConsole();
-          }}
+          aria-pressed={previewConsoleOpen}
+          title="Toggle the in-app console"
+          onClick={() => togglePreviewConsole()}
         >
           Console{consoleErrors > 0 ? ` ${consoleErrors}` : ''}
         </button>
@@ -306,6 +355,53 @@ export function PreviewTab() {
           </div>
         )}
       </div>
+      {previewConsoleOpen && (
+        <div className="preview-console">
+          <div className="preview-console__header">
+            <span className="preview-console__title">Console</span>
+            <span className="preview-console__count mono">{consoleMessages.length}</span>
+            <div className="preview-console__spacer" />
+            <button
+              type="button"
+              className={['preview-console__btn', consoleErrorsOnly ? 'active' : '']
+                .filter(Boolean)
+                .join(' ')}
+              aria-pressed={consoleErrorsOnly}
+              onClick={() => setConsoleErrorsOnly((value) => !value)}
+            >
+              Errors only
+            </button>
+            <button
+              type="button"
+              className="preview-console__btn"
+              onClick={() => clearPreviewConsole()}
+            >
+              Clear
+            </button>
+            <IconButton label="Close console" onClick={() => togglePreviewConsole()}>
+              <CollapseIcon size={14} />
+            </IconButton>
+          </div>
+          <div className="preview-console__list" ref={consoleListRef}>
+            {consoleMessages.length === 0 ? (
+              <div className="preview-console__empty">No console output captured yet.</div>
+            ) : (
+              consoleMessages.map((message) => (
+                <div key={message.id} className={`preview-console__row is-${message.level}`}>
+                  <span className="preview-console__level">{message.level}</span>
+                  <span className="preview-console__text mono">{message.text}</span>
+                  {message.source ? (
+                    <span className="preview-console__source mono">
+                      {sourceLabel(message.source)}
+                      {message.line ? `:${message.line}` : ''}
+                    </span>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -55,7 +55,7 @@ export function SettingsPage() {
   const setSettingsSection = useAppStore((s) => s.setSettingsSection);
 
   return (
-    <div className="stage-inner">
+    <div className="stage-inner stage-inner--settings">
       <h1 className="page-title">Settings</h1>
       <p className="page-subtitle">Preferences are stored locally and applied instantly.</p>
       <nav className="settings-nav" aria-label="Settings sections">
@@ -546,7 +546,8 @@ function UpdateSection() {
     };
   }, []);
 
-  const checking = update.kind === 'checking' || update.kind === 'available';
+  const checking =
+    update.kind === 'checking' || update.kind === 'available' || update.kind === 'downloading';
   const description =
     update.kind === 'disabled'
       ? 'Updates are available in installed releases. Development and locally packaged builds do not check.'
@@ -554,11 +555,13 @@ function UpdateSection() {
         ? 'Checking the release channel.'
         : update.kind === 'available'
           ? 'An update is downloading in the background.'
-          : update.kind === 'downloaded'
-            ? `Version ${update.availableVersion} is ready. Restart when your work is safe to close.`
-            : update.kind === 'error'
-              ? 'The release channel could not be checked. Try again later.'
-              : 'Bureau is up to date.';
+          : update.kind === 'downloading'
+            ? `Downloading update… ${update.percent}%`
+            : update.kind === 'downloaded'
+              ? `Version ${update.availableVersion} is ready. Restart when your work is safe to close.`
+              : update.kind === 'error'
+                ? 'The release channel could not be checked. Try again later.'
+                : 'Bureau is up to date.';
 
   return (
     <div className="settings-row">

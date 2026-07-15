@@ -11,7 +11,11 @@ import type {
   ProcessStatusEvent,
   ProjectProcesses,
 } from '@shared/contracts/processes';
-import type { PreviewState } from '@shared/contracts/preview';
+import type {
+  PreviewConsoleMessage,
+  PreviewState,
+} from '@shared/contracts/preview';
+import type { AppUpdateState } from '@shared/contracts/updates';
 import type { ShutdownProcess } from '@shared/contracts/lifecycle';
 import type { GitSnapshot } from '@shared/contracts/git';
 import type {
@@ -183,8 +187,14 @@ type AppState = {
   previewViewport: ViewportPreset;
   previewRotated: boolean;
   previewFullscreen: boolean;
+  previewRecents: string[];
+  previewConsole: PreviewConsoleMessage[];
+  previewConsoleOpen: boolean;
+
+  updateState: AppUpdateState | null;
 
   paletteOpen: boolean;
+  onboardingOpen: boolean;
   contextMenu: ContextMenuState | null;
   announcements: string[];
   globalError: BureauError | null;
@@ -263,12 +273,14 @@ type AppState = {
   openUrlInPreview(url: string): void;
   previewNavigate(url: string): void;
   previewReload(): void;
+  previewReloadHard(): void;
   previewBack(): void;
   previewForward(): void;
   previewOpenExternal(): void;
   previewOpenDevTools(): void;
   setPreviewZoom(factor: number): void;
   clearPreviewConsole(): void;
+  togglePreviewConsole(): void;
   setPreviewViewport(preset: ViewportPreset): void;
   togglePreviewRotate(): void;
   togglePreviewFullscreen(): void;
@@ -277,6 +289,7 @@ type AppState = {
   openPalette(): void;
   closePalette(): void;
   togglePalette(): void;
+  completeOnboarding(): void;
   openContextMenu(menu: ContextMenuState): void;
   closeContextMenu(): void;
   updateSettings(patch: SettingsPatch): Promise<void>;
@@ -301,6 +314,8 @@ const api = () => window.bureau;
 let toastId = 0;
 let subscribed = false;
 const draftTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const workspacePersistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const workspacePersistPending = new Map<string, FilesProjectState>();
 
 function createFilesProjectState(): FilesProjectState {
   return {
@@ -336,19 +351,34 @@ function parentFilePath(relativePath: string): string {
 }
 
 function persistFilesWorkspace(projectId: string, project: FilesProjectState): void {
-  const state: FileWorkspaceState = {
+  // Coalesce the frequent workspace writes — open/close/toggle/reorder, and the
+  // burst during session restore — into a single fsync'd save. Previously each
+  // action triggered an fsync (temp file + sync + backup), serialized through
+  // the write queue, which dominated open time when restoring many tabs.
+  workspacePersistPending.set(projectId, project);
+  if (workspacePersistTimers.has(projectId)) return;
+  workspacePersistTimers.set(
     projectId,
-    openPaths: project.tabs,
-    activePath: project.activePath,
-    expandedPaths: project.expandedPaths,
-    recentPaths: project.recentPaths,
-    pinnedPaths: project.pinnedPaths,
-    modeByPath: project.modeByPath,
-    cursorByPath: project.cursorByPath,
-    explorerWidth: 280,
-    updatedAt: new Date().toISOString(),
-  };
-  void api().files.saveWorkspaceState({ state });
+    setTimeout(() => {
+      workspacePersistTimers.delete(projectId);
+      const latest = workspacePersistPending.get(projectId);
+      workspacePersistPending.delete(projectId);
+      if (!latest) return;
+      const state: FileWorkspaceState = {
+        projectId,
+        openPaths: latest.tabs,
+        activePath: latest.activePath,
+        expandedPaths: latest.expandedPaths,
+        recentPaths: latest.recentPaths,
+        pinnedPaths: latest.pinnedPaths,
+        modeByPath: latest.modeByPath,
+        cursorByPath: latest.cursorByPath,
+        explorerWidth: 280,
+        updatedAt: new Date().toISOString(),
+      };
+      void api().files.saveWorkspaceState({ state });
+    }, 400)
+  );
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -379,8 +409,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   previewViewport: 'fill',
   previewRotated: false,
   previewFullscreen: false,
+  previewRecents: [],
+  previewConsole: [],
+  previewConsoleOpen: false,
+
+  updateState: null,
 
   paletteOpen: false,
+  onboardingOpen: false,
   contextMenu: null,
   announcements: [],
   globalError: null,
@@ -401,13 +437,29 @@ export const useAppStore = create<AppState>()((set, get) => ({
         api().projects.list(),
       ]);
       applyAppearance(settings.appearance);
-      set({ capabilities, settings, projects, status: 'ready', view: 'hub' });
+      set({
+        capabilities,
+        settings,
+        projects,
+        status: 'ready',
+        view: 'hub',
+        // Show onboarding on first run and once for existing users after the
+        // update that adds it (their settings backfill completedVersion = null).
+        onboardingOpen: settings.onboarding?.completedVersion == null,
+      });
 
       if (!subscribed) {
         subscribed = true;
         api().processes.onOutput(handleOutput);
         api().processes.onStatus(handleStatus);
         api().preview.onState((previewState) => set({ previewState }));
+        api().preview.onConsole((messages) =>
+          set((s) => ({ previewConsole: [...s.previewConsole, ...messages].slice(-500) }))
+        );
+        api().app.onUpdateState((updateState) => set({ updateState }));
+        void api()
+          .app.getUpdateState()
+          .then((updateState) => set((s) => (s.updateState ? {} : { updateState })));
         api().app.onShutdownBegin(({ processes }) => {
           set({ shutdown: { items: processes.map((p) => ({ ...p, done: false })) } });
         });
@@ -733,11 +785,19 @@ export const useAppStore = create<AppState>()((set, get) => ({
         } } };
       });
 
-      const watcherResult = await watcherPromise;
-      if (!watcherResult.ok) {
-        set((s) => ({ filesByProject: { ...s.filesByProject, [projectId]: { ...(s.filesByProject[projectId] ?? createFilesProjectState()), status: 'error', loadingPhase: 'idle', error: watcherResult.error, watcherStatus: 'error' } } }));
-        return;
-      }
+      // The watcher keeps the tree fresh but must never gate the workspace: on a
+      // large repo readiness can lag, and a failure should degrade to "no live
+      // updates" rather than blank the panel. Settle its status in the background.
+      const markWatcher = (status: FilesProjectState['watcherStatus']) =>
+        set((s) => {
+          const current = s.filesByProject[projectId];
+          return current
+            ? { filesByProject: { ...s.filesByProject, [projectId]: { ...current, watcherStatus: status } } }
+            : {};
+        });
+      void watcherPromise
+        .then((watcherResult) => markWatcher(watcherResult.ok ? 'ready' : 'error'))
+        .catch(() => markWatcher('error'));
 
       const restored = get().settings?.files?.restoreSession !== false && workspaceResult.ok ? workspaceResult.state : null;
       set((s) => {
@@ -790,7 +850,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set((s) => {
         const current = s.filesByProject[projectId];
         if (!current) return {};
-        return { filesByProject: { ...s.filesByProject, [projectId]: { ...current, status: 'ready', loadingPhase: 'idle', error: null, watcherStatus: 'ready' } } };
+        // Keep whatever watcherStatus the background settle produced — don't
+        // optimistically claim 'ready' before the watcher has actually settled.
+        return { filesByProject: { ...s.filesByProject, [projectId]: { ...current, status: 'ready', loadingPhase: 'idle', error: null } } };
       });
     } catch (err) {
       const error = toError(err, 'files.initialize');
@@ -1289,17 +1351,28 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   openUrlInPreview(url) {
-    set({ projectTab: 'preview', previewUrl: url });
+    set((s) => ({
+      projectTab: 'preview',
+      previewUrl: url,
+      previewRecents: [url, ...s.previewRecents.filter((entry) => entry !== url)].slice(0, 8),
+    }));
     void api().preview.navigate({ url });
   },
 
   previewNavigate(url) {
-    set({ previewUrl: url });
+    set((s) => ({
+      previewUrl: url,
+      previewRecents: [url, ...s.previewRecents.filter((entry) => entry !== url)].slice(0, 8),
+    }));
     void api().preview.navigate({ url });
   },
 
   previewReload() {
     void api().preview.reload();
+  },
+
+  previewReloadHard() {
+    void api().preview.reloadHard();
   },
 
   previewBack() {
@@ -1324,7 +1397,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   clearPreviewConsole() {
+    set({ previewConsole: [] });
     void api().preview.clearConsole();
+  },
+
+  togglePreviewConsole() {
+    set((s) => ({ previewConsoleOpen: !s.previewConsoleOpen }));
   },
 
   setPreviewViewport(preset) {
@@ -1351,6 +1429,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
   togglePalette() {
     set((s) => ({ paletteOpen: !s.paletteOpen }));
+  },
+
+  completeOnboarding() {
+    set({ onboardingOpen: false });
+    // Stamp the running version so onboarding never re-shows (Skip and Finish
+    // both call this). updateSettings persists the flag.
+    const completedVersion = get().capabilities?.appVersion ?? '0.0.0';
+    void get().updateSettings({ onboarding: { completedVersion } });
   },
 
   openContextMenu(menu) {

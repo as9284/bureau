@@ -22,6 +22,7 @@ import { Dropdown } from '../../components/Dropdown';
 import { IconButton } from '../../components/IconButton';
 import { ResizablePanel } from '../../components/ResizablePanel';
 import { TextField } from '../../components/TextField';
+import { useModalDismiss } from '../../lib/useModalDismiss';
 import { useAppStore } from '../../store/appStore';
 import { errorHeading, toError } from '../../lib/error';
 
@@ -952,9 +953,12 @@ function StartAvdDialog({
   const [gpu, setGpu] = useState<EmulatorGpuMode>('auto');
   const [dnsServer, setDnsServer] = useState('');
   const [writableSystem, setWritableSystem] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDismiss(onCancel, dialogRef);
   return (
     <div className="overlay-root" onMouseDown={onCancel}>
       <div
+        ref={dialogRef}
         className="dialog dialog--form android-dialog"
         role="dialog"
         aria-modal="true"
@@ -1044,9 +1048,12 @@ function ConfirmDialog({
   onCancel(): void;
   onConfirm(): Promise<void>;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDismiss(onCancel, dialogRef);
   return (
     <div className="overlay-root" onMouseDown={onCancel}>
       <div
+        ref={dialogRef}
         className="dialog android-dialog"
         role="alertdialog"
         aria-modal="true"

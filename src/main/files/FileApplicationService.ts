@@ -172,22 +172,78 @@ export function createFileApplicationService(deps: FilesDependencies) {
     }
   }
 
+  // Compiled .gitignore matchers keyed by absolute path, validated by mtime so
+  // edits invalidate lazily. Re-reading and re-parsing every ancestor .gitignore
+  // for every entry, on every listing and every walk, was the dominant cost when
+  // opening the Files workspace on a large repo. A null entry is a negative
+  // cache (no .gitignore at that path).
+  const gitignoreCache = new Map<
+    string,
+    { mtimeMs: number; matcher: ReturnType<typeof ignore> } | null
+  >();
+
+  async function loadGitignoreMatcher(
+    absoluteDir: string
+  ): Promise<ReturnType<typeof ignore> | null> {
+    const gitignorePath = path.join(absoluteDir, '.gitignore');
+    try {
+      const stat = await fs.stat(gitignorePath);
+      const cached = gitignoreCache.get(gitignorePath);
+      if (cached && cached.mtimeMs === stat.mtimeMs) return cached.matcher;
+      const rules = await fs.readFile(gitignorePath, 'utf8');
+      const matcher = ignore().add(rules);
+      gitignoreCache.set(gitignorePath, { mtimeMs: stat.mtimeMs, matcher });
+      return matcher;
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        gitignoreCache.set(gitignorePath, null);
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  function invalidateGitignore(root: string, relativePath: string): void {
+    if (path.basename(relativePath) !== '.gitignore') return;
+    const parts = normalizeRelative(relativePath).split('/').filter(Boolean);
+    gitignoreCache.delete(path.join(root, ...parts));
+  }
+
   async function ignored(root: string, relativePath: string): Promise<boolean> {
     const parts = normalizeRelative(relativePath).split('/').filter(Boolean);
     if (parts.some((part) => part === '.git')) return true;
     if (parts.some((part) => CONVENTIONAL_IGNORES.has(part))) return true;
     for (let depth = 0; depth <= Math.max(0, parts.length - 1); depth += 1) {
-      const baseParts = parts.slice(0, depth);
-      const ignorePath = path.join(root, ...baseParts, '.gitignore');
-      try {
-        const rules = await fs.readFile(ignorePath, 'utf8');
+      const matcher = await loadGitignoreMatcher(path.join(root, ...parts.slice(0, depth)));
+      if (matcher) {
         const subject = parts.slice(depth).join('/');
-        if (subject && ignore().add(rules).ignores(subject)) return true;
-      } catch (error) {
-        if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+        if (subject && matcher.ignores(subject)) return true;
       }
     }
     return false;
+  }
+
+  // A per-directory predicate: load each ancestor .gitignore once (cached), then
+  // test every child in memory — instead of an async .gitignore walk per child.
+  async function directoryIgnoreFilter(
+    root: string,
+    dirRelative: string
+  ): Promise<(childName: string) => boolean> {
+    const dirParts = normalizeRelative(dirRelative).split('/').filter(Boolean);
+    const dirIgnored = dirParts.some((part) => part === '.git' || CONVENTIONAL_IGNORES.has(part));
+    const matchers: Array<{ depth: number; matcher: ReturnType<typeof ignore> }> = [];
+    for (let depth = 0; depth <= dirParts.length; depth += 1) {
+      const matcher = await loadGitignoreMatcher(path.join(root, ...dirParts.slice(0, depth)));
+      if (matcher) matchers.push({ depth, matcher });
+    }
+    return (childName: string): boolean => {
+      if (dirIgnored) return true;
+      if (childName === '.git' || CONVENTIONAL_IGNORES.has(childName)) return true;
+      for (const { depth, matcher } of matchers) {
+        if (matcher.ignores([...dirParts.slice(depth), childName].join('/'))) return true;
+      }
+      return false;
+    };
   }
 
   const imageTypes: Record<string, string> = {
@@ -268,10 +324,11 @@ export function createFileApplicationService(deps: FilesDependencies) {
     if (!resolved.ok) return resolved;
     try {
       const children = await fs.readdir(resolved.absolutePath, { withFileTypes: true });
+      const isChildIgnored = await directoryIgnoreFilter(resolved.root, resolved.relativePath);
       const entries = await Promise.all(children.map(async (child): Promise<FileEntry | null> => {
         if (child.name === '.git') return null;
         const relativePath = normalizeRelative([resolved.relativePath, child.name].filter(Boolean).join('/'));
-        const isIgnored = await ignored(resolved.root, relativePath);
+        const isIgnored = isChildIgnored(child.name);
         if (isIgnored && !input.showIgnored) return null;
         const absolute = path.join(resolved.absolutePath, child.name);
         const stat = await fs.lstat(absolute);
@@ -562,9 +619,22 @@ export function createFileApplicationService(deps: FilesDependencies) {
       settled: false,
     };
     watcherReadiness.set(input.projectId, readiness);
+    // Prune the initial recursive scan with the project's root .gitignore (plus
+    // the conventional set) so heavy ignored trees — node_modules, .venv,
+    // __pycache__, bin/obj, build output — are never walked or watched. Without
+    // this the watcher walks the entire tree and blocks the workspace on ready.
+    const rootIgnore = await loadGitignoreMatcher(rootResult.root).catch(() => null);
+    const scanIgnored = (candidate: string): boolean => {
+      if (path.basename(candidate) === '.git') return true;
+      const relative = path.relative(rootResult.root, candidate);
+      if (!relative || relative.startsWith('..')) return false;
+      const segments = relative.split(path.sep);
+      if (segments.some((part) => CONVENTIONAL_IGNORES.has(part))) return true;
+      return Boolean(rootIgnore && rootIgnore.ignores(segments.join('/')));
+    };
     let watcher: FSWatcher;
     try {
-      watcher = chokidar.watch(rootResult.root, { followSymlinks: false, ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 }, ignored: (candidate) => path.basename(candidate) === '.git' || candidate.split(path.sep).some((part) => CONVENTIONAL_IGNORES.has(part)) });
+      watcher = chokidar.watch(rootResult.root, { followSymlinks: false, ignoreInitial: true, awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 }, ignored: scanIgnored });
     } catch {
       watcherReadiness.delete(input.projectId);
       return failure('COMMAND_FAILED', 'File watching could not be initialized.', 'files.watchProject', input.projectId, true);
@@ -572,6 +642,7 @@ export function createFileApplicationService(deps: FilesDependencies) {
     const emit = async (type: FileSystemEvent['type'], absolutePath: string, isDirectory: boolean) => {
       const relativePath = normalizeRelative(path.relative(rootResult.root, absolutePath));
       if (!relativePath || relativePath.split('/').includes('.git')) return;
+      invalidateGitignore(rootResult.root, relativePath);
       if (await ignored(rootResult.root, relativePath)) return;
       queueWatcherEvent({ projectId: input.projectId, type, relativePath, isDirectory, occurredAt: new Date().toISOString() });
     };

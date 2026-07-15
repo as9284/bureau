@@ -58,6 +58,18 @@ describe('validateSettings', () => {
       paneWidths: { files: 340, commit: 280, filesExplorer: 280 },
     });
   });
+
+  it('backfills onboarding.completedVersion=null for existing settings files', () => {
+    // A pre-onboarding settings file has no `onboarding` section; the lenient
+    // merge must supply the default so onboarding shows once for existing users.
+    const settings = validateSettings({ appearance: { theme: 'light' } });
+    expect(settings.onboarding).toEqual({ completedVersion: null });
+  });
+
+  it('preserves a stamped onboarding version', () => {
+    const settings = validateSettings({ onboarding: { completedVersion: '1.0.4' } });
+    expect(settings.onboarding.completedVersion).toBe('1.0.4');
+  });
 });
 
 describe('settingsPatchSchema', () => {

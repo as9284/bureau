@@ -60,6 +60,9 @@ describe('UpdateService', () => {
     fake.emit('update-available');
     expect(service.getState()).toEqual({ kind: 'available', currentVersion: '1.0.0' });
 
+    fake.emit('download-progress', { percent: 42.7 });
+    expect(service.getState()).toEqual({ kind: 'downloading', currentVersion: '1.0.0', percent: 43 });
+
     expect(service.quitAndInstall()).toBe(false);
     fake.emit('update-downloaded', { version: '1.0.1' });
 

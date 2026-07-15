@@ -218,6 +218,10 @@ export function registerHandlers(
     services.preview.reload();
   });
 
+  register(IPC_CHANNELS.PREVIEW_RELOAD_HARD, 'preview.reloadHard', async () => {
+    services.preview.reloadHard();
+  });
+
   register(IPC_CHANNELS.PREVIEW_BACK, 'preview.back', async () => {
     services.preview.back();
   });

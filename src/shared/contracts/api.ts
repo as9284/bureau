@@ -18,6 +18,7 @@ import type { OkResult, Result } from './errors';
 import type {
   PreviewBounds,
   PreviewHotkey,
+  PreviewConsoleMessage,
   PreviewNavigateRequest,
   PreviewOpenExternalRequest,
   PreviewSetVisibleRequest,
@@ -168,6 +169,7 @@ export type BureauApiV1 = {
     setBounds(bounds: PreviewBounds): Promise<void>;
     navigate(input: PreviewNavigateRequest): Promise<void>;
     reload(): Promise<void>;
+    reloadHard(): Promise<void>;
     back(): Promise<void>;
     forward(): Promise<void>;
     setVisible(input: PreviewSetVisibleRequest): Promise<void>;
@@ -177,6 +179,7 @@ export type BureauApiV1 = {
     clearConsole(): Promise<void>;
     onState(listener: (state: PreviewState) => void): Unsubscribe;
     onHotkey(listener: (hotkey: PreviewHotkey) => void): Unsubscribe;
+    onConsole(listener: (messages: PreviewConsoleMessage[]) => void): Unsubscribe;
   };
   system: {
     chooseDirectory(input: ChooseDirectoryRequest): Promise<ChooseDirectoryResult>;

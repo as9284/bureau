@@ -44,6 +44,17 @@
   color: var(--color-text-on-accent);
 }
 
+.sg-checkbox--described {
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-2);
+  text-align: left;
+}
+
+.sg-checkbox--described .sg-checkbox__box {
+  margin-top: var(--space-1);
+}
+
 .sg-checkbox[aria-checked='true'] .sg-checkbox__box {
   border-color: var(--color-accent-primary);
   background-color: var(--color-accent-primary);
@@ -59,6 +70,33 @@
   stroke-linejoin: round;
 }
 
+.sg-checkbox__copy {
+  min-width: 0;
+}
+
 .sg-checkbox__label {
   white-space: nowrap;
+}
+
+.sg-checkbox--described .sg-checkbox__copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.sg-checkbox--described .sg-checkbox__label {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  white-space: normal;
+}
+
+.sg-checkbox__description {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-supporting);
+}
+
+.sg-checkbox--danger .sg-checkbox__label {
+  color: var(--color-status-danger);
 }

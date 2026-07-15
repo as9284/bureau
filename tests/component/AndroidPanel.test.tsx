@@ -143,6 +143,7 @@ beforeEach(() => {
   },
   commit: { defaultSignOff: false, signingPreference: 'off' },
   hub: { defaultSort: 'attention', recentCount: 8 },
+  onboarding: { completedVersion: '1.0.0' },
     },
   });
 });
@@ -186,6 +187,16 @@ describe('AndroidPanel', () => {
     expect(screen.getByRole('dialog', { name: 'Start Pixel_8' })).toHaveClass('dialog--form');
     await user.click(screen.getByRole('checkbox', { name: /Wipe data/ }));
     expect(screen.getByRole('button', { name: 'Wipe and start' })).toBeInTheDocument();
+  });
+
+  it('closes the AVD launch dialog on Escape', async () => {
+    const user = userEvent.setup();
+    render(<AndroidPanel projectId={projectId} />);
+    await screen.findByText('Pixel_8');
+    await user.click(screen.getByRole('button', { name: 'Start Pixel_8' }));
+    expect(screen.getByRole('dialog', { name: 'Start Pixel_8' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Start Pixel_8' })).not.toBeInTheDocument();
   });
 
   it('requires a destructive confirmation before uninstalling a package', async () => {

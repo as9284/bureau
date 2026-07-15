@@ -283,7 +283,7 @@
 .android-options > label:not(.control-checkbox) {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   color: var(--color-text-muted);
   font-size: 10px;
 }

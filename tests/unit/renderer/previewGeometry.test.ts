@@ -14,6 +14,7 @@ describe('normalizeLoopback', () => {
   });
 });
 
+// Framed device sizing intentionally remains renderer-only.
 describe('computeBounds', () => {
   const rect = { left: 100, top: 40, width: 1000, height: 800 };
 
@@ -23,15 +24,20 @@ describe('computeBounds', () => {
 
   it('centers a device viewport within the container', () => {
     const bounds = computeBounds(rect, 'mobile', false);
-    expect(bounds.width).toBe(375);
-    expect(bounds.height).toBe(800); // clamped to container height (812 > 800)
-    expect(bounds.x).toBe(Math.round(100 + (1000 - 375) / 2)); // 412.5 → 413
+    expect(bounds.width).toBe(390);
+    expect(bounds.height).toBe(800); // clamped to container height (844 > 800)
+    expect(bounds.x).toBe(Math.round(100 + (1000 - 390) / 2));
   });
 
   it('swaps dimensions when rotated', () => {
     const bounds = computeBounds(rect, 'mobile', true);
-    expect(bounds.width).toBe(812);
-    expect(bounds.height).toBe(375);
+    expect(bounds.width).toBe(844); // landscape long edge fits the 1000-wide container
+    expect(bounds.height).toBe(390);
+  });
+
+  it('keeps device framing in the renderer-only fallback', () => {
+    const bounds = computeBounds({ left: 0, top: 0, width: 1440, height: 1000 }, 'tablet', false);
+    expect(bounds).toEqual({ x: 310, y: 0, width: 820, height: 1000 });
   });
 
   it('always returns integer bounds (setBounds IPC rejects floats)', () => {

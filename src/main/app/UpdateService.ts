@@ -75,6 +75,10 @@ export function createUpdateService(
     updater.on('checking-for-update', () => publish({ kind: 'checking', currentVersion }));
     updater.on('update-available', () => publish({ kind: 'available', currentVersion }));
     updater.on('update-not-available', setReady);
+    updater.on('download-progress', (progress) => {
+      const raw = typeof progress?.percent === 'number' ? progress.percent : 0;
+      publish({ kind: 'downloading', currentVersion, percent: Math.max(0, Math.min(100, Math.round(raw))) });
+    });
     updater.on('update-downloaded', (info) => {
       publish({ kind: 'downloaded', currentVersion, availableVersion: info.version });
     });
@@ -88,7 +92,13 @@ export function createUpdateService(
     start,
     getState: () => state,
     checkForUpdates: () => {
-      if (!started || state.kind === 'disabled' || state.kind === 'downloaded') return state;
+      if (
+        !started ||
+        state.kind === 'disabled' ||
+        state.kind === 'downloading' ||
+        state.kind === 'downloaded'
+      )
+        return state;
       check();
       return state;
     },

@@ -138,7 +138,13 @@ export function MarkdownReader({ projectId, relativePath, source, allowRawHtml =
     ? [rehypeRaw, [rehypeSanitize, sanitizeSchema], [rehypeKatex, { trust: false, strict: 'ignore' }], rehypeSlug]
     : [[rehypeSanitize, sanitizeSchema], [rehypeKatex, { trust: false, strict: 'ignore' }], rehypeSlug];
 
-  useEffect(() => { if (rootRef.current) onRenderedHtml?.(rootRef.current.outerHTML); });
+  // Only re-serialize the rendered document when its inputs change — not on
+  // every render. Without deps this fired after every render (including the
+  // setRenderedHtml it triggers), serializing the whole subtree's outerHTML in
+  // a self-perpetuating loop.
+  useEffect(() => {
+    if (rootRef.current) onRenderedHtml?.(rootRef.current.outerHTML);
+  }, [source, allowRawHtml, remoteImages, onRenderedHtml]);
   useEffect(() => {
     const scroller = rootRef.current?.parentElement;
     if (!scroller || !onProgress) return;

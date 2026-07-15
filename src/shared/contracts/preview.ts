@@ -1,5 +1,17 @@
 export type PreviewLoadError = { code: number; description: string };
 
+export type PreviewConsoleLevel = 'debug' | 'info' | 'warning' | 'error';
+
+/** A single console message forwarded from the preview page for the in-app console. */
+export type PreviewConsoleMessage = {
+  id: number;
+  level: PreviewConsoleLevel;
+  text: string;
+  source: string;
+  line: number;
+  at: string;
+};
+
 export type PreviewState = {
   currentUrl: string | null;
   loading: boolean;

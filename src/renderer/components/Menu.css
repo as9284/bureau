@@ -5,7 +5,7 @@
 
 .sg-menu__panel {
   position: fixed;
-  z-index: var(--z-dropdown);
+  z-index: var(--z-popover);
   min-width: 180px;
   padding: var(--space-1);
   border-radius: var(--radius-overlay);

@@ -106,6 +106,7 @@ function applyPatch(current: SettingsFileV1, patch: SettingsPatch): SettingsFile
   if (patch.android) next.android = { ...current.android, ...patch.android };
   if (patch.toolchains) next.toolchains = { ...current.toolchains, ...patch.toolchains };
   if (patch.files) next.files = { ...current.files, ...patch.files };
+  if (patch.onboarding) next.onboarding = { ...current.onboarding, ...patch.onboarding };
 
   return validateSettings(next);
 }

@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { Button } from '../../components/Button';
 import { StackBadge } from '../../components/StackBadge';
+import { useModalDismiss } from '../../lib/useModalDismiss';
 
 export function AddProjectDialog() {
   const open = useAppStore((s) => s.addDialogOpen);
@@ -8,6 +10,8 @@ export function AddProjectDialog() {
   const busy = useAppStore((s) => s.addBusy);
   const confirm = useAppStore((s) => s.confirmAddProject);
   const cancel = useAppStore((s) => s.cancelAddDialog);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDismiss(cancel, dialogRef, open && Boolean(detection));
 
   if (!open || !detection) return null;
 
@@ -16,6 +20,7 @@ export function AddProjectDialog() {
   return (
     <div className="overlay-root" onMouseDown={cancel}>
       <div
+        ref={dialogRef}
         className="dialog"
         role="dialog"
         aria-modal="true"

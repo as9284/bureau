@@ -7,6 +7,8 @@ import { TitleBar } from './TitleBar';
 import { CommandPalette } from './CommandPalette';
 import { LiveRegion } from '../components/LiveRegion';
 import { ToastStack } from '../components/ToastStack';
+import { UpdateNotifier } from '../components/UpdateNotifier';
+import { OnboardingOverlay } from '../components/OnboardingOverlay';
 import { ContextMenu } from '../components/ContextMenu';
 import { ContextMenuProvider as GitContextMenuProvider } from '../components/GitContextMenu';
 import { ShutdownOverlay } from '../components/ShutdownOverlay';
@@ -97,10 +99,12 @@ export function WorkbenchShell() {
         <PublishToGitHubDialog />
         <OperationsDrawer />
         <ToastStack />
+        <UpdateNotifier />
         <ContextMenu />
         <QuitConfirmDialog />
         <ProjectRemoveDialog />
         <ShutdownOverlay />
+        <OnboardingOverlay />
         <LiveRegion />
       </div>
     </GitContextMenuProvider>

@@ -3,8 +3,8 @@ import type { ViewportPreset } from '../store/appStore';
 
 export const VIEWPORTS: Record<ViewportPreset, { w: number; h: number } | null> = {
   fill: null,
-  mobile: { w: 375, h: 812 },
-  tablet: { w: 768, h: 1024 },
+  mobile: { w: 390, h: 844 },
+  tablet: { w: 820, h: 1180 },
   desktop: { w: 1280, h: 800 },
 };
 

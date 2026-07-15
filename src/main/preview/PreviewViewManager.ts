@@ -1,7 +1,20 @@
-import { WebContentsView, session, shell, type BrowserWindow } from 'electron';
-import type { PreviewBounds, PreviewHotkey, PreviewState } from '@shared/contracts/preview';
+import {
+  WebContentsView,
+  session,
+  shell,
+  type BrowserWindow,
+} from 'electron';
+import type {
+  PreviewBounds,
+  PreviewConsoleLevel,
+  PreviewConsoleMessage,
+  PreviewHotkey,
+  PreviewState,
+} from '@shared/contracts/preview';
 
-const PARTITION = 'bureau:preview';
+// One app-owned browser profile shared by every local preview. The `persist:`
+// prefix retains cookies, local storage, IndexedDB, and cache across restarts.
+const PARTITION = 'persist:bureau:preview';
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]', '::1']);
 
 function isLoopback(url: string): boolean {
@@ -21,6 +34,7 @@ export type PreviewViewManager = {
   setBounds(bounds: PreviewBounds): void;
   navigate(url: string): void;
   reload(): void;
+  reloadHard(): void;
   back(): void;
   forward(): void;
   setVisible(visible: boolean): void;
@@ -30,8 +44,17 @@ export type PreviewViewManager = {
   clearConsoleErrors(): void;
   onState(listener: (state: PreviewState) => void): () => void;
   onHotkey(listener: (hotkey: PreviewHotkey) => void): () => void;
+  onConsole(listener: (messages: PreviewConsoleMessage[]) => void): () => void;
   destroy(): void;
 };
+
+const CONSOLE_LEVELS = new Set<PreviewConsoleLevel>(['debug', 'info', 'warning', 'error']);
+
+function toConsoleLevel(level: unknown): PreviewConsoleLevel {
+  return typeof level === 'string' && CONSOLE_LEVELS.has(level as PreviewConsoleLevel)
+    ? (level as PreviewConsoleLevel)
+    : 'info';
+}
 
 export function createPreviewViewManager(): PreviewViewManager {
   let window: BrowserWindow | undefined;
@@ -42,6 +65,18 @@ export function createPreviewViewManager(): PreviewViewManager {
   let consoleErrorCount = 0;
   const listeners = new Set<(state: PreviewState) => void>();
   const hotkeyListeners = new Set<(hotkey: PreviewHotkey) => void>();
+  const consoleListeners = new Set<(messages: PreviewConsoleMessage[]) => void>();
+  let consoleQueue: PreviewConsoleMessage[] = [];
+  let consoleTimer: ReturnType<typeof setTimeout> | undefined;
+  let consoleSeq = 0;
+
+  function flushConsole(): void {
+    consoleTimer = undefined;
+    if (consoleQueue.length === 0) return;
+    const batch = consoleQueue;
+    consoleQueue = [];
+    for (const listener of consoleListeners) listener(batch);
+  }
 
   function emitHotkey(hotkey: PreviewHotkey): void {
     for (const listener of hotkeyListeners) listener(hotkey);
@@ -103,10 +138,21 @@ export function createPreviewViewManager(): PreviewViewManager {
     });
     wc.on('console-message', (event) => {
       // New event-object API (the positional-args form was deprecated in Electron 36).
-      if (event.level === 'warning' || event.level === 'error') {
+      const level = toConsoleLevel(event.level);
+      if (level === 'warning' || level === 'error') {
         consoleErrorCount += 1;
         emit();
       }
+      consoleQueue.push({
+        id: (consoleSeq += 1),
+        level,
+        text: event.message ?? '',
+        source: event.sourceId ?? '',
+        line: typeof event.lineNumber === 'number' ? event.lineNumber : 0,
+        at: new Date().toISOString(),
+      });
+      if (consoleQueue.length > 200) consoleQueue = consoleQueue.slice(-200);
+      if (!consoleTimer) consoleTimer = setTimeout(flushConsole, 120);
     });
     // The view holds keyboard focus once the page is interacted with, so F11/Escape never
     // reach the renderer. Capture them here and forward so fullscreen is always escapable.
@@ -154,6 +200,11 @@ export function createPreviewViewManager(): PreviewViewManager {
     reload() {
       failed = null;
       view?.webContents.reload();
+    },
+
+    reloadHard() {
+      failed = null;
+      view?.webContents.reloadIgnoringCache();
     },
 
     back() {
@@ -204,7 +255,17 @@ export function createPreviewViewManager(): PreviewViewManager {
       return () => hotkeyListeners.delete(listener);
     },
 
+    onConsole(listener) {
+      consoleListeners.add(listener);
+      return () => consoleListeners.delete(listener);
+    },
+
     destroy() {
+      if (consoleTimer) {
+        clearTimeout(consoleTimer);
+        consoleTimer = undefined;
+      }
+      consoleQueue = [];
       if (view && window) {
         window.contentView.removeChildView(view);
         view.webContents.close();

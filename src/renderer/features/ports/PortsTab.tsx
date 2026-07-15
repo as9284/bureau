@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { Button } from '../../components/Button';
 import { Dropdown } from '../../components/Dropdown';
 import { IconButton } from '../../components/IconButton';
 import { StopIcon } from '../../components/icons';
+import { useModalDismiss } from '../../lib/useModalDismiss';
 import type { ListeningPort, PortOwner } from '@shared/contracts/ports';
 
 type SortKey = 'status' | 'port' | 'owner';
@@ -99,6 +100,8 @@ export function PortsTab({ projectId }: { projectId: string }) {
   const killPort = useAppStore((s) => s.killPort);
   const [confirm, setConfirm] = useState<{ pid: number; port: number } | null>(null);
   const [sort, setSort] = useState<SortKey>('status');
+  const killDialogRef = useRef<HTMLDivElement>(null);
+  useModalDismiss(() => setConfirm(null), killDialogRef, Boolean(confirm));
 
   if (!ports) {
     return <div className="tab-loading">Loading…</div>;
@@ -172,6 +175,7 @@ export function PortsTab({ projectId }: { projectId: string }) {
       {confirm && (
         <div className="overlay-root" onMouseDown={() => setConfirm(null)}>
           <div
+            ref={killDialogRef}
             className="dialog"
             role="dialog"
             aria-modal="true"

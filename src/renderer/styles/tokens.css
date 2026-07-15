@@ -143,6 +143,9 @@
   --z-command-palette: 400;
   --z-dialog: 500;
   --z-app-chrome: 550;
+  /* Transient menus/popovers portalled to <body> sit above dialogs so they are
+     never occluded by a modal scrim (see Dropdown/Select/Menu). */
+  --z-popover: 600;
 
   /* Layout */
   --layout-titlebar-height: var(--size-titlebar);

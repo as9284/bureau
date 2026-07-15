@@ -31,6 +31,12 @@ const RULES = [
     re: /webviewTag\s*:\s*true|allowpopups/i,
     message: 'Do not enable <webview> / allowpopups. Use WebContentsView with a hardened session.',
   },
+  {
+    id: 'UNSAFE-PREVIEW-EMULATION',
+    re: /\b(?:enable|disable)DeviceEmulation\s*\(/,
+    message:
+      'Do not call Chromium device emulation from the sandboxed preview WebContentsView; it crashes Electron 36 on Windows. Keep viewport sizing in previewGeometry instead.',
+  },
 ];
 
 /** @param {string} dir */

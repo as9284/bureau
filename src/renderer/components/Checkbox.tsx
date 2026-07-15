@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useId, type ReactElement, type ReactNode } from 'react';
 import './Checkbox.css';
 
 type CheckboxProps = {
@@ -9,7 +9,7 @@ type CheckboxProps = {
   onChange?: (checked: boolean) => void;
   label: ReactNode;
   description?: ReactNode;
-  tone?: string;
+  tone?: 'danger';
   disabled?: boolean;
   className?: string;
 };
@@ -21,9 +21,13 @@ export function Checkbox({
   onChange,
   label,
   description,
+  tone,
   disabled = false,
   className,
 }: CheckboxProps): ReactElement {
+  const labelId = useId();
+  const descriptionId = useId();
+
   function toggle(): void {
     const next = !checked;
     onCheckedChange?.(next);
@@ -31,13 +35,29 @@ export function Checkbox({
   }
 
   return (
-    <div className={['checkbox-row', className].filter(Boolean).join(' ')}>
+    <div
+      className={[
+        'checkbox-row',
+        description ? 'checkbox-row--described' : undefined,
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <button
         type="button"
         role="checkbox"
         aria-checked={checked}
+        aria-labelledby={labelId}
+        aria-describedby={description ? descriptionId : undefined}
         disabled={disabled}
-        className="sg-checkbox"
+        className={[
+          'sg-checkbox',
+          description ? 'sg-checkbox--described' : undefined,
+          tone ? `sg-checkbox--${tone}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={toggle}
       >
         <span className="sg-checkbox__box" aria-hidden="true">
@@ -47,9 +67,17 @@ export function Checkbox({
             </svg>
           ) : null}
         </span>
-        <span className="sg-checkbox__label">{label}</span>
+        <span className="sg-checkbox__copy">
+          <span id={labelId} className="sg-checkbox__label">
+            {label}
+          </span>
+          {description ? (
+            <span id={descriptionId} className="sg-checkbox__description">
+              {description}
+            </span>
+          ) : null}
+        </span>
       </button>
-      {description ? <span className="checkbox-row__desc">{description}</span> : null}
     </div>
   );
 }
