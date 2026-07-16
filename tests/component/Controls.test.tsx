@@ -5,6 +5,7 @@ import { Checkbox } from '@renderer/components/Checkbox';
 import { Dropdown } from '@renderer/components/Dropdown';
 import { Select } from '@renderer/components/Select';
 import { TextField } from '@renderer/components/TextField';
+import { TextInput } from '@renderer/components/TextInput';
 
 afterEach(cleanup);
 
@@ -91,5 +92,18 @@ describe('shared form controls', () => {
     await user.click(screen.getByText('Ignore the saved snapshot.'));
     expect(onChecked).toHaveBeenCalledWith(true);
     expect(screen.getByRole('textbox', { name: 'Package' })).toHaveValue('com.example.app');
+  });
+
+  it('renders a TextInput label as a real field label, or as an accessible name only', () => {
+    // The label used to be hidden with an undefined class, so it rendered as stray
+    // text above every field. Visible labels are now the default and opt-out is explicit.
+    const { rerender } = render(<TextInput label="Remote name" placeholder="origin" />);
+    const labelled = screen.getByRole('textbox', { name: 'Remote name' });
+    expect(labelled).toHaveAccessibleName('Remote name');
+    expect(screen.getByText('Remote name')).toHaveClass('sg-text-input__label');
+
+    rerender(<TextInput label="Search branches" hideLabel placeholder="Search…" />);
+    expect(screen.getByRole('textbox', { name: 'Search branches' })).toBeInTheDocument();
+    expect(screen.queryByText('Search branches')).not.toBeInTheDocument();
   });
 });

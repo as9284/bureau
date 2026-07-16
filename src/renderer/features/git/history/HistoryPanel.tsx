@@ -336,6 +336,7 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
           <p className="history-panel__header-hint">Select a commit to inspect its file changes.</p>
           <TextInput
             label="Filter commits"
+            hideLabel
             value={filterDraft}
             onChange={(e) => setFilterDraft(e.target.value)}
             placeholder="Filter by subject…"

@@ -176,27 +176,30 @@ export function StashPanel({ projectId, snapshot, readOnly }: Props): ReactEleme
         <header className="stash-panel__header">
           <h2>Stashes</h2>
           <div className="stash-panel__actions">
-            {!readOnly && revision ? (
-              <>
-                <Checkbox
-                  checked={includeUntracked}
-                  onCheckedChange={setIncludeUntracked}
-                  label="Include untracked"
-                />
-                <Button
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => stashPush(projectId, revision, undefined, includeUntracked)}
-                >
-                  Stash changes
-                </Button>
-              </>
-            ) : null}
             <Button variant="ghost" onClick={() => loadStash(projectId)}>
               Refresh
             </Button>
           </div>
         </header>
+
+        {/* The push controls are their own toolbar row: the pane is one narrow
+            column beside the diff, too tight to share a line with the title. */}
+        {!readOnly && revision ? (
+          <div className="stash-panel__create">
+            <Checkbox
+              checked={includeUntracked}
+              onCheckedChange={setIncludeUntracked}
+              label="Include untracked"
+            />
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => stashPush(projectId, revision, undefined, includeUntracked)}
+            >
+              Stash changes
+            </Button>
+          </div>
+        ) : null}
 
         {stashError ? (
           <PanelError

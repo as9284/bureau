@@ -169,6 +169,7 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
         <div className="branches-panel__header-actions">
           <TextInput
             label="Search branches"
+            hideLabel
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
@@ -184,9 +185,11 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
         <div className="branches-panel__create">
           <TextInput
             label="New branch name"
+            hideLabel
             value={newBranchName}
             onChange={(e) => setNewBranchName(e.target.value)}
             placeholder="feature/my-branch"
+            className="branches-panel__create-input"
           />
           <Button
             variant="primary"
@@ -201,111 +204,113 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
         </div>
       ) : null}
 
-      {branchesError ? (
-        <PanelError
-          title="Could not load branches"
-          message={branchesError.message}
-          onRetry={() => void loadBranches(projectId)}
-        />
-      ) : null}
-
-      {/* Skeletons only when there is nothing to show. A refresh over an existing
-          list marks it stale instead of wiping it back to placeholders. */}
-      {branchesLoading && branchDetails.length === 0 ? (
-        <div className="branches-panel__loading">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height="var(--size-list-row)" />
-          ))}
-        </div>
-      ) : localBranches.length === 0 && remoteBranches.length === 0 ? (
-        branchesError ? null : (
-          <EmptyState
-            title={search ? 'No matching branches' : 'No branches'}
-            description={search ? 'Try a different search term.' : undefined}
+      <div className="branches-panel__body">
+        {branchesError ? (
+          <PanelError
+            title="Could not load branches"
+            message={branchesError.message}
+            onRetry={() => void loadBranches(projectId)}
           />
-        )
-      ) : (
-        <div className={branchesLoading ? 'git-stale' : undefined} aria-busy={branchesLoading}>
-          {localBranches.length > 0 ? (
-            <div className="branches-panel__section">
-              <h3 className="branches-panel__section-title">Local</h3>
-              <ul className="branches-panel__list">
-                {localBranches.map((branch) => (
-                  <BranchRow
-                    key={branch.ref}
-                    projectId={projectId}
-                    branch={branch}
-                    revision={revision}
-                    readOnly={readOnly}
-                    busy={busy}
-                    onCheckout={() => handleCheckout(branch)}
-                    onDeleteLocal={() => {
-                      if (!confirmDeleteLocal && revision) {
-                        deleteBranch(projectId, revision, branch.shortName);
-                        return;
-                      }
-                      setDeleteLocalTarget(branch);
-                    }}
-                    onDeleteRemote={() => undefined}
-                    onRename={() => {
-                      setRenameTarget(branch);
-                      setRenameValue(branch.shortName);
-                    }}
-                    onSetUpstream={() => {
-                      setUpstreamTarget(branch);
-                      setUpstreamValue(branch.upstreamRef ?? '');
-                    }}
-                    onUnsetUpstream={() => revision && setUpstream(projectId, revision, null)}
-                    onPublish={() => {
-                      if (branch.current) {
-                        setGitHubPublishRepoId(projectId);
-                        return;
-                      }
-                      setPublishTarget(branch);
-                      setPublishRemoteName(branch.remoteName ?? 'origin');
-                      setPublishRemoteUrl('');
-                    }}
-                  />
-                ))}
-              </ul>
-            </div>
-          ) : null}
+        ) : null}
 
-          {remoteBranches.length > 0 ? (
-            <div className="branches-panel__section">
-              <h3 className="branches-panel__section-title">Remote</h3>
-              <ul className="branches-panel__list">
-                {remoteBranches.map((branch) => (
-                  <BranchRow
-                    key={branch.ref}
-                    projectId={projectId}
-                    branch={branch}
-                    revision={revision}
-                    readOnly={readOnly}
-                    busy={busy}
-                    onCheckout={() => handleCheckout(branch)}
-                    onDeleteLocal={() => undefined}
-                    onDeleteRemote={() => {
-                      if (!confirmDeleteRemote && revision && branch.remoteName) {
-                        const name = branch.shortName.includes('/')
-                          ? branch.shortName.split('/').slice(1).join('/')
-                          : branch.shortName;
-                        deleteRemoteBranch(projectId, revision, branch.remoteName, name);
-                        return;
-                      }
-                      setDeleteRemoteTarget(branch);
-                    }}
-                    onRename={() => undefined}
-                    onSetUpstream={() => undefined}
-                    onUnsetUpstream={() => undefined}
-                    onPublish={() => undefined}
-                  />
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      )}
+        {/* Skeletons only when there is nothing to show. A refresh over an existing
+          list marks it stale instead of wiping it back to placeholders. */}
+        {branchesLoading && branchDetails.length === 0 ? (
+          <div className="branches-panel__loading">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} width="100%" height="var(--size-list-row)" />
+            ))}
+          </div>
+        ) : localBranches.length === 0 && remoteBranches.length === 0 ? (
+          branchesError ? null : (
+            <EmptyState
+              title={search ? 'No matching branches' : 'No branches'}
+              description={search ? 'Try a different search term.' : undefined}
+            />
+          )
+        ) : (
+          <div className={branchesLoading ? 'git-stale' : undefined} aria-busy={branchesLoading}>
+            {localBranches.length > 0 ? (
+              <div className="branches-panel__section">
+                <h3 className="branches-panel__section-title">Local</h3>
+                <ul className="branches-panel__list">
+                  {localBranches.map((branch) => (
+                    <BranchRow
+                      key={branch.ref}
+                      projectId={projectId}
+                      branch={branch}
+                      revision={revision}
+                      readOnly={readOnly}
+                      busy={busy}
+                      onCheckout={() => handleCheckout(branch)}
+                      onDeleteLocal={() => {
+                        if (!confirmDeleteLocal && revision) {
+                          deleteBranch(projectId, revision, branch.shortName);
+                          return;
+                        }
+                        setDeleteLocalTarget(branch);
+                      }}
+                      onDeleteRemote={() => undefined}
+                      onRename={() => {
+                        setRenameTarget(branch);
+                        setRenameValue(branch.shortName);
+                      }}
+                      onSetUpstream={() => {
+                        setUpstreamTarget(branch);
+                        setUpstreamValue(branch.upstreamRef ?? '');
+                      }}
+                      onUnsetUpstream={() => revision && setUpstream(projectId, revision, null)}
+                      onPublish={() => {
+                        if (branch.current) {
+                          setGitHubPublishRepoId(projectId);
+                          return;
+                        }
+                        setPublishTarget(branch);
+                        setPublishRemoteName(branch.remoteName ?? 'origin');
+                        setPublishRemoteUrl('');
+                      }}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {remoteBranches.length > 0 ? (
+              <div className="branches-panel__section">
+                <h3 className="branches-panel__section-title">Remote</h3>
+                <ul className="branches-panel__list">
+                  {remoteBranches.map((branch) => (
+                    <BranchRow
+                      key={branch.ref}
+                      projectId={projectId}
+                      branch={branch}
+                      revision={revision}
+                      readOnly={readOnly}
+                      busy={busy}
+                      onCheckout={() => handleCheckout(branch)}
+                      onDeleteLocal={() => undefined}
+                      onDeleteRemote={() => {
+                        if (!confirmDeleteRemote && revision && branch.remoteName) {
+                          const name = branch.shortName.includes('/')
+                            ? branch.shortName.split('/').slice(1).join('/')
+                            : branch.shortName;
+                          deleteRemoteBranch(projectId, revision, branch.remoteName, name);
+                          return;
+                        }
+                        setDeleteRemoteTarget(branch);
+                      }}
+                      onRename={() => undefined}
+                      onSetUpstream={() => undefined}
+                      onUnsetUpstream={() => undefined}
+                      onPublish={() => undefined}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
 
       <Dialog
         open={Boolean(publishTarget)}

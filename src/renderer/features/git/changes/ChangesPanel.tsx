@@ -372,6 +372,7 @@ export function ChangesPanel({ projectId, snapshot, readOnly }: Props): ReactEle
           ref={discardAllInputRef}
           id="discard-all-confirm"
           label={`Type ${DISCARD_ALL_CONFIRM_PHRASE} to confirm`}
+          hideLabel
           value={discardAllPhrase}
           autoComplete="off"
           spellCheck={false}
