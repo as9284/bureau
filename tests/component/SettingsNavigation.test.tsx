@@ -55,6 +55,9 @@ const CAPABILITIES: AppCapabilities = {
   terminalAvailable: true,
   availableEditors: ['vscode', 'cursor'],
   availableTerminals: ['powershell'],
+  availableShells: [
+    { id: 'powershell', label: 'Windows PowerShell', executable: 'powershell.exe' },
+  ],
   editor: { kind: 'none' },
   terminal: { kind: 'auto' },
   android: {

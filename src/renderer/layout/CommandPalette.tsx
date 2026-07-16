@@ -284,6 +284,12 @@ export function CommandPalette() {
       ...(selectedProjectId
         ? [
             {
+              id: 'open-terminal',
+              title: 'Open Terminal',
+              hint: 'Terminal',
+              run: () => setProjectTab('terminal' as const),
+            },
+            {
               id: 'open-toolchains',
               title: 'Open Toolchains',
               hint: 'Toolchains',

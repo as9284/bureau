@@ -4,6 +4,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import type { TerminalLauncher } from '../system/TerminalLauncher';
 import { listAvailableEditorPresets } from '../system/EditorLauncher';
 import { listAvailableTerminalPresets } from '../system/TerminalLauncher';
+import type { ShellRegistry } from '../terminal/ShellRegistry';
 import type { SdkResolver } from '../android/SdkResolver';
 import type { GitExecutableResolver } from '../git/GitExecutableResolver';
 import { probeRuntimes } from '../toolchains/RuntimeDetector';
@@ -22,6 +23,7 @@ async function detectPackageManagers(): Promise<Array<'npm' | 'pnpm' | 'yarn' | 
 type SystemScan = {
   availableEditors: Awaited<ReturnType<typeof listAvailableEditorPresets>>;
   availableTerminals: Awaited<ReturnType<typeof listAvailableTerminalPresets>>;
+  availableShells: Awaited<ReturnType<ShellRegistry['list']>>;
   runtimes: Awaited<ReturnType<typeof probeRuntimes>>;
   packageManagers: Awaited<ReturnType<typeof detectPackageManagers>>;
 };
@@ -30,7 +32,8 @@ export function createCapabilityService(
   gitResolver: GitExecutableResolver,
   settingsStore: SettingsStore,
   terminalLauncher: TerminalLauncher,
-  sdkResolver: SdkResolver
+  sdkResolver: SdkResolver,
+  shells: ShellRegistry
 ): CapabilityService {
   // Spawn-heavy system scans that do not depend on settings — installed editors,
   // terminals, language runtimes, and package managers. They only change when the
@@ -48,13 +51,15 @@ export function createCapabilityService(
         listAvailableTerminalPresets().catch(
           () => [] as Awaited<ReturnType<typeof listAvailableTerminalPresets>>
         ),
+        shells.list().catch(() => [] as Awaited<ReturnType<ShellRegistry['list']>>),
         probeRuntimes().catch(() => [] as Awaited<ReturnType<typeof probeRuntimes>>),
         detectPackageManagers().catch(
           () => [] as Awaited<ReturnType<typeof detectPackageManagers>>
         ),
-      ]).then(([availableEditors, availableTerminals, runtimes, packageManagers]) => ({
+      ]).then(([availableEditors, availableTerminals, availableShells, runtimes, packageManagers]) => ({
         availableEditors,
         availableTerminals,
+        availableShells,
         runtimes,
         packageManagers,
       }));
@@ -86,6 +91,12 @@ export function createCapabilityService(
       terminalAvailable,
       availableEditors: scan.availableEditors,
       availableTerminals: scan.availableTerminals,
+      // ResolvedShell carries launch args too; the renderer only needs the identity.
+      availableShells: scan.availableShells.map(({ id, label, executable }) => ({
+        id,
+        label,
+        executable,
+      })),
       editor: settings.editor,
       terminal: settings.terminal,
       android,

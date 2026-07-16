@@ -11,6 +11,8 @@ import {
 } from '../projects/ProjectConfigStore';
 import { createProcessSupervisor, type ProcessSupervisor } from '../processes/ProcessSupervisor';
 import { createProcessApplicationService } from '../processes/ProcessApplicationService';
+import { createShellRegistry } from '../terminal/ShellRegistry';
+import { createShellSessionService } from '../terminal/ShellSessionService';
 import { createPreviewViewManager } from '../preview/PreviewViewManager';
 import { createTerminalLauncher } from '../system/TerminalLauncher';
 import { createEditorLauncher } from '../system/EditorLauncher';
@@ -19,8 +21,10 @@ import { createElectronExecutablePickerAdapter } from '../system/executablePicke
 import { createElectronDialogAdapter, type NativeDialogAdapter } from '../system/dialogAdapter';
 import { toBureauError } from '../ipc/errors';
 import type { AppServices } from '../ipc/serviceContracts';
+import type { ProjectApplicationService } from '../projects/ProjectApplicationService';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { OkResult } from '@shared/contracts/errors';
+import type { ProcessDefinition } from '@shared/contracts/projects';
 import { compactGitSnapshot } from '@shared/contracts/gitSnapshot';
 import { createExecutableAdapter, type ExecutableAdapter } from '../android/ExecutableAdapter';
 import { createSdkResolver } from '../android/SdkResolver';
@@ -66,6 +70,23 @@ export type AppBootstrap = {
   services: AppServices;
   settingsStore: SettingsStore;
   supervisor: ProcessSupervisor;
+};
+
+/**
+ * The toolchain env resolver is shaped around a stored process; a shell session has no
+ * ProcessDefinition. This stand-in carries no per-process toolchain pin, so a shell gets
+ * exactly the project's own toolchain PATH — the same node/python/flutter its processes run.
+ */
+const SHELL_ENV_DEFINITION: ProcessDefinition = {
+  id: 'shell',
+  label: 'Shell',
+  command: '',
+  args: [],
+  cwd: '.',
+  env: {},
+  runMode: 'terminal',
+  autoRestart: false,
+  runOnOpen: false,
 };
 
 export async function createAppServices(
@@ -122,6 +143,17 @@ export async function createAppServices(
     getMaxCrashRestarts: () => settingsStore.get().processes.maxCrashRestarts,
   });
   await supervisor.adoptOrphans();
+
+  // One registry, shared with the capability service: shell detection spawns `where`/`which`
+  // per candidate and memoizes, so a second instance would re-probe for no reason.
+  const shellRegistry = createShellRegistry();
+  const terminal = createShellSessionService({
+    catalogue,
+    shells: shellRegistry,
+    resolveEnv: ({ projectId, projectRoot }) =>
+      resolveEnv({ projectId, projectRoot, definition: SHELL_ENV_DEFINITION, overrides: {} }),
+    getDefaultShellId: () => settingsStore.get().embeddedTerminal.defaultShellId,
+  });
 
   const terminalLauncher = createTerminalLauncher();
   const editorLauncher = createEditorLauncher();
@@ -256,7 +288,16 @@ export async function createAppServices(
     resolver: gitResolver,
     pickerAdapter,
   });
-  const projects = createProjectApplicationService(catalogue, projectConfigStore);
+  const projectsService = createProjectApplicationService(catalogue, projectConfigStore);
+  const projects: ProjectApplicationService = {
+    ...projectsService,
+    async remove(input) {
+      // Once the project is gone its Terminal tab is unreachable, so any shell still open
+      // there — and whatever it is running — could never be stopped from the UI again.
+      await terminal.closeProject(input.projectId);
+      return projectsService.remove(input);
+    },
+  };
   const gitLifecycle = createGitLifecycleService({
     projects,
     validator: gitValidator,
@@ -353,7 +394,8 @@ export async function createAppServices(
     gitResolver,
     settingsStore,
     terminalLauncher,
-    sdkResolver
+    sdkResolver,
+    shellRegistry
   );
   const toolchains = createToolchainApplicationService({
     catalogue,
@@ -371,6 +413,7 @@ export async function createAppServices(
     capabilities,
     projects,
     processes,
+    terminal,
     preview,
     settings,
     operations,

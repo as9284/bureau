@@ -236,6 +236,24 @@ vendored proto in `src/main/android/proto/`), forwarding input back the same way
 - A cancelled gRPC stream emits `end`/`error` *after* its replacement is live; stream handlers must stay
   keyed to their own stream (never a shared flag) or a resize silently kills the session.
 
+**Embedded terminal (2026-07-16):** the per-project **Terminal** tab hosts free shell sessions
+(`src/main/terminal/**`, `src/renderer/features/terminal/**`) instead of the "open terminal" buttons
+launching an OS terminal; the external launcher remains as a secondary "Open in external terminal"
+action. It sits *beside* `ProcessSupervisor` (a shell has no `ProcessDefinition`) and reuses `spawnPty`.
+Notes for future work:
+- Sessions live until closed, so the pane can unmount. Replay is a **seq handshake**: subscribe first,
+  queue, fetch the buffer, then replay only chunks with `seq > snapshot.seq`. Fetch-then-subscribe
+  drops the gap. The buffer holds raw bytes and trims at a newline — an arbitrary cut can strand a
+  partial escape sequence and render as garbage.
+- Closing a session **tree-kills** (`pty.kill()` leaves ConPTY grandchildren orphaned), and skips it
+  once exited, since the pid may be reused. `killTree` is injectable because a fake-pty test with an
+  invented pid would otherwise `taskkill` a real process.
+- node-pty can't load under vitest (Electron ABI), so there is no real-pty test; the integration test
+  fakes the pty around a real child process and asserts the pid dies.
+- The renderer sends `projectId` + an optional `rootRelative` checked against the project's detected
+  `nestedRoots`, never a path; shells are chosen by `ShellId` from a closed set. Git Bash is derived
+  from the resolved `git` executable — `bash` on PATH is System32's WSL launcher on Windows.
+
 **Phase 3 notes:** Git runs only in main (`src/main/git/**`, `github/`); renderer uses `gitStore` +
 `features/git/**`. Bureau Projects hub owns tracking — do not reintroduce StarGit’s multi-repo catalogue.
 Deferred with StarGit: interactive rebase, three-way merge editor, LFS, force-push, full git e2e matrix.

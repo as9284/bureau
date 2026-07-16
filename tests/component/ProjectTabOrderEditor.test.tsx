@@ -92,6 +92,7 @@ describe('project tab order editor', () => {
           'files',
           'overview',
           'processes',
+          'terminal',
           'preview',
           'android',
           'toolchains',

@@ -47,6 +47,11 @@ import {
   runTaskRequestSchema,
   ptyWriteRequestSchema,
   ptyResizeRequestSchema,
+  createTerminalSessionSchema,
+  renameTerminalSessionSchema,
+  resizeTerminalSchema,
+  terminalSessionRequestSchema,
+  writeTerminalSchema,
 } from '@shared/validation/requests';
 import { assertTrustedSender, InvalidSenderError } from './senderValidation';
 import { throwMappedError, toBureauError } from './errors';
@@ -231,6 +236,34 @@ export function registerHandlers(
     const input = ptyResizeRequestSchema.parse(args);
     return services.processes.resizePty(input);
   });
+
+  register(IPC_CHANNELS.TERMINAL_LIST, 'terminal.list', async (args: unknown) =>
+    services.terminal.list(projectIdRequestSchema.parse(args))
+  );
+
+  register(IPC_CHANNELS.TERMINAL_CREATE, 'terminal.create', async (args: unknown) =>
+    services.terminal.create(createTerminalSessionSchema.parse(args))
+  );
+
+  register(IPC_CHANNELS.TERMINAL_CLOSE, 'terminal.close', async (args: unknown) =>
+    services.terminal.close(terminalSessionRequestSchema.parse(args))
+  );
+
+  register(IPC_CHANNELS.TERMINAL_RENAME, 'terminal.rename', async (args: unknown) =>
+    services.terminal.rename(renameTerminalSessionSchema.parse(args))
+  );
+
+  register(IPC_CHANNELS.TERMINAL_WRITE, 'terminal.write', async (args: unknown) =>
+    services.terminal.write(writeTerminalSchema.parse(args))
+  );
+
+  register(IPC_CHANNELS.TERMINAL_RESIZE, 'terminal.resize', async (args: unknown) =>
+    services.terminal.resize(resizeTerminalSchema.parse(args))
+  );
+
+  register(IPC_CHANNELS.TERMINAL_GET_BUFFER, 'terminal.getBuffer', async (args: unknown) =>
+    services.terminal.getBuffer(terminalSessionRequestSchema.parse(args))
+  );
 
   register(IPC_CHANNELS.PREVIEW_SET_BOUNDS, 'preview.setBounds', async (args: unknown) => {
     services.preview.setBounds(previewBoundsSchema.parse(args));

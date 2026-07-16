@@ -6,6 +6,7 @@ import './styles/shell.css';
 import './styles/controls.css';
 import './styles/panels.css';
 import './styles/phase1.css';
+import './styles/terminal.css';
 import './styles/overview.css';
 import './styles/android.css';
 import './styles/git.css';

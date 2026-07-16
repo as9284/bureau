@@ -1,0 +1,128 @@
+/* Terminal tab — embedded shell sessions. Mirrors the ports/toolchains tab language. */
+
+.terminal-tab {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.terminal-tab__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.terminal-tab__title {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.terminal-tab__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Split control: "New session" + a caret that offers the other detected shells. */
+.terminal-tab__new {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.terminal-tab__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-status-danger-soft);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-supporting);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.terminal-tab__strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.terminal-tab__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.terminal-chip {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-base);
+  transition: background var(--motion-duration-state) ease;
+}
+
+.terminal-chip:hover {
+  background: var(--color-surface-hover);
+}
+
+.terminal-chip.selected {
+  background: var(--color-surface-selected);
+  border-color: var(--color-border-strong);
+}
+
+.terminal-chip.editing {
+  padding: 0 var(--space-1);
+}
+
+.terminal-chip.editing .control-input {
+  width: 140px;
+}
+
+.terminal-chip__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-target-minimum);
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-supporting);
+  cursor: pointer;
+}
+
+.terminal-chip.selected .terminal-chip__label {
+  color: var(--color-text-primary);
+}
+
+.terminal-chip__title {
+  white-space: nowrap;
+}
+
+/* Machine text: a repo-relative path and an exit code. */
+.terminal-chip__cwd,
+.terminal-chip__exit {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-label);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.terminal-chip__exit {
+  color: var(--color-status-danger);
+}

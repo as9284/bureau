@@ -1,6 +1,7 @@
 import { useAppStore } from '../store/appStore';
 import { ProjectOverview } from '../features/overview/ProjectOverview';
 import { ProcessesTab } from '../features/processes/ProcessesTab';
+import { TerminalTab } from '../features/terminal/TerminalTab';
 import { PreviewTab } from '../features/preview/PreviewTab';
 import { AndroidPanel } from '../features/android/AndroidPanel';
 import { ToolchainsTab } from '../features/toolchains/ToolchainsTab';
@@ -40,6 +41,7 @@ export function ProjectWorkspace() {
         {projectTab === 'overview' && <ProjectOverview projectId={projectId} />}
         {projectTab === 'files' && <FilesTab projectId={projectId} />}
         {projectTab === 'processes' && <ProcessesTab projectId={projectId} />}
+        {projectTab === 'terminal' && <TerminalTab projectId={projectId} />}
         {projectTab === 'preview' && <PreviewTab />}
         {projectTab === 'android' && <AndroidPanel key={projectId} projectId={projectId} />}
         {projectTab === 'toolchains' && <ToolchainsTab projectId={projectId} />}

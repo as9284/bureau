@@ -487,6 +487,7 @@ export function useActiveRepositoryContextMenuItems(projectId: string): ContextM
   const refreshRepo = useGitStore((s) => s.refreshRepo);
   const openInEditor = useGitStore((s) => s.openInEditor);
   const openInTerminal = useGitStore((s) => s.openInTerminal);
+  const openInExternalTerminal = useGitStore((s) => s.openInExternalTerminal);
   const openInFileExplorer = useGitStore((s) => s.openInFileExplorer);
   const fetch = useGitStore((s) => s.fetch);
   const pull = useGitStore((s) => s.pull);
@@ -508,6 +509,11 @@ export function useActiveRepositoryContextMenuItems(projectId: string): ContextM
       },
       { id: 'editor', label: 'Open in editor', onClick: () => openInEditor(projectId) },
       { id: 'terminal', label: 'Open in terminal', onClick: () => openInTerminal(projectId) },
+      {
+        id: 'terminal-external',
+        label: 'Open in external terminal',
+        onClick: () => openInExternalTerminal(projectId),
+      },
       {
         id: 'explorer',
         label: 'Reveal in file explorer',
@@ -550,6 +556,7 @@ export function useActiveRepositoryContextMenuItems(projectId: string): ContextM
     refreshRepo,
     openInEditor,
     openInTerminal,
+    openInExternalTerminal,
     openInFileExplorer,
     fetch,
     pull,

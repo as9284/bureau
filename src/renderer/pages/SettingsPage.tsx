@@ -31,7 +31,11 @@ import {
   UI_SCALES,
   VIEWPORT_PRESETS,
 } from '@shared/contracts/settings';
+import type { ShellId } from '@shared/contracts/terminal';
 import type { AppUpdateState } from '@shared/contracts/updates';
+
+/** Sentinel for "no explicit default shell"; Dropdown needs a string value. */
+const AUTO_SHELL = 'auto';
 
 const THEMES: ThemePreference[] = ['dark', 'light', 'system'];
 const DENSITIES: DensityPreference[] = ['compact', 'comfortable'];
@@ -1300,9 +1304,18 @@ function ManagerRow<T extends string>({
 function ProcessesSettingsSection() {
   const settings = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
+  const availableShells = useAppStore((s) => s.capabilities?.availableShells);
   if (!settings) return null;
 
   const { processes, preview, embeddedTerminal } = settings;
+  const shells = availableShells ?? [];
+  // A shell that was uninstalled since it was chosen falls back to auto rather than
+  // showing a dead option — main resolves it the same way.
+  const defaultShellValue =
+    embeddedTerminal.defaultShellId &&
+    shells.some((shell) => shell.id === embeddedTerminal.defaultShellId)
+      ? embeddedTerminal.defaultShellId
+      : AUTO_SHELL;
 
   return (
     <section className="settings-section">
@@ -1391,6 +1404,34 @@ function ProcessesSettingsSection() {
       </div>
 
       <h2 style={{ marginTop: 'var(--space-6)' }}>Embedded terminal</h2>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Default shell</div>
+          <div className="settings-row__desc">
+            {shells.length > 0
+              ? 'Shell that new Terminal sessions open with. Individual sessions can still pick another.'
+              : 'No supported shell was detected on this machine.'}
+          </div>
+        </div>
+        <Dropdown
+          className="settings-dropdown"
+          label="Default shell"
+          disabled={shells.length === 0}
+          value={defaultShellValue}
+          options={[
+            { value: AUTO_SHELL, label: 'Auto-detect' },
+            ...shells.map((shell) => ({ value: shell.id, label: shell.label })),
+          ]}
+          onChange={(value) =>
+            void updateSettings({
+              embeddedTerminal: {
+                defaultShellId: value === AUTO_SHELL ? undefined : (value as ShellId),
+              },
+            })
+          }
+        />
+      </div>
 
       <div className="settings-row">
         <div>

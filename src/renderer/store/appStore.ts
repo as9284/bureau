@@ -31,6 +31,11 @@ import type { BureauError } from '@shared/contracts/errors';
 import { moveTabRelative, type TabDropPlace } from '@shared/files/tabOrder';
 import { isPathDeleted, pathsAffectedByDelete } from '@shared/files/deletedPaths';
 import type { ProjectToolchains, SwitchableRuntimeKind } from '@shared/contracts/toolchains';
+import type {
+  DetectedShell,
+  ShellId,
+  TerminalSession,
+} from '@shared/contracts/terminal';
 import type { ProjectPorts } from '@shared/contracts/ports';
 import type { ProjectTasks } from '@shared/contracts/tasks';
 import type {
@@ -65,6 +70,22 @@ export type SettingsSection =
   | 'git';
 export type ProjectTab = ProjectTabId;
 export type ViewportPreset = SharedViewportPreset;
+
+/** Embedded shell sessions for one project (the Terminal tab). */
+export type TerminalProjectState = {
+  sessions: TerminalSession[];
+  /** Shells detected on this machine; empty until the first load resolves. */
+  shells: DetectedShell[];
+  /** False once main reports node-pty could not be loaded — the tab degrades. */
+  ptyAvailable: boolean;
+  activeSessionId: string | null;
+  loading: boolean;
+  /** Non-fatal; shown as a banner with a retry rather than blanking the tab. */
+  error?: BureauError;
+};
+
+/** Options for a new session; both are resolved in main, which owns the cwd. */
+export type NewTerminalOptions = { shellId?: ShellId; rootRelative?: string };
 
 export type ContextMenuItem =
   | { type: 'item'; label: string; onSelect: () => void; danger?: boolean; disabled?: boolean }
@@ -169,6 +190,7 @@ type AppState = {
   projectTab: ProjectTab;
 
   processesByProject: Record<string, ProjectProcesses>;
+  terminalByProject: Record<string, TerminalProjectState>;
   toolchainsByProject: Record<string, ProjectToolchains>;
   portsByProject: Record<string, ProjectPorts>;
   tasksByProject: Record<string, ProjectTasks>;
@@ -267,7 +289,15 @@ type AppState = {
   cancelProjectSearch(projectId: string): Promise<void>;
   reloadFileFromDisk(projectId: string, relativePath: string): Promise<void>;
   openInEditor(): Promise<void>;
-  openInTerminal(): Promise<void>;
+  /** Defaults to the selected project; callers with an explicit target pass it. */
+  openInTerminal(projectId?: string): Promise<void>;
+  openInExternalTerminal(): Promise<void>;
+
+  ensureTerminalProject(projectId: string): Promise<void>;
+  createTerminalSession(projectId: string, options?: NewTerminalOptions): Promise<void>;
+  closeTerminalSession(projectId: string, sessionId: string): Promise<void>;
+  renameTerminalSession(projectId: string, sessionId: string, title: string): Promise<void>;
+  setActiveTerminalSession(projectId: string, sessionId: string): void;
   openInExplorer(): Promise<void>;
 
   openUrlInPreview(url: string): void;
@@ -311,6 +341,14 @@ type AppState = {
 };
 
 const api = () => window.bureau;
+const terminalLoadSeq = new Map<string, number>();
+const emptyTerminalState = (): TerminalProjectState => ({
+  sessions: [],
+  shells: [],
+  ptyAvailable: true,
+  activeSessionId: null,
+  loading: false,
+});
 let toastId = 0;
 let subscribed = false;
 const draftTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -395,6 +433,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   projectTab: 'overview',
 
   processesByProject: {},
+  terminalByProject: {},
   toolchainsByProject: {},
   portsByProject: {},
   tasksByProject: {},
@@ -465,6 +504,27 @@ export const useAppStore = create<AppState>()((set, get) => ({
         subscribed = true;
         api().processes.onOutput(handleOutput);
         api().processes.onStatus(handleStatus);
+        // Session output goes straight to the xterm view; only the exit transition is
+        // state the rest of the tab renders.
+        api().terminal.onExit(({ projectId, sessionId, exitCode }) =>
+          set((s) => {
+            const previous = s.terminalByProject[projectId];
+            if (!previous) return {};
+            return {
+              terminalByProject: {
+                ...s.terminalByProject,
+                [projectId]: {
+                  ...previous,
+                  sessions: previous.sessions.map((session) =>
+                    session.sessionId === sessionId
+                      ? { ...session, status: 'exited' as const, exitCode }
+                      : session
+                  ),
+                },
+              },
+            };
+          })
+        );
         api().preview.onState((previewState) => set({ previewState }));
         api().preview.onConsole((messages) =>
           set((s) =>
@@ -818,6 +878,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set(tab === 'preview' ? { projectTab: tab } : { projectTab: tab, previewFullscreen: false });
     const projectId = get().selectedProjectId;
     if (tab === 'files' && projectId) void get().ensureFilesProject(projectId);
+    if (tab === 'terminal' && projectId) void get().ensureTerminalProject(projectId);
   },
 
   async ensureFilesProject(projectId) {
@@ -1399,11 +1460,159 @@ export const useAppStore = create<AppState>()((set, get) => ({
     if (!result.ok) get().pushToast('error', result.error.message);
   },
 
-  async openInTerminal() {
+  /** The default "Open terminal" action: the built-in Terminal tab, with a fresh session. */
+  async openInTerminal(projectId) {
+    const target = projectId ?? get().selectedProjectId;
+    if (!target) return;
+    get().setProjectTab('terminal');
+    await get().ensureTerminalProject(target);
+    await get().createTerminalSession(target);
+  },
+
+  /** The escape hatch: hand the project root to the OS terminal configured in settings. */
+  async openInExternalTerminal() {
     const projectId = get().selectedProjectId;
     if (!projectId) return;
     const result = await api().system.openInTerminal({ projectId });
     if (!result.ok) get().pushToast('error', result.error.message);
+  },
+
+  async ensureTerminalProject(projectId) {
+    // Latest-request-wins: a fast project switch must not let an older list() overwrite
+    // the newer project's sessions.
+    const seq = (terminalLoadSeq.get(projectId) ?? 0) + 1;
+    terminalLoadSeq.set(projectId, seq);
+    set((s) => ({
+      terminalByProject: {
+        ...s.terminalByProject,
+        [projectId]: { ...emptyTerminalState(), ...s.terminalByProject[projectId], loading: true },
+      },
+    }));
+    try {
+      const snapshot = await api().terminal.list({ projectId });
+      if (terminalLoadSeq.get(projectId) !== seq) return;
+      set((s) => {
+        const previous = s.terminalByProject[projectId];
+        const stillOpen = snapshot.sessions.some(
+          (session) => session.sessionId === previous?.activeSessionId
+        );
+        return {
+          terminalByProject: {
+            ...s.terminalByProject,
+            [projectId]: {
+              sessions: snapshot.sessions,
+              shells: snapshot.shells,
+              ptyAvailable: snapshot.ptyAvailable,
+              activeSessionId: stillOpen
+                ? previous.activeSessionId
+                : (snapshot.sessions[0]?.sessionId ?? null),
+              loading: false,
+              error: undefined,
+            },
+          },
+        };
+      });
+    } catch (error) {
+      if (terminalLoadSeq.get(projectId) !== seq) return;
+      set((s) => ({
+        terminalByProject: {
+          ...s.terminalByProject,
+          [projectId]: {
+            ...emptyTerminalState(),
+            ...s.terminalByProject[projectId],
+            loading: false,
+            error: toError(error, 'terminal.list'),
+          },
+        },
+      }));
+    }
+  },
+
+  async createTerminalSession(projectId, options) {
+    const result = await api().terminal.create({ projectId, ...options });
+    if (!result.ok) {
+      get().pushToast('error', result.error.message);
+      return;
+    }
+    set((s) => {
+      const previous = s.terminalByProject[projectId] ?? emptyTerminalState();
+      return {
+        terminalByProject: {
+          ...s.terminalByProject,
+          [projectId]: {
+            ...previous,
+            sessions: [...previous.sessions, result.session],
+            activeSessionId: result.session.sessionId,
+            error: undefined,
+          },
+        },
+      };
+    });
+  },
+
+  async closeTerminalSession(projectId, sessionId) {
+    const result = await api().terminal.close({ projectId, sessionId });
+    if (!result.ok) {
+      get().pushToast('error', result.error.message);
+      return;
+    }
+    set((s) => {
+      const previous = s.terminalByProject[projectId];
+      if (!previous) return {};
+      const closedAt = previous.sessions.findIndex((session) => session.sessionId === sessionId);
+      const sessions = previous.sessions.filter((session) => session.sessionId !== sessionId);
+      // Focus the neighbour that took the closed tab's place, not always the first.
+      const neighbour = sessions[Math.min(Math.max(closedAt, 0), sessions.length - 1)];
+      return {
+        terminalByProject: {
+          ...s.terminalByProject,
+          [projectId]: {
+            ...previous,
+            sessions,
+            activeSessionId:
+              previous.activeSessionId === sessionId
+                ? (neighbour?.sessionId ?? null)
+                : previous.activeSessionId,
+          },
+        },
+      };
+    });
+  },
+
+  async renameTerminalSession(projectId, sessionId, title) {
+    const result = await api().terminal.rename({ projectId, sessionId, title });
+    if (!result.ok) {
+      get().pushToast('error', result.error.message);
+      return;
+    }
+    set((s) => {
+      const previous = s.terminalByProject[projectId];
+      if (!previous) return {};
+      return {
+        terminalByProject: {
+          ...s.terminalByProject,
+          [projectId]: {
+            ...previous,
+            sessions: previous.sessions.map((session) =>
+              session.sessionId === sessionId ? result.session : session
+            ),
+          },
+        },
+      };
+    });
+  },
+
+  setActiveTerminalSession(projectId, sessionId) {
+    set((s) => {
+      const previous = s.terminalByProject[projectId];
+      if (!previous) return {};
+      return {
+        terminalByProject: {
+          ...s.terminalByProject,
+          [projectId]: { ...previous, activeSessionId: sessionId },
+        },
+      };
+    });
   },
 
   async openInExplorer() {

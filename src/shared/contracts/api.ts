@@ -124,6 +124,18 @@ import type {
 import type { GitHubCliStatus, GitHubPublishRequest, GitHubPublishResult } from './github';
 import type { FilesApi } from './files';
 import type { AppUpdateState } from './updates';
+import type {
+  CreateTerminalSessionRequest,
+  RenameTerminalSessionRequest,
+  ResizeTerminalRequest,
+  TerminalBuffer,
+  TerminalDataEvent,
+  TerminalExitEvent,
+  TerminalSession,
+  TerminalSessionRequest,
+  TerminalSnapshot,
+  WriteTerminalRequest,
+} from './terminal';
 
 export type Unsubscribe = () => void;
 
@@ -180,6 +192,17 @@ export type BureauApiV1 = {
     onOutput(listener: (event: ProcessOutputEvent) => void): Unsubscribe;
     onStatus(listener: (event: ProcessStatusEvent) => void): Unsubscribe;
     onPty(listener: (event: PtyOutputEvent) => void): Unsubscribe;
+  };
+  terminal: {
+    list(input: ProjectIdRequest): Promise<TerminalSnapshot>;
+    create(input: CreateTerminalSessionRequest): Promise<Result<{ session: TerminalSession }>>;
+    close(input: TerminalSessionRequest): Promise<OkResult>;
+    rename(input: RenameTerminalSessionRequest): Promise<Result<{ session: TerminalSession }>>;
+    write(input: WriteTerminalRequest): Promise<void>;
+    resize(input: ResizeTerminalRequest): Promise<void>;
+    getBuffer(input: TerminalSessionRequest): Promise<TerminalBuffer>;
+    onData(listener: (event: TerminalDataEvent) => void): Unsubscribe;
+    onExit(listener: (event: TerminalExitEvent) => void): Unsubscribe;
   };
   preview: {
     setBounds(bounds: PreviewBounds): Promise<void>;

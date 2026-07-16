@@ -1,5 +1,7 @@
 // Editor / terminal presets are shared with the launcher services (ported from StarGit).
 
+import type { ShellId } from './terminal';
+
 export type EditorPreset = 'vscode' | 'cursor' | 'zed' | 'sublime';
 
 export type EditorConfig =
@@ -74,6 +76,11 @@ export type EmbeddedTerminalSettings = {
   fontSize: TerminalFontSize;
   scrollback: TerminalScrollback;
   cursorStyle: TerminalCursorStyle;
+  /**
+   * Shell that new Terminal-tab sessions open with. Unset, or set to one that is not
+   * installed here, falls back to the first shell detected on this machine.
+   */
+  defaultShellId?: ShellId;
 };
 
 export type EditorFontSize = 12 | 13 | 14 | 16;
@@ -174,6 +181,7 @@ export const PROJECT_TAB_IDS = [
   'overview',
   'files',
   'processes',
+  'terminal',
   'preview',
   'android',
   'toolchains',

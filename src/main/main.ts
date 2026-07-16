@@ -46,6 +46,14 @@ app
       mainWindow.webContents.send(channel, evt.event);
     });
 
+    // Bridge embedded shell-session output to the renderer.
+    services.terminal.onEvent((evt) => {
+      if (mainWindow.isDestroyed()) return;
+      const channel =
+        evt.type === 'data' ? IPC_CHANNELS.TERMINAL_DATA_EVENT : IPC_CHANNELS.TERMINAL_EXIT_EVENT;
+      mainWindow.webContents.send(channel, evt.event);
+    });
+
     // Attach the embedded web-preview view and bridge its state to the renderer.
     services.preview.attach(mainWindow);
     services.preview.onState((state) => {
@@ -157,6 +165,7 @@ app
     // Best-effort backstop: stop anything still running as the app exits.
     app.on('before-quit', () => {
       void supervisor.stopAll();
+      void services.terminal.dispose();
       void services.android.dispose();
       void services.files.dispose();
     });

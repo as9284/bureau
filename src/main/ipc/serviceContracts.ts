@@ -25,6 +25,7 @@ import type { GitAdvancedService } from '../git/GitAdvancedService';
 import type { GitLifecycleService } from '../git/GitLifecycleService';
 import type { GitHubPublishingService } from '../github/GitHubPublishingService';
 import type { FileApplicationService } from '../files/FileApplicationService';
+import type { ShellSessionService } from '../terminal/ShellSessionService';
 
 export type ProjectActionRequest = { projectId: string };
 
@@ -60,6 +61,7 @@ export type AppServices = {
   capabilities: CapabilityService;
   projects: ProjectApplicationService;
   processes: ProcessApplicationService;
+  terminal: ShellSessionService;
   preview: PreviewViewManager;
   settings: SettingsApplicationService;
   operations: OperationApplicationService;

@@ -5,6 +5,7 @@ export const PROJECT_TAB_LABELS: Record<ProjectTabId, string> = {
   overview: 'Overview',
   files: 'Files',
   processes: 'Processes',
+  terminal: 'Terminal',
   preview: 'Preview',
   android: 'Android',
   toolchains: 'Toolchains',

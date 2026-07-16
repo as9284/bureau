@@ -420,6 +420,7 @@ type AppStore = {
 
   openInFileExplorer: (projectId: string) => Promise<void>;
   openInTerminal: (projectId: string) => Promise<void>;
+  openInExternalTerminal: (projectId: string) => Promise<void>;
   openInEditor: (projectId: string) => Promise<void>;
   chooseGitExecutable: () => Promise<void>;
   clearGitExecutable: () => Promise<void>;
@@ -1741,11 +1742,15 @@ export const useGitStore = create<AppStore>((set, get) => ({
       toast('error', toError(err, 'system.openInExplorer').message);
     }
   },
+  /** Opens Bureau's own Terminal tab; the external launcher is a separate action now. */
   openInTerminal: async (projectId) => {
+    await useAppStore.getState().openInTerminal(projectId);
+  },
+  openInExternalTerminal: async (projectId) => {
     try {
       await api().system.openInTerminal({ projectId });
     } catch (err) {
-      toast('error', toError(err, 'openInTerminal').message);
+      toast('error', toError(err, 'openInExternalTerminal').message);
     }
   },
   openInEditor: async (projectId) => {

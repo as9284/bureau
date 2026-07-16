@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PROJECT_TAB_IDS, TERMINAL_CURSOR_STYLES, VIEWPORT_PRESETS } from '../contracts/settings';
+import { SHELL_IDS } from '../contracts/terminal';
 
 const MAX_PATH_LENGTH = 4096;
 
@@ -228,6 +229,7 @@ export const settingsPatchSchema = z
           .optional(),
         scrollback: z.union([z.literal(1000), z.literal(5000), z.literal(10000)]).optional(),
         cursorStyle: z.enum(TERMINAL_CURSOR_STYLES).optional(),
+        defaultShellId: z.enum(SHELL_IDS).optional(),
       })
       .strict()
       .optional(),
@@ -394,6 +396,57 @@ export const ptyResizeRequestSchema = z
   .object({
     projectId: projectIdField,
     processId: processIdField,
+    cols: z.number().int().min(2).max(500),
+    rows: z.number().int().min(1).max(200),
+  })
+  .strict();
+
+// ---------- Embedded shell sessions ----------
+
+const sessionIdField = z.string().max(64).regex(UUID_RE, 'sessionId must be a UUID');
+
+/**
+ * A project-relative nested root. Bounded and NUL-free here; main additionally checks it
+ * against the project's detected roots, so this never becomes an arbitrary path.
+ */
+const rootRelativeField = z
+  .string()
+  .min(1)
+  .max(MAX_PATH_LENGTH)
+  .refine((v) => !v.includes('\0'), 'root must not contain NUL');
+
+export const terminalSessionRequestSchema = z
+  .object({ projectId: projectIdField, sessionId: sessionIdField })
+  .strict();
+
+export const createTerminalSessionSchema = z
+  .object({
+    projectId: projectIdField,
+    shellId: z.enum(SHELL_IDS).optional(),
+    rootRelative: rootRelativeField.optional(),
+  })
+  .strict();
+
+export const renameTerminalSessionSchema = z
+  .object({
+    projectId: projectIdField,
+    sessionId: sessionIdField,
+    title: z.string().min(1).max(60),
+  })
+  .strict();
+
+export const writeTerminalSchema = z
+  .object({
+    projectId: projectIdField,
+    sessionId: sessionIdField,
+    data: z.string().max(16_384),
+  })
+  .strict();
+
+export const resizeTerminalSchema = z
+  .object({
+    projectId: projectIdField,
+    sessionId: sessionIdField,
     cols: z.number().int().min(2).max(500),
     rows: z.number().int().min(1).max(200),
   })

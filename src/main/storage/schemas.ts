@@ -7,6 +7,7 @@ import {
   UI_SCALES,
   VIEWPORT_PRESETS,
 } from '@shared/contracts/settings';
+import { SHELL_IDS } from '@shared/contracts/terminal';
 import type { TrackedProject } from '@shared/contracts/projects';
 import { STACK_TAGS } from '@shared/contracts/projects';
 import { processDefinitionSchema } from '@shared/validation/requests';
@@ -186,6 +187,7 @@ export const settingsFileSchema = z.object({
     fontSize: z.union([z.literal(11), z.literal(12), z.literal(13), z.literal(14)]),
     scrollback: z.union([z.literal(1000), z.literal(5000), z.literal(10000)]),
     cursorStyle: z.enum(TERMINAL_CURSOR_STYLES),
+    defaultShellId: z.enum(SHELL_IDS).optional(),
   }),
   files: z.object({
     wordWrap: z.boolean(),

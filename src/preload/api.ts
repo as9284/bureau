@@ -1,6 +1,18 @@
 import { ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC_CHANNELS } from '@shared/contracts/channels';
-import type { BureauApiV1, Unsubscribe } from '@shared/contracts/api';
+import type { BureauApiV1, PtyOutputEvent, Unsubscribe } from '@shared/contracts/api';
+import type {
+  CreateTerminalSessionRequest,
+  RenameTerminalSessionRequest,
+  ResizeTerminalRequest,
+  TerminalBuffer,
+  TerminalDataEvent,
+  TerminalExitEvent,
+  TerminalSession,
+  TerminalSessionRequest,
+  TerminalSnapshot,
+  WriteTerminalRequest,
+} from '@shared/contracts/terminal';
 import type { AppCapabilities } from '@shared/contracts/capabilities';
 import type {
   AddProjectRequest,
@@ -156,8 +168,24 @@ export const bureauApi = Object.freeze({
       subscribe<ProcessOutputEvent>(IPC_CHANNELS.PROCESSES_OUTPUT_EVENT, listener),
     onStatus: (listener: (event: ProcessStatusEvent) => void) =>
       subscribe<ProcessStatusEvent>(IPC_CHANNELS.PROCESSES_STATUS_EVENT, listener),
-    onPty: (listener: (event: { projectId: string; processId: string; data: string }) => void) =>
-      subscribe(IPC_CHANNELS.PROCESSES_PTY_EVENT, listener),
+    onPty: (listener: (event: PtyOutputEvent) => void) =>
+      subscribe<PtyOutputEvent>(IPC_CHANNELS.PROCESSES_PTY_EVENT, listener),
+  },
+  terminal: {
+    list: (input: ProjectIdRequest) => invoke<TerminalSnapshot>(IPC_CHANNELS.TERMINAL_LIST, input),
+    create: (input: CreateTerminalSessionRequest) =>
+      invoke<Result<{ session: TerminalSession }>>(IPC_CHANNELS.TERMINAL_CREATE, input),
+    close: (input: TerminalSessionRequest) => invoke<OkResult>(IPC_CHANNELS.TERMINAL_CLOSE, input),
+    rename: (input: RenameTerminalSessionRequest) =>
+      invoke<Result<{ session: TerminalSession }>>(IPC_CHANNELS.TERMINAL_RENAME, input),
+    write: (input: WriteTerminalRequest) => invoke<void>(IPC_CHANNELS.TERMINAL_WRITE, input),
+    resize: (input: ResizeTerminalRequest) => invoke<void>(IPC_CHANNELS.TERMINAL_RESIZE, input),
+    getBuffer: (input: TerminalSessionRequest) =>
+      invoke<TerminalBuffer>(IPC_CHANNELS.TERMINAL_GET_BUFFER, input),
+    onData: (listener: (event: TerminalDataEvent) => void) =>
+      subscribe<TerminalDataEvent>(IPC_CHANNELS.TERMINAL_DATA_EVENT, listener),
+    onExit: (listener: (event: TerminalExitEvent) => void) =>
+      subscribe<TerminalExitEvent>(IPC_CHANNELS.TERMINAL_EXIT_EVENT, listener),
   },
   preview: {
     setBounds: (bounds: PreviewBounds) => invoke<void>(IPC_CHANNELS.PREVIEW_SET_BOUNDS, bounds),

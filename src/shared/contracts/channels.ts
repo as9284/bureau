@@ -88,6 +88,18 @@ export const IPC_CHANNELS = {
   PROCESSES_PTY_RESIZE: 'bureau:processes:ptyResize',
   PROCESSES_PTY_EVENT: 'bureau:processes:pty',
 
+  // Embedded shell sessions (the Terminal tab).
+  TERMINAL_LIST: 'bureau:terminal:list',
+  TERMINAL_CREATE: 'bureau:terminal:create',
+  TERMINAL_CLOSE: 'bureau:terminal:close',
+  TERMINAL_RENAME: 'bureau:terminal:rename',
+  TERMINAL_WRITE: 'bureau:terminal:write',
+  TERMINAL_RESIZE: 'bureau:terminal:resize',
+  TERMINAL_GET_BUFFER: 'bureau:terminal:getBuffer',
+  // Main → renderer streaming events.
+  TERMINAL_DATA_EVENT: 'bureau:terminal:data',
+  TERMINAL_EXIT_EVENT: 'bureau:terminal:exit',
+
   SYSTEM_CHOOSE_DIRECTORY: 'bureau:system:chooseDirectory',
   SYSTEM_OPEN_IN_EDITOR: 'bureau:system:openInEditor',
   SYSTEM_OPEN_IN_TERMINAL: 'bureau:system:openInTerminal',
