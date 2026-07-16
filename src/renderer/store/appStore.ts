@@ -20,10 +20,12 @@ import type { ShutdownProcess } from '@shared/contracts/lifecycle';
 import type { GitSnapshot } from '@shared/contracts/git';
 import type {
   EditorPreset,
+  ProjectTabId,
   PublicSettings,
   SettingsPatch,
   TerminalPreset,
   ThemePreference,
+  ViewportPreset as SharedViewportPreset,
 } from '@shared/contracts/settings';
 import type { BureauError } from '@shared/contracts/errors';
 import { moveTabRelative, type TabDropPlace } from '@shared/files/tabOrder';
@@ -56,20 +58,13 @@ export type SettingsSection =
   | 'general'
   | 'appearance'
   | 'tools'
-  | 'android'
-  | 'toolchains'
-  | 'files'
-  | 'git';
-export type ProjectTab =
-  | 'overview'
-  | 'files'
   | 'processes'
-  | 'preview'
   | 'android'
   | 'toolchains'
-  | 'ports'
+  | 'files'
   | 'git';
-export type ViewportPreset = 'fill' | 'mobile' | 'tablet' | 'desktop';
+export type ProjectTab = ProjectTabId;
+export type ViewportPreset = SharedViewportPreset;
 
 export type ContextMenuItem =
   | { type: 'item'; label: string; onSelect: () => void; danger?: boolean; disabled?: boolean }
@@ -164,6 +159,8 @@ type AppState = {
   capabilities: AppCapabilities | null;
   settings: PublicSettings | null;
   projects: TrackedProject[];
+  /** Filter text for the project rail + hub list (renderer-only). */
+  projectQuery: string;
 
   view: AppView;
   activeSection: ActiveSection;
@@ -209,6 +206,9 @@ type AppState = {
 
   init(): Promise<void>;
   refreshProjects(): Promise<void>;
+  setProjectQuery(query: string): void;
+  setProjectPinned(projectId: string, pinned: boolean): Promise<void>;
+  reorderPinnedProjects(orderedIds: string[]): Promise<void>;
   setView(view: AppView): void;
   setSection(section: ActiveSection): void;
   setSettingsSection(section: SettingsSection): void;
@@ -386,6 +386,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   capabilities: null,
   settings: null,
   projects: [],
+  projectQuery: '',
 
   view: 'hub',
   activeSection: 'projects',
@@ -431,22 +432,34 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   async init() {
     try {
-      const [capabilities, settings, projects] = await Promise.all([
-        api().app.getCapabilities(),
+      // Only the two fast reads — in-memory settings and a small catalogue JSON —
+      // gate the boot splash. Capability detection is intentionally left off this
+      // path (see the background load below) because it spawns ~20 probe processes.
+      const [settings, projects] = await Promise.all([
         api().settings.get(),
         api().projects.list(),
       ]);
       applyAppearance(settings.appearance);
       set({
-        capabilities,
         settings,
         projects,
         status: 'ready',
         view: 'hub',
+        previewViewport: settings.preview.defaultViewport,
         // Show onboarding on first run and once for existing users after the
         // update that adds it (their settings backfill completedVersion = null).
         onboardingOpen: settings.onboarding?.completedVersion == null,
       });
+
+      // Capabilities need ~20 probe spawns (runtimes, editors, terminals, package
+      // managers, git, Android SDK) — 1–2s on Windows, and the dominant cost of the
+      // old startup animation. Resolve it off the critical path so the shell is
+      // interactive immediately; every consumer already renders a null state, and a
+      // probe failure must not fail app startup.
+      void api()
+        .app.getCapabilities()
+        .then((capabilities) => set({ capabilities }))
+        .catch(() => undefined);
 
       if (!subscribed) {
         subscribed = true;
@@ -454,7 +467,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
         api().processes.onStatus(handleStatus);
         api().preview.onState((previewState) => set({ previewState }));
         api().preview.onConsole((messages) =>
-          set((s) => ({ previewConsole: [...s.previewConsole, ...messages].slice(-500) }))
+          set((s) =>
+            // Checked per batch (not at subscribe time) so toggling the setting takes
+            // effect immediately rather than on the next launch.
+            s.settings?.preview.captureConsole === false
+              ? {}
+              : { previewConsole: [...s.previewConsole, ...messages].slice(-500) }
+          )
         );
         api().app.onUpdateState((updateState) => set({ updateState }));
         void api()
@@ -488,9 +507,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
     function handleOutput(event: ProcessOutputEvent): void {
       const key = processKey(event.projectId, event.processId);
       set((s) => {
+        const cap = s.settings?.processes.logBufferLines ?? LOG_CAP;
         const existing = s.logsByProject[key] ?? [];
         const merged = [...existing, ...event.lines];
-        const trimmed = merged.length > LOG_CAP ? merged.slice(merged.length - LOG_CAP) : merged;
+        const trimmed = merged.length > cap ? merged.slice(merged.length - cap) : merged;
         return { logsByProject: { ...s.logsByProject, [key]: trimmed } };
       });
     }
@@ -524,7 +544,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
     function handleFileEvents(events: FileSystemEvent[]): void {
       const cleanReloads: Array<{ projectId: string; relativePath: string }> = [];
-      const configProjects = new Set<string>();
       set((s) => {
         const filesByProject = { ...s.filesByProject };
         for (const event of events) {
@@ -585,16 +604,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
           const next = { ...project, directoryCache, buffers, tabs, activePath, recentPaths, pinnedPaths };
           filesByProject[event.projectId] = next;
           if (event.type === 'deleted') persistFilesWorkspace(event.projectId, next);
-          if (event.relativePath.toLocaleLowerCase() === '.bureau/config.json') configProjects.add(event.projectId);
         }
         return { filesByProject };
       });
       for (const item of cleanReloads) void get().reloadFileFromDisk(item.projectId, item.relativePath);
-      for (const projectId of configProjects) {
-        void get().loadProcesses(projectId);
-        void get().loadTasks(projectId);
-        get().pushToast('info', 'Project configuration changed; processes and tasks were refreshed.');
-      }
     }
 
     function handleSearchBatch(batch: SearchBatch): void {
@@ -626,6 +639,49 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set({ projects: await api().projects.list() });
     } catch (err) {
       set({ globalError: toError(err, 'projects.list') });
+    }
+  },
+
+  setProjectQuery(query) {
+    set({ projectQuery: query });
+  },
+
+  async setProjectPinned(projectId, pinned) {
+    // Optimistic: flip the flag locally so the section reshuffle is instant.
+    const nextRank =
+      get().projects.reduce((max, p) => Math.max(max, p.pinnedRank ?? -1), -1) + 1;
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.projectId === projectId
+          ? pinned
+            ? { ...p, pinned: true, pinnedRank: p.pinnedRank ?? nextRank }
+            : { ...p, pinned: false, pinnedRank: undefined }
+          : p
+      ),
+    }));
+    try {
+      set({ projects: await api().projects.setPinned({ projectId, pinned }) });
+    } catch (err) {
+      get().pushToast('error', toError(err, 'projects.setPinned').message);
+      await get().refreshProjects();
+    }
+  },
+
+  async reorderPinnedProjects(orderedIds) {
+    // Optimistic: apply the new ranks locally before the round-trip.
+    const rankById = new Map(orderedIds.map((id, index) => [id, index]));
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.pinned && rankById.has(p.projectId)
+          ? { ...p, pinnedRank: rankById.get(p.projectId)! }
+          : p
+      ),
+    }));
+    try {
+      set({ projects: await api().projects.reorderPinned({ orderedIds }) });
+    } catch (err) {
+      get().pushToast('error', toError(err, 'projects.reorderPinned').message);
+      await get().refreshProjects();
     }
   },
 
@@ -685,7 +741,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   async selectProject(projectId) {
-    set({
+    // Bump recency optimistically so the "Recent" ordering + timestamp update
+    // instantly (and the opened project floats to the top) even before the
+    // touch() round-trip resolves. Fixes stale/unreliable "last opened" times.
+    const openedAt = new Date().toISOString();
+    set((s) => ({
       selectedProjectId: projectId,
       view: 'project',
       activeSection: 'projects',
@@ -694,11 +754,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
       previewUrl: null,
       previewState: null,
       previewFullscreen: false,
-    });
+      projects: s.projects.map((p) =>
+        p.projectId === projectId ? { ...p, lastOpenedAt: openedAt } : p
+      ),
+    }));
     try {
       await api().projects.touch({ projectId });
     } catch {
-      // Non-fatal.
+      // Non-fatal: the optimistic timestamp above already applied.
     }
     await get().loadProcesses(projectId);
     void get().loadGit(projectId);

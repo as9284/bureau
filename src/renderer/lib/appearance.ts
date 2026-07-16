@@ -11,7 +11,31 @@ export function applyAppearance(appearance: AppearanceSettings): void {
   const root = document.documentElement;
   root.dataset.theme = resolveTheme(appearance.theme);
   root.dataset.density = appearance.density;
+  // Only an app-level *override*: the OS `prefers-reduced-motion` media query in
+  // global.css still applies on its own when this is off.
+  if (appearance.reduceMotion) {
+    root.dataset.reduceMotion = 'true';
+  } else {
+    delete root.dataset.reduceMotion;
+  }
+  applyUiScale(appearance.uiScale);
   applyAccentColor(appearance.accentColor);
+}
+
+/**
+ * CSS `zoom` (not browser/webFrame zoom) on purpose: `zoom` is layout-affecting, so
+ * getBoundingClientRect() comes back already scaled. That keeps the DOM→native seam
+ * honest — the preview's WebContentsView is positioned from those rects
+ * (PreviewTab.applyLayout), and browser zoom would leave them unscaled and drift the
+ * overlay off its placeholder. The tokens are px-based, so rem scaling is not an option.
+ */
+export function applyUiScale(scale: number): void {
+  const root = document.documentElement;
+  if (scale === 1) {
+    root.style.removeProperty('zoom');
+  } else {
+    root.style.setProperty('zoom', String(scale));
+  }
 }
 
 /**

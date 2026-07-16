@@ -1,4 +1,4 @@
-import { useAppStore, type ProjectTab } from '../store/appStore';
+import { useAppStore } from '../store/appStore';
 import { ProjectOverview } from '../features/overview/ProjectOverview';
 import { ProcessesTab } from '../features/processes/ProcessesTab';
 import { PreviewTab } from '../features/preview/PreviewTab';
@@ -7,38 +7,31 @@ import { ToolchainsTab } from '../features/toolchains/ToolchainsTab';
 import { PortsTab } from '../features/ports/PortsTab';
 import { GitTab } from '../features/git/GitTab';
 import { FilesTab } from '../features/files/FilesTab';
-
-const TABS: Array<{ id: ProjectTab; label: string }> = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'files', label: 'Files' },
-  { id: 'processes', label: 'Processes' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'android', label: 'Android' },
-  { id: 'toolchains', label: 'Toolchains' },
-  { id: 'ports', label: 'Ports' },
-  { id: 'git', label: 'Git' },
-];
+import { orderProjectTabs, PROJECT_TAB_LABELS } from '../lib/projectTabs';
 
 export function ProjectWorkspace() {
   const projectId = useAppStore((s) => s.selectedProjectId);
   const project = useAppStore((s) => s.projects.find((p) => p.projectId === s.selectedProjectId));
   const projectTab = useAppStore((s) => s.projectTab);
   const setProjectTab = useAppStore((s) => s.setProjectTab);
+  const tabOrder = useAppStore((s) => s.settings?.appearance.projectTabOrder);
 
   if (!projectId || !project) return null;
+
+  const tabs = orderProjectTabs(tabOrder);
 
   return (
     <div className="workspace-view">
       <div className="workspace-tabstrip">
-        {TABS.map((tab) => (
+        {tabs.map((id) => (
           <button
-            key={tab.id}
+            key={id}
             type="button"
-            className={['workspace-tab', projectTab === tab.id ? 'active' : ''].join(' ')}
-            aria-current={projectTab === tab.id ? 'page' : undefined}
-            onClick={() => setProjectTab(tab.id)}
+            className={['workspace-tab', projectTab === id ? 'active' : ''].join(' ')}
+            aria-current={projectTab === id ? 'page' : undefined}
+            onClick={() => setProjectTab(id)}
           >
-            {tab.label}
+            {PROJECT_TAB_LABELS[id]}
           </button>
         ))}
       </div>

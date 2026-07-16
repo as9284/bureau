@@ -50,3 +50,7 @@ ehthumbs.db
 *.tgz
 *.tmp
 .cache/
+
+# Legacy per-project config. Bureau now keeps process/toolchain state in its own app storage;
+# ignored so an older installed build writing this file can't put it back into git.
+.bureau/

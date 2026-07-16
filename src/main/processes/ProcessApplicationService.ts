@@ -1,11 +1,6 @@
 import type { ProcessSupervisor, StartInput } from './ProcessSupervisor';
 import type { ProjectCatalogue } from '../projects/ProjectCatalogue';
-import {
-  readProjectConfig,
-  removeProcessDefinition,
-  upsertProcessDefinition,
-  writeProjectConfig,
-} from '../projects/BureauConfigStore';
+import type { ProjectConfigStore } from '../projects/ProjectConfigStore';
 import { detectStack } from '../projects/StackDetector';
 import { mapUnknownError } from '../ipc/errors';
 import type { OkResult } from '@shared/contracts/errors';
@@ -42,7 +37,8 @@ function sameStack(a: readonly string[], b: readonly string[]): boolean {
 
 export function createProcessApplicationService(
   catalogue: ProjectCatalogue,
-  supervisor: ProcessSupervisor
+  supervisor: ProcessSupervisor,
+  configStore: ProjectConfigStore
 ): ProcessApplicationService {
   function projectRootOf(projectId: string): string {
     const project = catalogue.get(projectId);
@@ -54,20 +50,19 @@ export function createProcessApplicationService(
 
   async function processesFor(projectId: string): Promise<ProjectProcesses> {
     const root = projectRootOf(projectId);
-    let { config } = await readProjectConfig(root);
-    // Self-heal projects whose committable config is missing or was written before their
-    // runnable commands were detectable (e.g. native Android, or a config that never got
-    // persisted). Re-run detection and store the suggestions so they become startable.
+    let config = configStore.get(projectId);
+    // Seed projects that have no stored commands yet — a project added before its commands were
+    // detectable (e.g. native Android), or one whose stored config was never written. Re-run
+    // detection and persist the suggestions so they become startable.
     if (config.processes.length === 0) {
       const detection = await detectStack(root).catch(() => null);
       if (detection && detection.suggestedProcesses.length > 0) {
         config = {
           ...config,
-          stack: detection.stack.length > 0 ? detection.stack : config.stack,
           packageManager: detection.packageManager ?? config.packageManager,
           processes: detection.suggestedProcesses,
         };
-        await writeProjectConfig(root, config).catch(() => undefined);
+        await configStore.set(projectId, config).catch(() => undefined);
         // Keep the catalogue's stack (which drives the sidebar/overview badges) in sync
         // with what detection just found, so a healed project badges correctly.
         const current = catalogue.get(projectId);
@@ -81,8 +76,9 @@ export function createProcessApplicationService(
 
   async function resolveStartInput(target: Target): Promise<StartInput> {
     const root = projectRootOf(target.projectId);
-    const { config } = await readProjectConfig(root);
-    const definition = config.processes.find((p) => p.id === target.processId);
+    const definition = configStore.get(target.projectId).processes.find(
+      (p) => p.id === target.processId
+    );
     if (!definition) {
       throw {
         code: 'PROCESS_NOT_FOUND',
@@ -133,8 +129,7 @@ export function createProcessApplicationService(
     projectId: string;
     definition: ProcessDefinition;
   }): Promise<ProjectProcesses> {
-    const root = projectRootOf(input.projectId);
-    await upsertProcessDefinition(root, input.definition);
+    await configStore.upsertProcess(input.projectId, input.definition);
     return processesFor(input.projectId);
   }
 
@@ -143,8 +138,7 @@ export function createProcessApplicationService(
     processId: string;
   }): Promise<ProjectProcesses> {
     await supervisor.stop(input.projectId, input.processId);
-    const root = projectRootOf(input.projectId);
-    await removeProcessDefinition(root, input.processId);
+    await configStore.removeProcess(input.projectId, input.processId);
     return processesFor(input.projectId);
   }
 

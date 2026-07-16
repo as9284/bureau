@@ -37,6 +37,7 @@
   overflow: hidden;
   color: var(--color-text-primary);
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -44,6 +45,7 @@
 .github-publish__branch {
   grid-column: 2;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .github-publish__field {
@@ -179,6 +181,7 @@
   min-width: 0;
   overflow: hidden;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;

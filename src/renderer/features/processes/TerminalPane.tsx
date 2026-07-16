@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { DEFAULT_EMBEDDED_TERMINAL_SETTINGS } from '@shared/contracts/settings';
+import { useAppStore } from '../../store/appStore';
 
 /**
  * Build an xterm theme from the graphite design tokens (tokens.css). xterm's `theme`
@@ -71,13 +73,21 @@ export function TerminalPane({
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const terminalSettings = useAppStore((s) => s.settings?.embeddedTerminal);
+  // Read via a ref so changing these does not tear down and recreate the pty pane
+  // (that would drop scrollback); a separate effect applies them live instead.
+  const settingsRef = useRef(terminalSettings);
+  settingsRef.current = terminalSettings;
 
   useEffect(() => {
     if (!hostRef.current) return;
     const term = new Terminal({
       convertEol: true,
       fontFamily: monoFontFamily(),
-      fontSize: 12,
+      fontSize: settingsRef.current?.fontSize ?? DEFAULT_EMBEDDED_TERMINAL_SETTINGS.fontSize,
+      scrollback: settingsRef.current?.scrollback ?? DEFAULT_EMBEDDED_TERMINAL_SETTINGS.scrollback,
+      cursorStyle:
+        settingsRef.current?.cursorStyle ?? DEFAULT_EMBEDDED_TERMINAL_SETTINGS.cursorStyle,
       theme: themeFromTokens(),
     });
     const fit = new FitAddon();
@@ -122,6 +132,23 @@ export function TerminalPane({
   useEffect(() => {
     if (active) fitRef.current?.fit();
   }, [active]);
+
+  // Apply terminal settings to the live instance; a font-size change alters the cell
+  // grid, so refit and tell the pty about the new dimensions.
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term || !terminalSettings) return;
+    term.options.fontSize = terminalSettings.fontSize;
+    term.options.scrollback = terminalSettings.scrollback;
+    term.options.cursorStyle = terminalSettings.cursorStyle;
+    fitRef.current?.fit();
+    void window.bureau.processes.resizePty({
+      projectId,
+      processId,
+      cols: term.cols,
+      rows: term.rows,
+    });
+  }, [terminalSettings, projectId, processId]);
 
   return <div className="terminal-pane" ref={hostRef} />;
 }

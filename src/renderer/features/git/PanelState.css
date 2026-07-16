@@ -1,0 +1,37 @@
+/* Shared Git workbench state surfaces: the tweaks PanelError layers on the Banner
+   primitive, and the degraded/stale marker its sibling lists use while re-loading. */
+
+/* Git's message is machine-generated text. */
+.git-panel-error__message {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Panels and dialogs stack these banners with their own content, so the banner sits
+   apart from whatever follows without each caller repeating a margin. */
+.git-panel-error {
+  margin-bottom: var(--space-3);
+}
+
+/**
+ * Degraded, not blank: a list re-loading over data it already has stays readable
+ * and interactive, just visibly out of date. Panels pair this with `aria-busy`.
+ */
+.git-stale {
+  opacity: 0.6;
+  transition: opacity var(--motion-duration-state) var(--ease-state);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .git-stale {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .git-stale {
+    opacity: 1;
+  }
+}
+

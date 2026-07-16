@@ -268,5 +268,51 @@ export function ChevronDownIcon(props: IconProps) {
   );
 }
 
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16.5" y1="16.5" x2="21" y2="21" />
+    </Icon>
+  );
+}
+
+/** Push-pin. Render with an accent color + `filled` for the pinned state. */
+export function PinIcon({ filled = false, ...props }: IconProps & { filled?: boolean }) {
+  return (
+    <Icon {...props}>
+      <path
+        d="M9 3h6l-1 5 3 3v2H7v-2l3-3-1-5Z"
+        fill={filled ? 'currentColor' : 'none'}
+      />
+      <line x1="12" y1="13" x2="12" y2="21" />
+    </Icon>
+  );
+}
+
+/** Clock / history — the "Recent" section marker. */
+export function ClockIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
+    </Icon>
+  );
+}
+
+/** Six-dot drag affordance for reorderable rows. */
+export function GripIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="18" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="18" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
 export { BranchIcon as GitMark };
 

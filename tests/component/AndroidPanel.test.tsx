@@ -5,6 +5,7 @@ import { AndroidPanel } from '@renderer/features/android/AndroidPanel';
 import { useAppStore } from '@renderer/store/appStore';
 import type { BureauApiV1 } from '@shared/contracts/api';
 import type { AndroidOverview } from '@shared/contracts/android';
+import { DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const overview: AndroidOverview = {
@@ -104,7 +105,6 @@ beforeEach(() => {
         canonicalPath: 'c:\\mobile',
         stack: ['flutter'],
         addedAt: new Date().toISOString(),
-        configPresent: false,
       },
     ],
     androidByProject: {},
@@ -118,6 +118,8 @@ beforeEach(() => {
         density: 'compact',
         accentColor: '#7c9cff',
         immersiveMode: false,
+        reduceMotion: false,
+        uiScale: 1,
       },
       tools: { showOpenInEditor: true, showOpenInTerminal: true, showOpenInExplorer: true },
       layout: { paneWidths: { files: 340, commit: 280 } },
@@ -132,17 +134,11 @@ beforeEach(() => {
   git: {},
   gitBehavior: { pullStrategy: 'ff-only' },
   history: { commitLimit: 30 },
-  confirmations: {
-    discardChanges: true,
-    deleteBranch: true,
-    dropStash: true,
-    amendCommit: true,
-    conflictOverwrite: true,
-    deleteRemoteBranch: true,
-    deleteRemoteTag: true,
-  },
+  confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
-  hub: { defaultSort: 'attention', recentCount: 8 },
+  processes: { logBufferLines: 5000, maxCrashRestarts: 5 },
+  preview: { defaultViewport: 'fill', captureConsole: true },
+  embeddedTerminal: { fontSize: 12, scrollback: 1000, cursorStyle: 'block' },
   onboarding: { completedVersion: '1.0.0' },
     },
   });

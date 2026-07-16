@@ -133,6 +133,7 @@
 
 .history-panel__hash {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
   color: var(--color-accent-primary);
 }
@@ -154,6 +155,8 @@
 .history-panel__meta {
   font-size: var(--font-size-label);
   color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .history-panel__file {
@@ -166,6 +169,7 @@
 
 .history-panel__file-code {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-muted);
@@ -192,6 +196,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-supporting);
 }
 
@@ -251,6 +256,7 @@
 
 .history-panel__compare-code {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-semibold);
 }

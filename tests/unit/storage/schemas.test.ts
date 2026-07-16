@@ -34,6 +34,62 @@ describe('validateSettings', () => {
     expect(settings.appearance.accentColor).toBe('#7c9cff');
   });
 
+  it('defaults reduceMotion off and preserves an explicit opt-in', () => {
+    expect(validateSettings({}).appearance.reduceMotion).toBe(false);
+    expect(validateSettings({ appearance: { reduceMotion: true } }).appearance.reduceMotion).toBe(
+      true
+    );
+    // Non-boolean junk falls back to the default rather than throwing away settings.
+    expect(
+      validateSettings({ appearance: { reduceMotion: 'yes' } }).appearance.reduceMotion
+    ).toBe(false);
+  });
+
+  it('defaults the processes and preview groups and preserves overrides', () => {
+    const defaults = validateSettings({});
+    expect(defaults.processes).toEqual({ logBufferLines: 5000, maxCrashRestarts: 5 });
+    expect(defaults.preview).toEqual({ defaultViewport: 'fill', captureConsole: true });
+
+    const custom = validateSettings({
+      processes: { maxCrashRestarts: 0 },
+      preview: { defaultViewport: 'mobile', captureConsole: false },
+    });
+    // A partial group keeps the untouched key at its default.
+    expect(custom.processes).toEqual({ logBufferLines: 5000, maxCrashRestarts: 0 });
+    expect(custom.preview).toEqual({ defaultViewport: 'mobile', captureConsole: false });
+  });
+
+  it('defaults the embedded terminal and code editor settings', () => {
+    const defaults = validateSettings({});
+    expect(defaults.embeddedTerminal).toEqual({
+      fontSize: 12,
+      scrollback: 1000,
+      cursorStyle: 'block',
+    });
+    expect(defaults.files.editorFontSize).toBe(13);
+    expect(defaults.files.lineNumbers).toBe(true);
+
+    const custom = validateSettings({
+      embeddedTerminal: { fontSize: 14, cursorStyle: 'bar' },
+      files: { lineNumbers: false },
+    });
+    expect(custom.embeddedTerminal).toEqual({
+      fontSize: 14,
+      scrollback: 1000,
+      cursorStyle: 'bar',
+    });
+    expect(custom.files.lineNumbers).toBe(false);
+    expect(custom.files.editorFontSize).toBe(13);
+  });
+
+  it('defaults uiScale to 100% and normalizes an unsupported scale', () => {
+    expect(validateSettings({}).appearance.uiScale).toBe(1);
+    expect(validateSettings({ appearance: { uiScale: 1.25 } }).appearance.uiScale).toBe(1.25);
+    // An out-of-range or retired scale must not fail the whole settings parse.
+    expect(validateSettings({ appearance: { uiScale: 3 } }).appearance.uiScale).toBe(1);
+    expect(validateSettings({ appearance: { uiScale: 'big' } }).appearance.uiScale).toBe(1);
+  });
+
   it('silently removes retired immersive tuning fields from v1 settings', () => {
     const settings = validateSettings({
       appearance: {
@@ -48,6 +104,8 @@ describe('validateSettings', () => {
       density: 'compact',
       accentColor: '#7c9cff',
       immersiveMode: true,
+      reduceMotion: false,
+      uiScale: 1,
     });
   });
 
@@ -132,6 +190,5 @@ function makeProject(projectId: string, path: string) {
     canonicalPath: path,
     stack: ['node'],
     addedAt: new Date().toISOString(),
-    configPresent: false,
   };
 }

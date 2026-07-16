@@ -4,6 +4,7 @@ import { Button } from '@renderer/components/Button';
 import { Checkbox } from '@renderer/components/Checkbox';
 import { Dialog } from '@renderer/components/Dialog';
 import { TextInput } from '@renderer/components/TextInput';
+import { PanelError } from '@renderer/features/git/PanelState';
 import './LifecycleDialog.css';
 
 function folderNameFromUrl(url: string): string {
@@ -18,6 +19,8 @@ export function CloneDialog(): ReactElement {
   const open = useGitStore((s) => s.cloneDialogOpen);
   const setOpen = useGitStore((s) => s.setCloneDialogOpen);
   const cloneRepository = useGitStore((s) => s.cloneRepository);
+  const cloneBusy = useGitStore((s) => s.cloneBusy);
+  const cloneError = useGitStore((s) => s.cloneError);
 
   const [url, setUrl] = useState('');
   const [parentDirectory, setParentDirectory] = useState('');
@@ -56,21 +59,28 @@ export function CloneDialog(): ReactElement {
   };
 
   const canSubmit =
-    url.trim().length > 0 && parentDirectory.trim().length > 0 && folderName.trim().length > 0;
+    url.trim().length > 0 &&
+    parentDirectory.trim().length > 0 &&
+    folderName.trim().length > 0 &&
+    !cloneBusy;
 
   return (
     <Dialog
       open={open}
       title="Clone repository"
       description="Clone a remote repository into a folder on this machine."
-      onClose={() => setOpen(false)}
+      onClose={() => {
+        // Closing mid-clone would strand the operation with no way back to its result.
+        if (!cloneBusy) setOpen(false);
+      }}
       actions={
         <>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="secondary" disabled={cloneBusy} onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button
             variant="primary"
+            loading={cloneBusy}
             disabled={!canSubmit}
             onClick={() =>
               cloneRepository({
@@ -88,6 +98,14 @@ export function CloneDialog(): ReactElement {
       }
     >
       <div className="lifecycle-dialog__fields">
+        {/* No onRetry: the dialog stays open with the values intact, so Clone below is
+            the retry — and a bad URL needs correcting first, not re-sending. */}
+        {cloneError ? <PanelError title="Clone failed" message={cloneError.message} /> : null}
+        {cloneBusy ? (
+          <p className="lifecycle-dialog__status" role="status">
+            Cloning repository — this can take a while for a large repository.
+          </p>
+        ) : null}
         <TextInput
           label="Repository URL"
           value={url}

@@ -56,7 +56,7 @@ describe('project + process journey (headless)', () => {
   it('adds a project, runs a process, streams logs, stops, and removes', async () => {
     const { services, supervisor } = boot;
 
-    // Add project → detection writes .bureau/config.json with the npm script.
+    // Add project → detection persists the npm script into Bureau's own app storage.
     const added = await services.projects.add({ path: projectDir });
     expect(added.ok).toBe(true);
     if (!added.ok) return;

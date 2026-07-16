@@ -6,7 +6,7 @@ import type { GitExecutableResolver } from './GitExecutableResolver';
 import type { GitRunner } from './GitRunner';
 import type { GitStatusService } from './GitStatusService';
 import type { BureauErrorCode } from '@shared/contracts/errors';
-import type { CommitRequest, BranchSwitchRequest, BranchCreateRequest, BranchDeleteRequest, FileMutationRequest, MutationResult, RepoMutationRequest, StashPushRequest, StashIndexRequest } from '@shared/contracts/operations';
+import type { BranchSwitchRequest, BranchCreateRequest, BranchDeleteRequest, FileMutationRequest, MutationResult, RepoMutationRequest, StashPushRequest, StashIndexRequest } from '@shared/contracts/operations';
 import type { PullStrategy } from '@shared/contracts/settings';
 import { assertGitSuccess } from './gitResult';
 import { toBureauError } from '../ipc/errors';
@@ -16,7 +16,6 @@ const MUTATION_TIMEOUT_MS = 60_000;
 const PULL_PUSH_TIMEOUT_MS = 300_000;
 
 export type GitMutationService = {
-  listBranches(input: { projectId: string }): Promise<string[]>;
   switchBranch(input: BranchSwitchRequest): Promise<MutationResult>;
   createBranch(input: BranchCreateRequest): Promise<MutationResult>;
   deleteBranch(input: BranchDeleteRequest): Promise<MutationResult>;
@@ -27,7 +26,6 @@ export type GitMutationService = {
   unstageAll(input: RepoMutationRequest): Promise<MutationResult>;
   discardFile(input: FileMutationRequest): Promise<MutationResult>;
   discardAll(input: RepoMutationRequest): Promise<MutationResult>;
-  commit(input: CommitRequest): Promise<MutationResult>;
   pullFastForward(input: RepoMutationRequest): Promise<MutationResult>;
   push(input: RepoMutationRequest): Promise<MutationResult>;
   stashPush(input: StashPushRequest): Promise<MutationResult>;
@@ -425,32 +423,6 @@ export function createGitMutationService(params: {
     });
   }
 
-  async function listBranches(input: { projectId: string }): Promise<string[]> {
-    return coordinator.runProjectRead(input.projectId, async () => {
-      const repo = catalogue.get(input.projectId);
-      if (!repo) throw new Error(`Repository ${input.projectId} not found.`);
-      const capability = await resolver.resolve();
-      if (capability.kind !== 'available') throw new Error('Git is not available or unsupported.');
-      const result = await runner.run(capability.executablePath, {
-        args: [
-          '-C',
-          repo.canonicalPath,
-          'for-each-ref',
-          '--format=%(refname:short)%00',
-          'refs/heads',
-        ],
-        timeoutMs: MUTATION_TIMEOUT_MS,
-        stdoutLimitBytes: 1024 * 1024,
-      });
-      if (result.exitCode !== 0) throw new Error(result.stderr || 'Could not list branches.');
-      return result.stdout
-        .split('\0')
-        .map((branch) => branch.trim())
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b));
-    });
-  }
-
   async function switchBranch(input: BranchSwitchRequest): Promise<MutationResult> {
     const eligibilityError = checkBranchSwitchEligibility(input.projectId, input.snapshotRevision);
     if (eligibilityError) return eligibilityError;
@@ -522,63 +494,6 @@ export function createGitMutationService(params: {
       const result = await runner.run(executablePath, {
         args,
         stdin: Buffer.from(`${input.path}\0`),
-        timeoutMs: MUTATION_TIMEOUT_MS,
-      });
-      if (result.exitCode !== 0) {
-        throw new Error(result.stderr);
-      }
-    });
-  }
-
-  async function commit(input: CommitRequest): Promise<MutationResult> {
-    const trimmedMessage = input.message.trim();
-    if (trimmedMessage.length === 0) {
-      return errorResult(
-        'INVALID_COMMIT_MESSAGE',
-        'Commit message cannot be empty.',
-        'git.commit',
-        input.projectId
-      );
-    }
-    if (Buffer.byteLength(input.message, 'utf8') > 10000) {
-      return errorResult(
-        'INVALID_COMMIT_MESSAGE',
-        'Commit message is too long.',
-        'git.commit',
-        input.projectId
-      );
-    }
-
-    const snapshot = snapshotCache.get(input.projectId);
-    if (!snapshot || snapshot.revision !== input.snapshotRevision) {
-      return errorResult(
-        'SNAPSHOT_STALE',
-        'Repository snapshot is stale. Refresh before committing.',
-        'git.commit',
-        input.projectId
-      );
-    }
-    if (!snapshot.changedFiles.some((f) => f.staged)) {
-      return errorResult(
-        'NO_STAGED_CHANGES',
-        'No staged changes to commit.',
-        'git.commit',
-        input.projectId
-      );
-    }
-    if (snapshot.blockedOperation) {
-      return errorResult(
-        'REPOSITORY_BLOCKED',
-        'Repository is blocked.',
-        'git.commit',
-        input.projectId
-      );
-    }
-
-    return runWithRefresh(input.projectId, 'git.commit', async (executablePath, repoPath) => {
-      const result = await runner.run(executablePath, {
-        args: ['-C', repoPath, 'commit', '--file=-'],
-        stdin: Buffer.from(input.message, 'utf8'),
         timeoutMs: MUTATION_TIMEOUT_MS,
       });
       if (result.exitCode !== 0) {
@@ -729,7 +644,6 @@ export function createGitMutationService(params: {
   }
 
   return {
-    listBranches,
     switchBranch,
     createBranch,
     deleteBranch,
@@ -740,7 +654,6 @@ export function createGitMutationService(params: {
     unstageAll,
     discardFile,
     discardAll,
-    commit,
     pullFastForward,
     push,
     stashPush,

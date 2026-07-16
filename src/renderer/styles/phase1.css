@@ -15,30 +15,127 @@
   gap: var(--space-2);
 }
 
+/* Project filter + sections */
+
+/* Sticky filter bar — the card grid scrolls under it inside .stage, so the
+   filter stays reachable in a long list. It needs an explicit z-index: the 3D
+   cards are transformed (each its own stacking context) and come later in DOM
+   order, so they would otherwise paint over it. */
+.hub-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-raised);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) 0;
+  background: var(--color-surface-base);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.hub-toolbar .project-search {
+  margin-bottom: 0;
+}
+
+.project-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-3);
+  height: var(--size-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  transition:
+    border-color var(--motion-duration-state) var(--ease-state),
+    background var(--motion-duration-state) var(--ease-state);
+}
+
+.project-search:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.project-search:focus-within {
+  border-color: var(--color-accent-primary);
+  background: var(--color-surface-base);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+.project-search > svg {
+  flex: 0 0 auto;
+}
+
+/* The inner input is chromeless in every state — the wrapper is the control.
+   The :not() guards match the base .control-input:hover specificity so this wins. */
+.project-search .control-input,
+.project-search .control-input:hover:not(:disabled):not(:read-only),
+.project-search .control-input:focus,
+.project-search .control-input:focus-visible {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.project-section {
+  margin-bottom: var(--space-5);
+}
+
+.project-section__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.project-list__empty {
+  margin: var(--space-4) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+}
+
 /* Project cards */
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .project-card {
+  --card-rx: 0deg;
+  --card-ry: 0deg;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  gap: var(--space-2);
+  padding: var(--space-4);
   border-radius: var(--radius-overlay);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
+  transform: perspective(var(--card-perspective)) rotateX(var(--card-rx)) rotateY(var(--card-ry));
+  transform-style: preserve-3d;
   transition:
-    border-color 120ms cubic-bezier(0.2, 0, 0, 1),
-    background 120ms cubic-bezier(0.2, 0, 0, 1);
+    transform var(--motion-duration-disclosure) var(--ease-state),
+    box-shadow var(--motion-duration-disclosure) var(--ease-state),
+    border-color var(--motion-duration-state) var(--ease-state),
+    background var(--motion-duration-state) var(--ease-state);
 }
 
 .project-card:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-border-default);
+  box-shadow: var(--shadow-card-hover);
+  transform: perspective(var(--card-perspective)) rotateX(var(--card-rx)) rotateY(var(--card-ry))
+    scale(1.015);
 }
 
 .project-card:focus-visible {
@@ -50,11 +147,46 @@
   opacity: 0.7;
 }
 
+.project-card.pinned {
+  border-color: var(--color-border-default);
+}
+
+.project-card.dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+/* Cursor-tracked sheen; hidden until hover. Sits under the card content. */
+.project-card__glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    18rem 18rem at var(--glare-x, 50%) var(--glare-y, 50%),
+    color-mix(in srgb, var(--color-text-primary) 10%, transparent),
+    transparent 60%
+  );
+  transition: opacity var(--motion-duration-disclosure) var(--ease-state);
+}
+
+.project-card:hover .project-card__glare {
+  opacity: 1;
+}
+
 .project-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
+}
+
+.project-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .project-card__name {
@@ -65,19 +197,59 @@
   white-space: nowrap;
 }
 
+.project-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+
+.project-card__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 22px;
+  color: var(--color-text-disabled);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+}
+
+.project-card__grip:hover {
+  color: var(--color-text-secondary);
+}
+
+.project-card__grip:active {
+  cursor: grabbing;
+}
+
+.project-card__pin.icon-button {
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  color: var(--color-text-muted);
+}
+
+.project-card__pin.icon-button.active {
+  opacity: 1;
+  color: var(--color-accent-primary);
+}
+
 .project-card__remove {
   opacity: 0;
   width: 26px;
   height: 26px;
 }
 
+.project-card:hover .project-card__pin.icon-button,
+.project-card:focus-within .project-card__pin.icon-button,
 .project-card:hover .project-card__remove,
 .project-card:focus-within .project-card__remove {
   opacity: 1;
 }
 
 .project-card__path {
-  font-size: 11px;
+  font-size: var(--font-size-label);
   color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -87,16 +259,34 @@
 .project-card__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: var(--space-1);
   min-height: 18px;
 }
 
 .project-card__foot {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-label);
   color: var(--color-text-muted);
   margin-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-card {
+    transform: none;
+    transition:
+      box-shadow var(--motion-duration-state) var(--ease-state),
+      border-color var(--motion-duration-state) var(--ease-state),
+      background var(--motion-duration-state) var(--ease-state);
+  }
+
+  .project-card:hover {
+    transform: none;
+  }
+
+  .project-card__glare {
+    display: none;
+  }
 }
 
 /* Stack badges */
@@ -166,6 +356,9 @@
 }
 .state-dot.danger {
   background: var(--color-status-danger);
+}
+.state-dot.warning {
+  background: var(--color-status-warning);
 }
 .state-dot.idle {
   background: var(--color-text-disabled);

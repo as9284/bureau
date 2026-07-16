@@ -72,8 +72,9 @@ workspaces, and an immersive mode that keeps project navigation out of the way u
 4. Use the project tabs for Files, Processes, Preview, Android, Toolchains, Ports, and Git.
 5. Open the command palette with `Ctrl+K`; use `Ctrl+B` to toggle immersive navigation.
 
-Projects may commit a `.bureau/config.json` file for shared process definitions. Bureau treats that file as
-untrusted repository input: commands remain visible and are never blindly auto-run merely because a project
+Bureau detects process definitions from a project's own files (`package.json` scripts and friends) and keeps
+them in its own application storage — nothing is written into your repository. Detected commands are treated
+as untrusted repository input: they remain visible and are never blindly auto-run merely because a project
 was opened.
 
 ## Security model

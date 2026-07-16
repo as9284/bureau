@@ -50,3 +50,19 @@ export type BranchDeleteRemoteRequest = {
   remoteName: string;
   branchName: string;
 };
+
+/** Merge another branch into the checked-out one. Conflicts leave the repo mid-merge. */
+export type MergeBranchRequest = {
+  projectId: string;
+  snapshotRevision: string;
+  /** Ref merged *into* the current branch (local short name or `origin/main`). */
+  branchName: string;
+};
+
+/** Replay the checked-out branch onto another. Rewrites the current branch's history. */
+export type RebaseBranchRequest = {
+  projectId: string;
+  snapshotRevision: string;
+  /** Ref the current branch is replayed onto (local short name or `origin/main`). */
+  ontoRef: string;
+};

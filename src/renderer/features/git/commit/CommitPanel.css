@@ -26,6 +26,7 @@
 }
 
 .commit-panel__count {
+  font-family: var(--font-family-mono);
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
   color: var(--color-text-muted);
@@ -55,6 +56,7 @@
 
 .commit-panel__latest code {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-accent-primary);
 }
 

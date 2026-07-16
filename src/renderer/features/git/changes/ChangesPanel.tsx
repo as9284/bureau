@@ -308,7 +308,17 @@ export function ChangesPanel({ projectId, snapshot, readOnly }: Props): ReactEle
       <Dialog
         open={Boolean(discardTarget)}
         title="Discard changes?"
-        description={`Changes to ${discardTarget?.path ?? 'this file'} will be permanently lost. This cannot be undone.`}
+        description={
+          <>
+            Changes to{' '}
+            {discardTarget?.path ? (
+              <span className="mono">{discardTarget.path}</span>
+            ) : (
+              'this file'
+            )}{' '}
+            will be permanently lost. This cannot be undone.
+          </>
+        }
         onClose={() => setDiscardTarget(null)}
         actions={
           <>

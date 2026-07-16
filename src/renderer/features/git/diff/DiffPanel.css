@@ -71,6 +71,7 @@
   padding: var(--space-1) var(--space-2);
   border-radius: calc(var(--radius-control) - 2px);
   cursor: pointer;
+  min-height: var(--size-target-minimum);
 }
 
 .diff-panel__mode-btn--active {
@@ -80,6 +81,7 @@
 
 .diff-panel__blame {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-supporting);
 }
 
@@ -135,6 +137,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .diff-panel__area {
@@ -154,9 +157,18 @@
   min-height: 0;
   overflow: auto;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-supporting);
   line-height: 20px;
   tab-size: 2;
+}
+
+/* Chromium puts a childless scroll container in the tab order (the blame and
+   read-only commit views). This one sits flush inside .diff-panel's overflow:hidden,
+   so the global +2px ring would be clipped away — inset it instead. */
+.diff-panel__body:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 .diff-panel__empty,
@@ -221,6 +233,7 @@
   font-size: var(--font-size-label);
   color: var(--color-accent-primary);
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .diff-panel__hunk-actions {

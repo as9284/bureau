@@ -1,5 +1,5 @@
 import type { ProjectCatalogue } from '../projects/ProjectCatalogue';
-import { readProjectConfig, writeProjectConfig } from '../projects/BureauConfigStore';
+import type { ProjectConfigStore } from '../projects/ProjectConfigStore';
 import { mapUnknownError } from '../ipc/errors';
 import type { OkResult } from '@shared/contracts/errors';
 import type {
@@ -19,6 +19,7 @@ export type ToolchainApplicationService = {
 export function createToolchainApplicationService(deps: {
   catalogue: ProjectCatalogue;
   settingsStore: SettingsStore;
+  configStore: ProjectConfigStore;
 }): ToolchainApplicationService {
   function projectOf(projectId: string): { path: string; stack: ProjectStack[] } {
     const project = deps.catalogue.get(projectId);
@@ -30,7 +31,7 @@ export function createToolchainApplicationService(deps: {
 
   async function getProjectToolchains(input: { projectId: string }): Promise<ProjectToolchains> {
     const project = projectOf(input.projectId);
-    const { config } = await readProjectConfig(project.path);
+    const config = deps.configStore.get(input.projectId);
     return buildProjectToolchains(
       input.projectId,
       project.path,
@@ -45,7 +46,7 @@ export function createToolchainApplicationService(deps: {
   ): Promise<OkResult & { toolchains: ProjectToolchains }> {
     try {
       const project = projectOf(input.projectId);
-      const { config } = await readProjectConfig(project.path);
+      const config = deps.configStore.get(input.projectId);
       const next = {
         ...config,
         toolchains: {
@@ -56,7 +57,7 @@ export function createToolchainApplicationService(deps: {
           },
         },
       };
-      await writeProjectConfig(project.path, next);
+      await deps.configStore.set(input.projectId, next);
       const toolchains = await buildProjectToolchains(
         input.projectId,
         project.path,

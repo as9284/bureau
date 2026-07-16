@@ -6,6 +6,7 @@ import { Button } from '@renderer/components/Button';
 import { Dialog } from '@renderer/components/Dialog';
 import { EmptyState } from '@renderer/components/EmptyState';
 import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { TextInput } from '@renderer/components/TextInput';
 import './WorktreesPanel.css';
 
@@ -18,6 +19,7 @@ type Props = {
 export function WorktreesPanel({ projectId, snapshot, readOnly }: Props): ReactElement {
   const worktrees = useGitStore((s) => s.worktrees);
   const worktreesLoading = useGitStore((s) => s.worktreesLoading);
+  const worktreesError = useGitStore((s) => s.worktreesError);
   const loadWorktrees = useGitStore((s) => s.loadWorktrees);
   const addWorktree = useGitStore((s) => s.addWorktree);
   const removeWorktree = useGitStore((s) => s.removeWorktree);
@@ -74,19 +76,32 @@ export function WorktreesPanel({ projectId, snapshot, readOnly }: Props): ReactE
         </div>
       </header>
 
-      {worktreesLoading ? (
+      {worktreesError ? (
+        <PanelError
+          title="Could not load worktrees"
+          message={worktreesError.message}
+          onRetry={() => void loadWorktrees(projectId)}
+        />
+      ) : null}
+
+      {worktreesLoading && worktrees.length === 0 ? (
         <div className="worktrees-panel__loading">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height="40px" />
+            <Skeleton key={i} width="100%" height="var(--size-hub-row)" />
           ))}
         </div>
       ) : worktrees.length === 0 ? (
-        <EmptyState
-          title="No linked worktrees"
-          description="Add a worktree to check out another branch in a separate directory."
-        />
+        worktreesError ? null : (
+          <EmptyState
+            title="No linked worktrees"
+            description="Add a worktree to check out another branch in a separate directory."
+          />
+        )
       ) : (
-        <ul className="worktrees-panel__list">
+        <ul
+          className={`worktrees-panel__list ${worktreesLoading ? 'git-stale' : ''}`}
+          aria-busy={worktreesLoading}
+        >
           {worktrees.map((wt) => (
             <li
               key={wt.path}

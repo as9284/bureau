@@ -357,10 +357,6 @@ function DetailsCard({ project }: { project: TrackedProject }) {
           <dt>Added</dt>
           <dd className="mono">{formatRelativeTime(project.addedAt)}</dd>
         </div>
-        <div>
-          <dt>Config</dt>
-          <dd className="mono">{project.configPresent ? '.bureau/config.json' : 'none'}</dd>
-        </div>
       </dl>
     </section>
   );

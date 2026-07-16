@@ -1,11 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, type MouseEvent } from 'react';
 import { useAppStore } from '../store/appStore';
 import { ensureGitProject, useGitStore } from '../store/gitStore';
 import { Button } from '../components/Button';
-import { StackBadge } from '../components/StackBadge';
-import { IconButton } from '../components/IconButton';
-import { FolderPlusIcon, StackIcon, TrashIcon } from '../components/icons';
-import { formatRelativeTime } from '../lib/format';
+import { TextField } from '../components/TextField';
+import { FolderPlusIcon, SearchIcon, StackIcon } from '../components/icons';
+import { ProjectCard } from '../features/projects/ProjectCard';
+import { groupProjects, movePinned } from '../lib/projectOrder';
+import { usePinnedReorder } from '../lib/usePinnedReorder';
+import type { TrackedProject } from '@shared/contracts/projects';
+import type { ContextMenuItem } from '../store/appStore';
 import {
   formatAttentionLabel,
   getAttentionLevel,
@@ -33,10 +36,14 @@ function attentionBadgeClass(level: AttentionLevel): string {
 
 export function HubOverview() {
   const projects = useAppStore((s) => s.projects);
+  const projectQuery = useAppStore((s) => s.projectQuery);
+  const setProjectQuery = useAppStore((s) => s.setProjectQuery);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
   const selectProject = useAppStore((s) => s.selectProject);
   const setProjectTab = useAppStore((s) => s.setProjectTab);
   const removeProject = useAppStore((s) => s.removeProject);
+  const setProjectPinned = useAppStore((s) => s.setProjectPinned);
+  const reorderPinnedProjects = useAppStore((s) => s.reorderPinnedProjects);
   const loadProcesses = useAppStore((s) => s.loadProcesses);
   const processesByProject = useAppStore((s) => s.processesByProject);
   const openContextMenu = useAppStore((s) => s.openContextMenu);
@@ -62,10 +69,87 @@ export function HubOverview() {
     }
   }, [projects, processesByProject, loadProcesses, refreshRepo]);
 
+  const grouped = useMemo(() => groupProjects(projects, projectQuery), [projects, projectQuery]);
+  const pinnedReorder = usePinnedReorder(grouped.pinned);
+  const pinnedIds = grouped.pinned.map((p) => p.projectId);
+
   const openGitTab = (projectId: string) => {
     void selectProject(projectId);
     setProjectTab('git');
   };
+
+  const runningCount = (projectId: string): number =>
+    (processesByProject[projectId]?.runtimes ?? []).filter(
+      (r) => r.status === 'running' || r.status === 'starting'
+    ).length;
+
+  const gitBadgeFor = (project: TrackedProject): { className: string; label: string } | null => {
+    const gitRepo = gitRepos[project.projectId];
+    const snap = gitRepo?.snapshot;
+    if (!snap) return null;
+    const level = getAttentionLevel({ snapshot: snap, error: gitRepo?.error });
+    return { className: attentionBadgeClass(level), label: formatAttentionLabel({ level, snapshot: snap }) };
+  };
+
+  const buildMenu = (project: TrackedProject) => (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const pinnedIndex = pinnedIds.indexOf(project.projectId);
+    const items: ContextMenuItem[] = [
+      { type: 'item', label: 'Open', onSelect: () => void selectProject(project.projectId) },
+      { type: 'item', label: 'Open Git tab', onSelect: () => openGitTab(project.projectId) },
+      { type: 'separator' },
+      {
+        type: 'item',
+        label: project.pinned ? 'Unpin' : 'Pin to top',
+        onSelect: () => void setProjectPinned(project.projectId, !project.pinned),
+      },
+    ];
+    if (project.pinned && pinnedIndex > 0) {
+      items.push({
+        type: 'item',
+        label: 'Move up',
+        onSelect: () => void reorderPinnedProjects(movePinned(pinnedIds, project.projectId, -1)),
+      });
+    }
+    if (project.pinned && pinnedIndex >= 0 && pinnedIndex < pinnedIds.length - 1) {
+      items.push({
+        type: 'item',
+        label: 'Move down',
+        onSelect: () => void reorderPinnedProjects(movePinned(pinnedIds, project.projectId, 1)),
+      });
+    }
+    items.push(
+      { type: 'separator' },
+      { type: 'item', label: 'Clone repository', onSelect: () => setCloneDialogOpen(true) },
+      { type: 'item', label: 'Init repository', onSelect: () => setInitDialogOpen(true) },
+      { type: 'separator' },
+      {
+        type: 'item',
+        label: 'Remove project',
+        danger: true,
+        onSelect: () => void removeProject(project.projectId),
+      }
+    );
+    openContextMenu({ x: event.clientX, y: event.clientY, items });
+  };
+
+  const renderCard = (project: TrackedProject, reorderable: boolean) => (
+    <ProjectCard
+      key={project.projectId}
+      project={project}
+      running={runningCount(project.projectId)}
+      gitBadge={gitBadgeFor(project)}
+      refreshing={Boolean(gitRepos[project.projectId]?.refreshing)}
+      onOpen={() => void selectProject(project.projectId)}
+      onRemove={() => void removeProject(project.projectId)}
+      onTogglePin={() => void setProjectPinned(project.projectId, !project.pinned)}
+      onContextMenu={buildMenu(project)}
+      dragHandleProps={reorderable ? pinnedReorder.handleProps(project.projectId) : undefined}
+      dropProps={reorderable ? pinnedReorder.itemProps(project.projectId) : undefined}
+      dragging={reorderable && pinnedReorder.draggingId === project.projectId}
+    />
+  );
 
   if (projects.length === 0) {
     return (
@@ -94,6 +178,9 @@ export function HubOverview() {
     );
   }
 
+  const hasPinned = pinnedReorder.order.length > 0;
+  const noMatches = grouped.pinned.length === 0 && grouped.recent.length === 0;
+
   return (
     <div className="stage-inner">
       <div className="hub-header">
@@ -115,99 +202,40 @@ export function HubOverview() {
         </div>
       </div>
 
-      <div className="project-grid">
-        {projects.map((project) => {
-          const runtimes = processesByProject[project.projectId]?.runtimes ?? [];
-          const running = runtimes.filter(
-            (r) => r.status === 'running' || r.status === 'starting'
-          ).length;
-          const gitRepo = gitRepos[project.projectId];
-          const snap = gitRepo?.snapshot;
-          const level = getAttentionLevel({ snapshot: snap, error: gitRepo?.error });
-          const attentionLabel = formatAttentionLabel({ level, snapshot: snap });
-
-          return (
-            <div
-              key={project.projectId}
-              className={['project-card', project.missing ? 'missing' : ''].join(' ')}
-              role="button"
-              tabIndex={0}
-              onClick={() => void selectProject(project.projectId)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void selectProject(project.projectId);
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openContextMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  items: [
-                    {
-                      type: 'item',
-                      label: 'Open',
-                      onSelect: () => void selectProject(project.projectId),
-                    },
-                    {
-                      type: 'item',
-                      label: 'Open Git tab',
-                      onSelect: () => openGitTab(project.projectId),
-                    },
-                    { type: 'separator' },
-                    {
-                      type: 'item',
-                      label: 'Clone repository',
-                      onSelect: () => setCloneDialogOpen(true),
-                    },
-                    {
-                      type: 'item',
-                      label: 'Init repository',
-                      onSelect: () => setInitDialogOpen(true),
-                    },
-                    { type: 'separator' },
-                    {
-                      type: 'item',
-                      label: 'Remove project',
-                      danger: true,
-                      onSelect: () => void removeProject(project.projectId),
-                    },
-                  ],
-                });
-              }}
-            >
-              <div className="project-card__top">
-                <span className="project-card__name">{project.name}</span>
-                <IconButton
-                  label="Remove project"
-                  className="project-card__remove"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void removeProject(project.projectId);
-                  }}
-                >
-                  <TrashIcon size={14} />
-                </IconButton>
-              </div>
-              <div className="project-card__path mono">{project.path}</div>
-              <div className="project-card__badges">
-                {project.stack.map((s) => (
-                  <StackBadge key={s} stack={s} />
-                ))}
-                {project.missing && <span className="stack-badge danger">Missing</span>}
-                {snap ? (
-                  <span className={attentionBadgeClass(level)}>{attentionLabel}</span>
-                ) : gitRepo?.refreshing ? (
-                  <span className="stack-badge">Refreshing…</span>
-                ) : null}
-              </div>
-              <div className="project-card__foot mono">
-                <span>{running > 0 ? `${running} running` : 'idle'}</span>
-                <span>{formatRelativeTime(project.lastOpenedAt)}</span>
-              </div>
-            </div>
-          );
-        })}
+      <div className="hub-toolbar">
+        <div className="project-search">
+          <SearchIcon size={15} />
+          <TextField
+            type="search"
+            placeholder="Filter projects by name or path…"
+            aria-label="Filter projects"
+            value={projectQuery}
+            onChange={(e) => setProjectQuery(e.target.value)}
+          />
+        </div>
       </div>
+
+      {noMatches ? (
+        <p className="project-list__empty">No projects match “{projectQuery}”.</p>
+      ) : (
+        <>
+          {hasPinned ? (
+            <section className="project-section" aria-label="Pinned projects">
+              <h2 className="project-section__title">Pinned</h2>
+              <div className="project-grid">
+                {pinnedReorder.order.map((p) => renderCard(p, true))}
+              </div>
+            </section>
+          ) : null}
+
+          {grouped.recent.length > 0 ? (
+            <section className="project-section" aria-label={hasPinned ? 'Recent projects' : 'Projects'}>
+              {hasPinned ? <h2 className="project-section__title">Recent</h2> : null}
+              <div className="project-grid">{grouped.recent.map((p) => renderCard(p, false))}</div>
+            </section>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

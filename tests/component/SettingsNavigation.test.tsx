@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@renderer/store/appStore';
 import { SettingsPage } from '@renderer/pages/SettingsPage';
 import type { PublicSettings } from '@shared/contracts/settings';
+import { DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
 import type { AppCapabilities } from '@shared/contracts/capabilities';
 
 const SETTINGS: PublicSettings = {
@@ -21,6 +22,8 @@ const SETTINGS: PublicSettings = {
     density: 'compact',
     accentColor: '#7c9cff',
     immersiveMode: false,
+    reduceMotion: false,
+    uiScale: 1,
   },
   tools: { showOpenInEditor: true, showOpenInTerminal: true, showOpenInExplorer: true },
   layout: { paneWidths: { files: 340, commit: 280 } },
@@ -32,20 +35,14 @@ const SETTINGS: PublicSettings = {
     reactNativeAutoReverse: true,
   },
   toolchains: {},
+  processes: { logBufferLines: 5000, maxCrashRestarts: 5 },
+  preview: { defaultViewport: 'fill', captureConsole: true },
+  embeddedTerminal: { fontSize: 12, scrollback: 1000, cursorStyle: 'block' },
   git: {},
   gitBehavior: { pullStrategy: 'ff-only' },
   history: { commitLimit: 30 },
-  confirmations: {
-    discardChanges: true,
-    deleteBranch: true,
-    dropStash: true,
-    amendCommit: true,
-    conflictOverwrite: true,
-    deleteRemoteBranch: true,
-    deleteRemoteTag: true,
-  },
+  confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
-  hub: { defaultSort: 'attention', recentCount: 8 },
   onboarding: { completedVersion: '1.0.0' },
 };
 

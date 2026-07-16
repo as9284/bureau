@@ -104,7 +104,13 @@ export async function detectPackageManager(dir: string): Promise<PackageManager>
   return 'npm';
 }
 
-const NODE_SCRIPT_PRIORITY = ['dev', 'start', 'serve', 'build', 'test', 'lint'];
+/**
+ * Surfaced first, in this order. These are the top-level commands worth a button; everything else
+ * keeps package.json order and is trimmed to MAX_NODE_SCRIPTS. Nothing is lost by the trim — the
+ * task palette (`discoverProjectTasks`) lists every script, uncapped.
+ */
+const NODE_SCRIPT_PRIORITY = ['dev', 'start', 'serve', 'build', 'test', 'lint', 'release'];
+const MAX_NODE_SCRIPTS = 12;
 
 /** Inspects a folder and returns its detected stack, package manager, and runnable commands. */
 export async function detectStack(dir: string): Promise<StackDetectionResult> {
@@ -145,7 +151,7 @@ export async function detectStack(dir: string): Promise<StackDetectionResult> {
       const ordered = [
         ...NODE_SCRIPT_PRIORITY.filter((n) => names.includes(n)),
         ...names.filter((n) => !NODE_SCRIPT_PRIORITY.includes(n)),
-      ].slice(0, 8);
+      ].slice(0, MAX_NODE_SCRIPTS);
       for (const name of ordered) {
         suggestedProcesses.push(
           definition({

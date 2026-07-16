@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { RepositorySnapshot } from '@shared/contracts/gitSnapshot';
 import { useGitStore } from '@renderer/store/gitStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { Button } from '@renderer/components/Button';
 import { Select } from '@renderer/components/Select';
 import { ArrowDownIcon, ArrowUpIcon, RefreshIcon } from '@renderer/components/icons';
@@ -13,6 +14,18 @@ type Props = {
   readOnly: boolean;
 };
 
+function plural(count: number): string {
+  return count === 1 ? 'commit' : 'commits';
+}
+
+function describeSyncCounts(ahead: number, behind: number): string {
+  if (ahead === 0 && behind === 0) return 'Branch is up to date with its upstream.';
+  const parts: string[] = [];
+  if (ahead > 0) parts.push(`${ahead} ${plural(ahead)} ahead`);
+  if (behind > 0) parts.push(`${behind} ${plural(behind)} behind`);
+  return `Branch is ${parts.join(' and ')} of its upstream.`;
+}
+
 export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement {
   const fetch = useGitStore((s) => s.fetch);
   const pull = useGitStore((s) => s.pull);
@@ -24,6 +37,10 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
   const branchDetails = useGitStore((s) => s.branchDetails);
   const operation = useGitStore((s) => s.operationByRepo[projectId]);
   const setGitHubPublishRepoId = useGitStore((s) => s.setGitHubPublishRepoId);
+  const announce = useAppStore((s) => s.announce);
+  const lastCounts = useRef<{ projectId: string; ahead: number; behind: number } | undefined>(
+    undefined
+  );
   const [pushConfirmOpen, setPushConfirmOpen] = useState(false);
   const [pushBranch, setPushBranch] = useState('');
   const [pushConfirming, setPushConfirming] = useState(false);
@@ -39,6 +56,20 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
 
   const ahead = snapshot.upstream.kind === 'tracking' ? snapshot.upstream.ahead : 0;
   const behind = snapshot.upstream.kind === 'tracking' ? snapshot.upstream.behind : 0;
+
+  // Fetch/pull/push move these counts and nothing said so out loud — this bar is the
+  // primary sync feedback. Announce only real changes, and treat a project switch as a
+  // new baseline so swapping repos does not read out counts the user never acted on.
+  useEffect(() => {
+    const baseline = lastCounts.current;
+    if (baseline?.projectId !== projectId) {
+      lastCounts.current = { projectId, ahead, behind };
+      return;
+    }
+    if (baseline.ahead === ahead && baseline.behind === behind) return;
+    lastCounts.current = { projectId, ahead, behind };
+    announce(describeSyncCounts(ahead, behind));
+  }, [projectId, ahead, behind, announce]);
   const pushBranches = Array.from(new Set([currentBranch, ...branches]));
   const selectedBranch = branchDetails.find(
     (branch) => branch.kind === 'local' && branch.shortName === pushBranch
@@ -158,7 +189,13 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
       <BranchActionConfirmation
         open={pushConfirmOpen}
         title="Push branch?"
-        description={`This will push ${pushBranch || 'the selected branch'} to its configured upstream.`}
+        description={
+          <>
+            This will push{' '}
+            {pushBranch ? <span className="mono">{pushBranch}</span> : 'the selected branch'} to its
+            configured upstream.
+          </>
+        }
         currentBranch={currentBranch}
         targetBranch={pushBranch}
         branches={pushBranches}

@@ -16,6 +16,8 @@ export type ProjectCatalogue = {
   add(record: Omit<TrackedProject, 'projectId'>): Promise<TrackedProject>;
   remove(projectId: string): Promise<void>;
   touch(projectId: string): Promise<TrackedProject>;
+  setPinned(projectId: string, pinned: boolean): Promise<TrackedProject[]>;
+  reorderPinned(orderedIds: string[]): Promise<TrackedProject[]>;
   setMissing(projectId: string, missing: boolean): Promise<void>;
   setStack(projectId: string, stack: ProjectStack[]): Promise<void>;
 };
@@ -67,6 +69,38 @@ export function createProjectCatalogue(
     return updated;
   }
 
+  async function setPinned(projectId: string, pinned: boolean): Promise<TrackedProject[]> {
+    await store.update((current) => {
+      const nextRank =
+        current.projects.reduce((max, p) => Math.max(max, p.pinnedRank ?? -1), -1) + 1;
+      return {
+        ...current,
+        updatedAt: new Date().toISOString(),
+        projects: current.projects.map((p) => {
+          if (p.projectId !== projectId) return p;
+          if (pinned) return { ...p, pinned: true, pinnedRank: p.pinnedRank ?? nextRank };
+          const { pinnedRank: _drop, ...rest } = p;
+          return { ...rest, pinned: false };
+        }),
+      };
+    });
+    return list();
+  }
+
+  async function reorderPinned(orderedIds: string[]): Promise<TrackedProject[]> {
+    const rankById = new Map(orderedIds.map((id, index) => [id, index]));
+    await store.update((current) => ({
+      ...current,
+      updatedAt: new Date().toISOString(),
+      projects: current.projects.map((p) =>
+        p.pinned && rankById.has(p.projectId)
+          ? { ...p, pinnedRank: rankById.get(p.projectId)! }
+          : p
+      ),
+    }));
+    return list();
+  }
+
   async function setMissing(projectId: string, missing: boolean): Promise<void> {
     await store.update((current) => ({
       ...current,
@@ -83,7 +117,18 @@ export function createProjectCatalogue(
     }));
   }
 
-  return { list, get, findByCanonicalPath, add, remove, touch, setMissing, setStack };
+  return {
+    list,
+    get,
+    findByCanonicalPath,
+    add,
+    remove,
+    touch,
+    setPinned,
+    reorderPinned,
+    setMissing,
+    setStack,
+  };
 }
 
 export function createProjectCatalogueStore(

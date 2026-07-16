@@ -4,12 +4,15 @@ import { Button } from '@renderer/components/Button';
 import { Checkbox } from '@renderer/components/Checkbox';
 import { Dialog } from '@renderer/components/Dialog';
 import { TextInput } from '@renderer/components/TextInput';
+import { PanelError } from '@renderer/features/git/PanelState';
 import './LifecycleDialog.css';
 
 export function InitDialog(): ReactElement {
   const open = useGitStore((s) => s.initDialogOpen);
   const setOpen = useGitStore((s) => s.setInitDialogOpen);
   const initRepository = useGitStore((s) => s.initRepository);
+  const initBusy = useGitStore((s) => s.initBusy);
+  const initError = useGitStore((s) => s.initError);
 
   const [directory, setDirectory] = useState('');
   const [defaultBranch, setDefaultBranch] = useState('main');
@@ -35,21 +38,24 @@ export function InitDialog(): ReactElement {
     }
   };
 
-  const canSubmit = directory.trim().length > 0;
+  const canSubmit = directory.trim().length > 0 && !initBusy;
 
   return (
     <Dialog
       open={open}
       title="Initialize repository"
       description="Create a Git repository in an existing folder or a new one. Existing files are preserved."
-      onClose={() => setOpen(false)}
+      onClose={() => {
+        if (!initBusy) setOpen(false);
+      }}
       actions={
         <>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="secondary" disabled={initBusy} onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button
             variant="primary"
+            loading={initBusy}
             disabled={!canSubmit}
             onClick={() =>
               initRepository({
@@ -66,6 +72,13 @@ export function InitDialog(): ReactElement {
       }
     >
       <div className="lifecycle-dialog__fields">
+        {/* As in CloneDialog: the form stays put, so Initialize is the retry. */}
+        {initError ? <PanelError title="Could not initialize" message={initError.message} /> : null}
+        {initBusy ? (
+          <p className="lifecycle-dialog__status" role="status">
+            Initializing repository…
+          </p>
+        ) : null}
         <div className="lifecycle-dialog__path-row">
           <TextInput
             label="Directory path"

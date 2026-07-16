@@ -33,7 +33,11 @@ export function CompareCommitsDialog(): ReactElement {
     <Dialog
       open={open}
       title="Compare commits"
-      description={`${baseShort} → ${targetShort}`}
+      description={
+        <span className="mono">
+          {baseShort} → {targetShort}
+        </span>
+      }
       onClose={() => setOpen(false)}
       actions={
         <Button variant="secondary" onClick={() => setOpen(false)}>

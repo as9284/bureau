@@ -6,6 +6,8 @@ import type {
   HistoryCommit,
   ListHistoryRequest,
   ListHistoryResult,
+  ListReflogRequest,
+  ListReflogResult,
   ListTagsRequest,
   ListTagsResult,
   CompareCommitsRequest,
@@ -13,12 +15,14 @@ import type {
 } from '@shared/contracts/history';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@shared/contracts/pagination';
 import { assignGraphLanes } from '@shared/git/graphLanes';
+import { parseReflog, REFLOG_FORMAT } from '@shared/git/reflogParse';
 import { toBureauError } from '../ipc/errors';
 
 const QUERY_TIMEOUT_MS = 60_000;
 
 export type GitHistoryService = {
   listHistory(input: ListHistoryRequest): Promise<ListHistoryResult>;
+  listReflog(input: ListReflogRequest): Promise<ListReflogResult>;
   listTags(input: ListTagsRequest): Promise<ListTagsResult>;
   compareCommits(input: CompareCommitsRequest): Promise<CompareCommitsResult>;
 };
@@ -106,6 +110,55 @@ export function createGitHistoryService(params: {
 
       return {
         items: withGraph,
+        hasMore,
+        nextCursor: hasMore ? encodeCursor(skip + limit) : undefined,
+      };
+    });
+  }
+
+  /**
+   * The reflog of HEAD — the undo trail that makes reset safe to offer. Read-only, so
+   * it mirrors listHistory's skip/limit cursor rather than the mutation envelope.
+   */
+  async function listReflog(input: ListReflogRequest): Promise<ListReflogResult> {
+    return coordinator.runProjectRead(input.projectId, async () => {
+      const repo = catalogue.get(input.projectId);
+      if (!repo) throw notFound(input.projectId);
+
+      const capability = await resolver.resolve();
+      if (capability.kind !== 'available') throw gitUnavailable(input.projectId);
+
+      const limit = Math.min(input.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+      const skip = decodeCursor(input.cursor);
+
+      const result = await runner.run(capability.executablePath, {
+        args: [
+          '-C',
+          repo.canonicalPath,
+          'reflog',
+          'show',
+          // `%gD` renders as HEAD@{<date>} under --date, and as HEAD@{<index>} without
+          // it — never both. We take the date and synthesize the index from `skip`.
+          '--date=iso-strict',
+          `--format=${REFLOG_FORMAT}`,
+          '-z',
+          `--skip=${skip}`,
+          `--max-count=${limit + 1}`,
+          'HEAD',
+        ],
+        timeoutMs: QUERY_TIMEOUT_MS,
+        stdoutLimitBytes: 4 * 1024 * 1024,
+      });
+      // An unborn HEAD (fresh `git init`) exits 128 with "unknown revision". That is a
+      // legitimate "nothing here yet" state, not a failure — report it as an empty page
+      // so the panel shows its empty state instead of an error.
+      if (result.exitCode !== 0) return { items: [], hasMore: false };
+
+      const entries = parseReflog(result.stdout, skip);
+      const hasMore = entries.length > limit;
+
+      return {
+        items: hasMore ? entries.slice(0, limit) : entries,
         hasMore,
         nextCursor: hasMore ? encodeCursor(skip + limit) : undefined,
       };
@@ -204,7 +257,7 @@ export function createGitHistoryService(params: {
     });
   }
 
-  return { listHistory, listTags, compareCommits };
+  return { listHistory, listReflog, listTags, compareCommits };
 }
 
 function encodeCursor(skip: number): string {

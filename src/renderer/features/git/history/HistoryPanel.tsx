@@ -9,8 +9,14 @@ import { ContextMenuTrigger } from '@renderer/components/GitContextMenu';
 import { Dialog } from '@renderer/components/Dialog';
 import { EmptyState } from '@renderer/components/EmptyState';
 import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { useCommitContextMenuItems } from '@renderer/lib/gitContextMenuItems';
 import { CompareCommitsDialog } from '@renderer/features/git/history/CompareCommitsDialog';
+import { ResetCommitDialog } from '@renderer/features/git/history/ResetCommitDialog';
+import {
+  MergeParentDialog,
+  type MergeParentAction,
+} from '@renderer/features/git/history/MergeParentDialog';
 import './HistoryPanel.css';
 
 function relativeTime(iso: string): string {
@@ -142,7 +148,6 @@ function GraphLane({
 }
 
 type HistoryCommitRowProps = {
-  projectId: string;
   commit: HistoryCommit;
   revision?: string;
   readOnly: boolean;
@@ -151,13 +156,16 @@ type HistoryCommitRowProps = {
   onSelect: () => void;
   onCreateBranch: () => void;
   onCreateTag: () => void;
+  onReset: () => void;
+  onCheckout: () => void;
+  onCherryPick: () => void;
+  onRevert: () => void;
   compareBaseOid?: string;
   onSetCompareBase: () => void;
   onCompareWithBase: () => void;
 };
 
 function HistoryCommitRow({
-  projectId,
   commit,
   revision,
   readOnly,
@@ -166,12 +174,15 @@ function HistoryCommitRow({
   onSelect,
   onCreateBranch,
   onCreateTag,
+  onReset,
+  onCheckout,
+  onCherryPick,
+  onRevert,
   compareBaseOid,
   onSetCompareBase,
   onCompareWithBase,
 }: HistoryCommitRowProps): ReactElement {
   const menuItems = useCommitContextMenuItems({
-    projectId,
     commit,
     revision,
     readOnly,
@@ -179,6 +190,10 @@ function HistoryCommitRow({
     compareBaseOid,
     onCreateBranch,
     onCreateTag,
+    onReset,
+    onCheckout,
+    onCherryPick,
+    onRevert,
     onSetCompareBase,
     onCompareWithBase,
   });
@@ -225,7 +240,9 @@ type Props = {
 export function HistoryPanel({ projectId, readOnly = false }: Props): ReactElement {
   const historyCommits = useGitStore((s) => s.historyCommits);
   const historyLoading = useGitStore((s) => s.historyLoading);
+  const historyError = useGitStore((s) => s.historyError);
   const historyHasMore = useGitStore((s) => s.historyHasMore);
+  const loadHistory = useGitStore((s) => s.loadHistory);
   const selectedCommitOid = useGitStore((s) => s.selectedCommitOid);
   const commitFiles = useGitStore((s) => s.commitFiles);
   const commitFilesLoading = useGitStore((s) => s.commitFilesLoading);
@@ -237,6 +254,9 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
   const historyFilters = useGitStore((s) => s.historyFilters);
   const createBranchFromCommit = useGitStore((s) => s.createBranchFromCommit);
   const createTag = useGitStore((s) => s.createTag);
+  const cherryPick = useGitStore((s) => s.cherryPick);
+  const revertCommit = useGitStore((s) => s.revertCommit);
+  const checkoutCommit = useGitStore((s) => s.checkoutCommit);
   const compareCommits = useGitStore((s) => s.compareCommits);
   const compareBaseOid = useGitStore((s) => s.compareBaseOid);
   const setCompareBaseOid = useGitStore((s) => s.setCompareBaseOid);
@@ -252,6 +272,9 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
   const [untilDraft, setUntilDraft] = useState(historyFilters.until ?? '');
   const [branchTarget, setBranchTarget] = useState<HistoryCommit | null>(null);
   const [branchName, setBranchName] = useState('');
+  const [resetTarget, setResetTarget] = useState<HistoryCommit | null>(null);
+  const [mergeParentTarget, setMergeParentTarget] = useState<HistoryCommit | null>(null);
+  const [mergeParentAction, setMergeParentAction] = useState<MergeParentAction>('revert');
   const [tagTarget, setTagTarget] = useState<HistoryCommit | null>(null);
   const [tagName, setTagName] = useState('');
   const [tagAnnotated, setTagAnnotated] = useState(false);
@@ -259,6 +282,26 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
 
   const revision = snapshot?.revision;
   const busy = Boolean(operation);
+
+  /**
+   * Git needs `-m <parent>` for a merge commit and rejects it for an ordinary one, so
+   * the parent count decides which path runs. The count comes from the commit's own
+   * `parentOids` (already populated from `%P` by GitHistoryService) — nothing here has
+   * to ask main, and nothing defaults the mainline.
+   */
+  const runCommitReplay = (commit: HistoryCommit, action: MergeParentAction) => {
+    if (!revision) return;
+    if (commit.parentOids.length > 1) {
+      setMergeParentAction(action);
+      setMergeParentTarget(commit);
+      return;
+    }
+    if (action === 'revert') {
+      void revertCommit(projectId, revision, commit.oid);
+    } else {
+      void cherryPick(projectId, revision, commit.oid);
+    }
+  };
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -344,21 +387,36 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
           ) : null}
         </header>
 
+        {historyError ? (
+          <PanelError
+            title="Could not load history"
+            message={historyError.message}
+            onRetry={() => void loadHistory(projectId)}
+          />
+        ) : null}
+
         {historyLoading && historyCommits.length === 0 ? (
           <div className="history-panel__loading">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} width="100%" height="48px" />
+              <Skeleton key={i} width="100%" height="var(--size-hub-row)" />
             ))}
           </div>
         ) : historyCommits.length === 0 ? (
-          <EmptyState title="No commits yet" description="This repository has no commit history." />
+          historyError ? null : (
+            <EmptyState
+              title="No commits yet"
+              description="This repository has no commit history."
+            />
+          )
         ) : (
           <>
-            <ul className="history-panel__list">
+            <ul
+              className={`history-panel__list ${historyLoading ? 'git-stale' : ''}`}
+              aria-busy={historyLoading}
+            >
               {historyCommits.map((commit) => (
                 <HistoryCommitRow
                   key={commit.oid}
-                  projectId={projectId}
                   commit={commit}
                   revision={revision}
                   readOnly={readOnly}
@@ -373,6 +431,12 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
                     setTagTarget(commit);
                     setTagName('');
                   }}
+                  onReset={() => setResetTarget(commit)}
+                  onCheckout={() => {
+                    if (revision) void checkoutCommit(projectId, revision, commit.oid);
+                  }}
+                  onCherryPick={() => runCommitReplay(commit, 'cherry-pick')}
+                  onRevert={() => runCommitReplay(commit, 'revert')}
                   compareBaseOid={compareBaseOid}
                   onSetCompareBase={() => setCompareBaseOid(commit.oid)}
                   onCompareWithBase={() => {
@@ -403,7 +467,8 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
           <h2>Changed files</h2>
           {selectedCommit ? (
             <p className="history-panel__header-hint" title={selectedCommit.oid}>
-              {selectedCommit.abbreviatedOid} · {selectedCommit.subject}
+              <span className="mono">{selectedCommit.abbreviatedOid}</span> ·{' '}
+              {selectedCommit.subject}
             </p>
           ) : (
             <p className="history-panel__header-hint">No commit selected</p>
@@ -418,11 +483,17 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
         ) : commitFilesLoading ? (
           <div className="history-panel__loading">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} width="100%" height="32px" />
+              <Skeleton key={i} width="100%" height="var(--size-list-row)" />
             ))}
           </div>
         ) : commitFilesError ? (
-          <EmptyState title="Could not load files" description={commitFilesError} />
+          // Was an EmptyState, which asserts "this commit changed nothing" — the
+          // opposite of what a failed load knows. It is an error, with a Retry.
+          <PanelError
+            title="Could not load files"
+            message={commitFilesError}
+            onRetry={() => void selectCommit(projectId, selectedCommitOid)}
+          />
         ) : commitFiles.length === 0 ? (
           <EmptyState
             title="No file changes"
@@ -468,7 +539,11 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
       <Dialog
         open={Boolean(branchTarget)}
         title="Create branch from commit"
-        description={`Create a branch pointing at ${branchTarget?.abbreviatedOid}.`}
+        description={
+          <>
+            Create a branch pointing at <span className="mono">{branchTarget?.abbreviatedOid}</span>.
+          </>
+        }
         onClose={() => setBranchTarget(null)}
         actions={
           <>
@@ -501,7 +576,11 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
       <Dialog
         open={Boolean(tagTarget)}
         title="Create tag"
-        description={`Tag commit ${tagTarget?.abbreviatedOid}.`}
+        description={
+          <>
+            Tag commit <span className="mono">{tagTarget?.abbreviatedOid}</span>.
+          </>
+        }
         onClose={() => {
           setTagTarget(null);
           setTagAnnotated(false);
@@ -551,6 +630,38 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
           />
         ) : null}
       </Dialog>
+
+      <ResetCommitDialog
+        projectId={projectId}
+        revision={revision}
+        target={
+          resetTarget
+            ? {
+                oid: resetTarget.oid,
+                abbreviatedOid: resetTarget.abbreviatedOid,
+                label: resetTarget.subject,
+              }
+            : null
+        }
+        onClose={() => setResetTarget(null)}
+      />
+
+      <MergeParentDialog
+        projectId={projectId}
+        revision={revision}
+        action={mergeParentAction}
+        target={
+          mergeParentTarget
+            ? {
+                oid: mergeParentTarget.oid,
+                abbreviatedOid: mergeParentTarget.abbreviatedOid,
+                label: mergeParentTarget.subject,
+                parentOids: mergeParentTarget.parentOids,
+              }
+            : null
+        }
+        onClose={() => setMergeParentTarget(null)}
+      />
 
       <CompareCommitsDialog />
     </section>

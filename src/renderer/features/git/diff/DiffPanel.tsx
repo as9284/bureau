@@ -5,6 +5,7 @@ import { Button } from '@renderer/components/Button';
 import { ContextMenuTrigger } from '@renderer/components/GitContextMenu';
 import { Dialog } from '@renderer/components/Dialog';
 import { IconButton } from '@renderer/components/IconButton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { ExpandIcon, CollapseIcon } from '@renderer/components/icons';
 import { useDiffContextMenuItems } from '@renderer/lib/gitContextMenuItems';
 import {
@@ -157,6 +158,9 @@ export function DiffPanel(): ReactElement {
   const selectedFile = useGitStore((s) => s.selectedFile);
   const diffText = useGitStore((s) => s.diffText);
   const diffLoading = useGitStore((s) => s.diffLoading);
+  const diffError = useGitStore((s) => s.diffError);
+  const loadDiff = useGitStore((s) => s.loadDiff);
+  const loadStashDiff = useGitStore((s) => s.loadStashDiff);
   const blameLines = useGitStore((s) => s.blameLines);
   const blameLoading = useGitStore((s) => s.blameLoading);
   const blameHasMore = useGitStore((s) => s.blameHasMore);
@@ -207,14 +211,16 @@ export function DiffPanel(): ReactElement {
   const fileName = selectedFile?.path.split(/[/\\]/).at(-1) ?? '';
   const historyCommits = useGitStore((s) => s.historyCommits);
   const selectedCommit = historyCommits.find((c) => c.oid === selectedFile?.commitOid);
-  const areaLabel =
+  // The label pairs a prose word with a machine token (an oid, a stash index). Only the
+  // token gets `.mono` — blanket-monoing the span would put "Staged" in the code font.
+  const areaLabel: ReactNode =
     selectedFile?.area === 'staged'
       ? 'Staged'
       : selectedFile?.area === 'stash'
-        ? `Stash @${selectedFile.stashIndex ?? 0}`
+        ? <>Stash <span className="mono">@{selectedFile.stashIndex ?? 0}</span></>
         : selectedFile?.area === 'commit'
           ? selectedCommit
-            ? `Commit ${selectedCommit.abbreviatedOid}`
+            ? <>Commit <span className="mono">{selectedCommit.abbreviatedOid}</span></>
             : 'Commit'
           : 'Unstaged';
   const emptyHint =
@@ -232,6 +238,25 @@ export function DiffPanel(): ReactElement {
     await appStore.ensureFilesProject(selectedFile.projectId);
     await appStore.openProjectFile(selectedFile.projectId, selectedFile.path);
     appStore.setProjectTab('files');
+  };
+
+  /**
+   * Re-fire the loader that failed. `selectedFile` already carries everything each
+   * one needs, and stash diffs come from a different call than the rest.
+   */
+  const reloadDiff = () => {
+    if (!selectedFile) return;
+    if (selectedFile.area === 'stash') {
+      if (selectedFile.stashIndex == null) return;
+      void loadStashDiff(selectedFile.projectId, selectedFile.stashIndex, selectedFile.path);
+      return;
+    }
+    void loadDiff(
+      selectedFile.projectId,
+      selectedFile.path,
+      selectedFile.area,
+      selectedFile.commitOid
+    );
   };
 
   const handleHunkAction = (patch: string, action: 'stage' | 'unstage' | 'discard') => {
@@ -340,6 +365,14 @@ export function DiffPanel(): ReactElement {
           <div className="diff-panel__empty">Loading diff…</div>
         ) : !selectedFile ? (
           <div className="diff-panel__empty">{emptyHint}</div>
+        ) : diffError ? (
+          // The message used to be written into `diffText` and parsed as a diff, so
+          // the pane printed error prose in place of the file's changes.
+          <PanelError
+            title="Could not load this diff"
+            message={diffError.message}
+            onRetry={reloadDiff}
+          />
         ) : parsed.isEmpty ? (
           <div className="diff-panel__empty">No changes in this file.</div>
         ) : parsed.isRawFallback ? (

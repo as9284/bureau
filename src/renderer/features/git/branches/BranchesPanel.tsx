@@ -8,6 +8,7 @@ import { ContextMenuTrigger } from '@renderer/components/GitContextMenu';
 import { Dialog } from '@renderer/components/Dialog';
 import { EmptyState } from '@renderer/components/EmptyState';
 import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { BranchIcon } from '@renderer/components/icons';
 import { useBranchContextMenuItems } from '@renderer/lib/gitContextMenuItems';
 import './BranchesPanel.css';
@@ -106,6 +107,7 @@ function BranchRow({
 export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactElement {
   const branchDetails = useGitStore((s) => s.branchDetails);
   const branchesLoading = useGitStore((s) => s.branchesLoading);
+  const branchesError = useGitStore((s) => s.branchesError);
   const newBranchName = useGitStore((s) => s.newBranchName);
   const setNewBranchName = useGitStore((s) => s.setNewBranchName);
   const loadBranches = useGitStore((s) => s.loadBranches);
@@ -199,19 +201,31 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
         </div>
       ) : null}
 
-      {branchesLoading ? (
+      {branchesError ? (
+        <PanelError
+          title="Could not load branches"
+          message={branchesError.message}
+          onRetry={() => void loadBranches(projectId)}
+        />
+      ) : null}
+
+      {/* Skeletons only when there is nothing to show. A refresh over an existing
+          list marks it stale instead of wiping it back to placeholders. */}
+      {branchesLoading && branchDetails.length === 0 ? (
         <div className="branches-panel__loading">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height="32px" />
+            <Skeleton key={i} width="100%" height="var(--size-list-row)" />
           ))}
         </div>
       ) : localBranches.length === 0 && remoteBranches.length === 0 ? (
-        <EmptyState
-          title={search ? 'No matching branches' : 'No branches'}
-          description={search ? 'Try a different search term.' : undefined}
-        />
+        branchesError ? null : (
+          <EmptyState
+            title={search ? 'No matching branches' : 'No branches'}
+            description={search ? 'Try a different search term.' : undefined}
+          />
+        )
       ) : (
-        <>
+        <div className={branchesLoading ? 'git-stale' : undefined} aria-busy={branchesLoading}>
           {localBranches.length > 0 ? (
             <div className="branches-panel__section">
               <h3 className="branches-panel__section-title">Local</h3>
@@ -290,13 +304,18 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
               </ul>
             </div>
           ) : null}
-        </>
+        </div>
       )}
 
       <Dialog
         open={Boolean(publishTarget)}
         title="Publish branch"
-        description={`Push "${publishTarget?.shortName}" and set its upstream. Public or private visibility is controlled by the remote repository.`}
+        description={
+          <>
+            Push <span className="mono">{publishTarget?.shortName}</span> and set its upstream.
+            Public or private visibility is controlled by the remote repository.
+          </>
+        }
         onClose={() => setPublishTarget(null)}
         actions={
           <>
@@ -343,7 +362,12 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
       <Dialog
         open={Boolean(deleteLocalTarget)}
         title="Delete branch?"
-        description={`Branch "${deleteLocalTarget?.shortName}" will be deleted. This cannot be undone if the branch has unmerged commits.`}
+        description={
+          <>
+            Branch <span className="mono">{deleteLocalTarget?.shortName}</span> will be deleted.
+            This cannot be undone if the branch has unmerged commits.
+          </>
+        }
         onClose={() => setDeleteLocalTarget(null)}
         actions={
           <>
@@ -368,7 +392,12 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
       <Dialog
         open={Boolean(deleteRemoteTarget)}
         title="Delete remote branch?"
-        description={`Remote branch "${deleteRemoteTarget?.shortName}" will be deleted from the remote.`}
+        description={
+          <>
+            Remote branch <span className="mono">{deleteRemoteTarget?.shortName}</span> will be
+            deleted from the remote.
+          </>
+        }
         onClose={() => setDeleteRemoteTarget(null)}
         actions={
           <>
@@ -396,7 +425,11 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
       <Dialog
         open={Boolean(renameTarget)}
         title="Rename branch"
-        description={`Enter a new name for "${renameTarget?.shortName}".`}
+        description={
+          <>
+            Enter a new name for <span className="mono">{renameTarget?.shortName}</span>.
+          </>
+        }
         onClose={() => setRenameTarget(null)}
         actions={
           <>
@@ -429,7 +462,12 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
       <Dialog
         open={Boolean(checkoutRemoteTarget)}
         title="Checkout remote branch"
-        description={`Create a local branch tracking "${checkoutRemoteTarget?.shortName}".`}
+        description={
+          <>
+            Create a local branch tracking{' '}
+            <span className="mono">{checkoutRemoteTarget?.shortName}</span>.
+          </>
+        }
         onClose={() => setCheckoutRemoteTarget(null)}
         actions={
           <>
@@ -467,7 +505,11 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
       <Dialog
         open={Boolean(upstreamTarget)}
         title="Set upstream"
-        description={`Set upstream for "${upstreamTarget?.shortName}".`}
+        description={
+          <>
+            Set upstream for <span className="mono">{upstreamTarget?.shortName}</span>.
+          </>
+        }
         onClose={() => setUpstreamTarget(null)}
         actions={
           <>

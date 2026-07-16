@@ -1,16 +1,12 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 import type { ProjectCatalogue } from './ProjectCatalogue';
+import type { ProjectConfigStore } from './ProjectConfigStore';
 import { canonicalizePath } from './pathIdentity';
 import { detectStack } from './StackDetector';
-import { readProjectConfig, writeProjectConfig } from './BureauConfigStore';
 import { toBureauError } from '../ipc/errors';
 import type { Result } from '@shared/contracts/errors';
-import type {
-  BureauProjectConfig,
-  StackDetectionResult,
-  TrackedProject,
-} from '@shared/contracts/projects';
+import type { StackDetectionResult, TrackedProject } from '@shared/contracts/projects';
 
 export type ProjectApplicationService = {
   list(): Promise<TrackedProject[]>;
@@ -18,6 +14,8 @@ export type ProjectApplicationService = {
   add(input: { path: string }): Promise<Result<{ project: TrackedProject }>>;
   remove(input: { projectId: string }): Promise<void>;
   touch(input: { projectId: string }): Promise<TrackedProject>;
+  setPinned(input: { projectId: string; pinned: boolean }): Promise<TrackedProject[]>;
+  reorderPinned(input: { orderedIds: string[] }): Promise<TrackedProject[]>;
 };
 
 async function pathExists(target: string): Promise<boolean> {
@@ -30,7 +28,8 @@ async function pathExists(target: string): Promise<boolean> {
 }
 
 export function createProjectApplicationService(
-  catalogue: ProjectCatalogue
+  catalogue: ProjectCatalogue,
+  configStore: ProjectConfigStore
 ): ProjectApplicationService {
   async function list(): Promise<TrackedProject[]> {
     // Reconcile missing-on-disk state before returning.
@@ -69,28 +68,20 @@ export function createProjectApplicationService(
 
       const detection = await detectStack(input.path);
 
-      // Respect an existing committable config; otherwise write one from detection.
-      const read = await readProjectConfig(input.path);
-      if (!read.present) {
-        const config: BureauProjectConfig = {
-          schemaVersion: 1,
-          name: path.basename(input.path) || 'Project',
-          stack: detection.stack,
-          packageManager: detection.packageManager,
-          processes: detection.suggestedProcesses,
-        };
-        await writeProjectConfig(input.path, config);
-      }
-
+      // The catalogue mints the projectId, and the config store is keyed by it — so the project
+      // has to be tracked before its detected commands can be persisted against it.
       const project = await catalogue.add({
-        name: read.present ? read.config.name : path.basename(input.path) || 'Project',
+        name: path.basename(input.path) || 'Project',
         path: input.path,
         canonicalPath,
         stack: detection.stack,
         addedAt: new Date().toISOString(),
-        configPresent: true,
         missing: false,
         nestedRoots: detection.nestedRoots.length > 0 ? detection.nestedRoots : undefined,
+      });
+      await configStore.set(project.projectId, {
+        packageManager: detection.packageManager,
+        processes: detection.suggestedProcesses,
       });
       return { ok: true, project };
     } catch (error) {
@@ -107,11 +98,25 @@ export function createProjectApplicationService(
 
   async function remove(input: { projectId: string }): Promise<void> {
     await catalogue.remove(input.projectId);
+    // Config is keyed by projectId and a re-add mints a fresh one, so a left-behind entry
+    // could never be reached again.
+    await configStore.remove(input.projectId);
   }
 
   async function touch(input: { projectId: string }): Promise<TrackedProject> {
     return catalogue.touch(input.projectId);
   }
 
-  return { list, detect, add, remove, touch };
+  async function setPinned(input: {
+    projectId: string;
+    pinned: boolean;
+  }): Promise<TrackedProject[]> {
+    return catalogue.setPinned(input.projectId, input.pinned);
+  }
+
+  async function reorderPinned(input: { orderedIds: string[] }): Promise<TrackedProject[]> {
+    return catalogue.reorderPinned(input.orderedIds);
+  }
+
+  return { list, detect, add, remove, touch, setPinned, reorderPinned };
 }

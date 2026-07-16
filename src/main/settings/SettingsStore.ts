@@ -105,6 +105,11 @@ function applyPatch(current: SettingsFileV1, patch: SettingsPatch): SettingsFile
   }
   if (patch.android) next.android = { ...current.android, ...patch.android };
   if (patch.toolchains) next.toolchains = { ...current.toolchains, ...patch.toolchains };
+  if (patch.processes) next.processes = { ...current.processes, ...patch.processes };
+  if (patch.preview) next.preview = { ...current.preview, ...patch.preview };
+  if (patch.embeddedTerminal) {
+    next.embeddedTerminal = { ...current.embeddedTerminal, ...patch.embeddedTerminal };
+  }
   if (patch.files) next.files = { ...current.files, ...patch.files };
   if (patch.onboarding) next.onboarding = { ...current.onboarding, ...patch.onboarding };
 

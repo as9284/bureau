@@ -7,10 +7,13 @@ import { CommitPanel } from '@renderer/features/git/commit/CommitPanel';
 import { BranchesPanel } from '@renderer/features/git/branches/BranchesPanel';
 import { StashPanel } from '@renderer/features/git/stash/StashPanel';
 import { HistoryPanel } from '@renderer/features/git/history/HistoryPanel';
+import { ReflogPanel } from '@renderer/features/git/history/ReflogPanel';
 import { WorktreesPanel } from '@renderer/features/git/worktrees/WorktreesPanel';
+import { RemotesPanel } from '@renderer/features/git/remotes/RemotesPanel';
 import { SubmodulesPanel } from '@renderer/features/git/submodules/SubmodulesPanel';
 import { TagsPanel } from '@renderer/features/git/tags/TagsPanel';
 import { RecoveryBanner } from '@renderer/features/git/recovery/RecoveryBanner';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { Button } from '@renderer/components/Button';
 import { ContextMenuTrigger } from '@renderer/components/GitContextMenu';
 import { PaneSeparator } from '@renderer/components/PaneSeparator';
@@ -29,7 +32,9 @@ type Props = { projectId: string };
 const MODES = [
   { id: 'changes' as const, label: 'Changes' },
   { id: 'history' as const, label: 'History' },
+  { id: 'reflog' as const, label: 'Reflog' },
   { id: 'branches' as const, label: 'Branches' },
+  { id: 'remotes' as const, label: 'Remotes' },
   { id: 'stash' as const, label: 'Stashes' },
   { id: 'worktrees' as const, label: 'Worktrees' },
   { id: 'submodules' as const, label: 'Submodules' },
@@ -43,10 +48,13 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
   const refreshRepo = useGitStore((s) => s.refreshRepo);
   const operation = useGitStore((s) => s.operationByRepo[projectId]);
   const clearOperationError = useGitStore((s) => s.clearOperationError);
+  const retryOperation = useGitStore((s) => s.retryOperation);
   const loadBranches = useGitStore((s) => s.loadBranches);
   const loadStash = useGitStore((s) => s.loadStash);
   const loadHistory = useGitStore((s) => s.loadHistory);
+  const loadReflog = useGitStore((s) => s.loadReflog);
   const loadWorktrees = useGitStore((s) => s.loadWorktrees);
+  const loadRemotes = useGitStore((s) => s.loadRemotes);
   const loadSubmodules = useGitStore((s) => s.loadSubmodules);
   const loadTags = useGitStore((s) => s.loadTags);
   const openInEditor = useGitStore((s) => s.openInEditor);
@@ -91,7 +99,9 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
     if (repoPanel === 'branches') loadBranches(projectId);
     if (repoPanel === 'stash') loadStash(projectId);
     if (repoPanel === 'history') loadHistory(projectId);
+    if (repoPanel === 'reflog') loadReflog(projectId);
     if (repoPanel === 'worktrees') loadWorktrees(projectId);
+    if (repoPanel === 'remotes') loadRemotes(projectId);
     if (repoPanel === 'submodules') loadSubmodules(projectId);
     if (repoPanel === 'tags') loadTags(projectId);
   }, [
@@ -100,7 +110,9 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
     loadBranches,
     loadStash,
     loadHistory,
+    loadReflog,
     loadWorktrees,
+    loadRemotes,
     loadSubmodules,
     loadTags,
   ]);
@@ -186,13 +198,23 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
         ) : null}
       </header>
 
+      {/* A failed refresh leaves the panels showing the last good snapshot rather
+          than blanking, so it reports itself here and offers the refresh again. */}
+      {repo.error ? (
+        <PanelError
+          title="Could not refresh this repository"
+          message={repo.error.message}
+          onRetry={() => void refreshRepo(projectId)}
+        />
+      ) : null}
+
       {operation?.error ? (
-        <div className="repo-workbench__banner">
-          <span>{operation.error.message}</span>
-          <Button variant="ghost" onClick={() => clearOperationError(projectId)}>
-            Dismiss
-          </Button>
-        </div>
+        <PanelError
+          title={`${operation.name ?? 'Operation'} failed`}
+          message={operation.error.message}
+          onRetry={operation.retry ? () => void retryOperation(projectId) : undefined}
+          onDismiss={() => clearOperationError(projectId)}
+        />
       ) : null}
 
       <nav className="repo-workbench__modes" aria-label="Repository modes">
@@ -279,8 +301,14 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
           </div>
         </div>
       ) : null}
+      {repoPanel === 'reflog' ? (
+        <ReflogPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />
+      ) : null}
       {repoPanel === 'worktrees' ? (
         <WorktreesPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />
+      ) : null}
+      {repoPanel === 'remotes' ? (
+        <RemotesPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />
       ) : null}
       {repoPanel === 'submodules' ? (
         <SubmodulesPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />

@@ -6,6 +6,7 @@ import type { SettingsApplicationService } from '../settings/SettingsApplication
 import type { OperationApplicationService } from '../operations/OperationApplicationService';
 import type { ChooseDirectoryRequest, ChooseDirectoryResult } from '@shared/contracts/system';
 import type { OkResult } from '@shared/contracts/errors';
+import type { CommitRequest, MutationResult } from '@shared/contracts/operations';
 import type { GitSnapshot } from '@shared/contracts/git';
 import type { RepositorySnapshot } from '@shared/contracts/gitSnapshot';
 import type { AndroidApplicationService } from '../android/AndroidApplicationService';
@@ -46,6 +47,12 @@ export type GitAppService = GitMutationService &
   GitLifecycleService & {
     refresh(input: ProjectActionRequest): Promise<RepositorySnapshot>;
     snapshot(input: ProjectActionRequest): Promise<GitSnapshot>;
+    /**
+     * Composed at the root rather than owned by a module service: createAppServices
+     * binds this to GitExtendedMutationService.commitEnhanced, which carries the
+     * commit guards and the amend/signoff/signing flags.
+     */
+    commit(input: CommitRequest): Promise<MutationResult>;
   };
 
 export type AppServices = {

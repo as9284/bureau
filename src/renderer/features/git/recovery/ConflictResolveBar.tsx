@@ -1,9 +1,11 @@
 import { useState, type ReactElement } from 'react';
 import type { ConflictStage } from '@shared/contracts/recovery';
+import type { BureauError } from '@shared/contracts/errors';
 import { useGitStore } from '@renderer/store/gitStore';
 import { Button } from '@renderer/components/Button';
 import { Dialog } from '@renderer/components/Dialog';
 import { TextArea } from '@renderer/components/TextArea';
+import { PanelError } from '@renderer/features/git/PanelState';
 import './ConflictResolveBar.css';
 
 type Props = {
@@ -25,51 +27,43 @@ export function ConflictResolveBar({
   const loadConflictVersion = useGitStore((s) => s.loadConflictVersion);
   const conflictPreview = useGitStore((s) => s.conflictPreview);
   const clearConflictPreview = useGitStore((s) => s.clearConflictPreview);
-  const confirmOverwrite = useGitStore((s) => s.settings?.confirmations.conflictOverwrite ?? true);
 
   const [previewStage, setPreviewStage] = useState<ConflictStage | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [pendingResolution, setPendingResolution] = useState<
-    'ours' | 'theirs' | 'markResolved' | null
-  >(null);
+  /**
+   * A failed load used to leave `conflictPreview` undefined, and the dialog fell
+   * through to `value={conflictPreview?.content ?? ''}` — presenting an empty
+   * textarea as though the file's "ours"/"theirs" side were genuinely blank. That
+   * is the most dangerous shape this bug could take: the next click resolves the
+   * conflict. The error is now held explicitly so the two cannot be confused.
+   */
+  const [previewError, setPreviewError] = useState<BureauError | null>(null);
 
   const openPreview = async (stage: 'ours' | 'theirs') => {
     setPreviewStage(stage);
     setPreviewOpen(true);
     setPreviewLoading(true);
-    await loadConflictVersion(projectId, path, stage);
+    setPreviewError(null);
+    const result = await loadConflictVersion(projectId, path, stage);
+    setPreviewError(result.ok ? null : result.error);
     setPreviewLoading(false);
   };
 
   const closePreview = () => {
     setPreviewOpen(false);
     setPreviewStage(null);
+    setPreviewError(null);
     clearConflictPreview();
   };
 
+  // No local confirmation here: resolveConflict gates itself in the store, so
+  // this button and the file context menu share one prompt.
   const requestResolve = (resolution: 'ours' | 'theirs' | 'markResolved') => {
-    if (confirmOverwrite) {
-      setPendingResolution(resolution);
-      return;
-    }
-    void resolveConflict(projectId, revision, path, resolution);
-  };
-
-  const confirmResolve = () => {
-    if (!pendingResolution) return;
-    const resolution = pendingResolution;
-    setPendingResolution(null);
     void resolveConflict(projectId, revision, path, resolution);
   };
 
   const previewLabel = previewStage === 'ours' ? 'Ours' : previewStage === 'theirs' ? 'Theirs' : '';
-  const pendingLabel =
-    pendingResolution === 'ours'
-      ? 'Use ours'
-      : pendingResolution === 'theirs'
-        ? 'Use theirs'
-        : 'Mark resolved';
 
   return (
     <div className="conflict-resolve-bar" role="toolbar" aria-label="Conflict resolution">
@@ -123,6 +117,16 @@ export function ConflictResolveBar({
       >
         {previewLoading ? (
           <p className="conflict-resolve-bar__preview-status">Loading…</p>
+        ) : previewError ? (
+          <PanelError
+            title={`Could not load the ${previewLabel.toLowerCase()} version`}
+            message={previewError.message}
+            onRetry={() => {
+              if (previewStage === 'ours' || previewStage === 'theirs') {
+                void openPreview(previewStage);
+              }
+            }}
+          />
         ) : conflictPreview?.binary ? (
           <p className="conflict-resolve-bar__preview-status">Binary file — preview unavailable.</p>
         ) : (
@@ -136,22 +140,6 @@ export function ConflictResolveBar({
         )}
       </Dialog>
 
-      <Dialog
-        open={pendingResolution !== null}
-        title="Overwrite conflict resolution?"
-        description={`Apply “${pendingLabel}” for ${path}? This replaces the working-tree resolution for this file.`}
-        onClose={() => setPendingResolution(null)}
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setPendingResolution(null)}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={confirmResolve}>
-              {pendingLabel}
-            </Button>
-          </>
-        }
-      />
     </div>
   );
 }

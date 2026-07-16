@@ -1,19 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 import { useAppStore, type SettingsSection } from '../store/appStore';
 import { AccentColorPicker } from '../components/ColorPicker';
 import { Button } from '../components/Button';
 import { Checkbox } from '../components/Checkbox';
 import { Dropdown } from '../components/Dropdown';
+import { IconButton } from '../components/IconButton';
 import { TextArea } from '../components/TextArea';
 import { TextField } from '../components/TextField';
+import { ArrowDownIcon, ArrowUpIcon, GripIcon } from '../components/icons';
+import { reorderByDrag } from '../lib/projectOrder';
+import { orderProjectTabs, PROJECT_TAB_LABELS } from '../lib/projectTabs';
 import type {
+  ConfirmationSettings,
   DensityPreference,
   EditorPreset,
+  ProjectTabId,
   StartupViewPreference,
   TerminalPreset,
   ThemePreference,
 } from '@shared/contracts/settings';
-import { DEFAULT_FILES_SETTINGS } from '@shared/contracts/settings';
+import {
+  DEFAULT_FILES_SETTINGS,
+  EDITOR_FONT_SIZES,
+  LOG_BUFFER_CHOICES,
+  MAX_CRASH_RESTART_CHOICES,
+  PROJECT_TAB_IDS,
+  TERMINAL_CURSOR_STYLES,
+  TERMINAL_FONT_SIZES,
+  TERMINAL_SCROLLBACKS,
+  UI_SCALES,
+  VIEWPORT_PRESETS,
+} from '@shared/contracts/settings';
 import type { AppUpdateState } from '@shared/contracts/updates';
 
 const THEMES: ThemePreference[] = ['dark', 'light', 'system'];
@@ -21,10 +38,119 @@ const DENSITIES: DensityPreference[] = ['compact', 'comfortable'];
 const STARTUP_VIEWS: StartupViewPreference[] = ['hub', 'lastOpened'];
 const PRESET_ACCENTS = ['#7c9cff', '#6db87a', '#c9a24d', '#d46a6a', '#b98cff', '#4fb3c4'];
 
+/**
+ * Every destructive git action that can ask first. Checked = ask. These are all
+ * honored by the store's gateConfirm; before this list existed only
+ * `conflictOverwrite` had a control, so the rest were pinned at their defaults.
+ */
+const CONFIRMATION_ROWS: Array<{
+  key: keyof ConfirmationSettings;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: 'discardChanges',
+    label: 'Discard changes',
+    description: 'Ask before discarding uncommitted changes to a file.',
+  },
+  {
+    key: 'deleteBranch',
+    label: 'Delete branch',
+    description: 'Ask before deleting a local branch.',
+  },
+  {
+    key: 'deleteRemoteBranch',
+    label: 'Delete remote branch',
+    description: 'Ask before deleting a branch on the remote.',
+  },
+  {
+    key: 'deleteRemoteTag',
+    label: 'Delete remote tag',
+    description: 'Ask before deleting a tag on the remote.',
+  },
+  { key: 'dropStash', label: 'Drop stash', description: 'Ask before dropping a stash entry.' },
+  {
+    key: 'stashPop',
+    label: 'Pop stash',
+    description: 'Ask before popping a stash, which drops it and can conflict.',
+  },
+  {
+    key: 'restoreStashFiles',
+    label: 'Restore files from stash',
+    description: 'Ask before overwriting working-tree files with a stashed version.',
+  },
+  {
+    key: 'amendCommit',
+    label: 'Amend commit',
+    description: 'Ask before rewriting the most recent commit.',
+  },
+  {
+    key: 'conflictOverwrite',
+    label: 'Overwrite conflict resolution',
+    description: 'Ask before “Use ours/theirs” replaces your working-tree resolution.',
+  },
+  {
+    key: 'mergeBranch',
+    label: 'Merge branch',
+    description: 'Ask before merging another branch into the current one.',
+  },
+  {
+    key: 'rebaseBranch',
+    label: 'Rebase branch',
+    description: 'Ask before replaying the current branch onto another, which rewrites its history.',
+  },
+  {
+    key: 'resetBranch',
+    label: 'Reset branch (soft or mixed)',
+    description: 'Ask before moving the current branch to another commit, keeping your files.',
+  },
+  {
+    key: 'resetHard',
+    label: 'Reset branch (hard)',
+    description:
+      'Ask before a hard reset restores tracked files and destroys your uncommitted changes for good.',
+  },
+  {
+    key: 'checkoutCommit',
+    label: 'Check out a commit',
+    description: 'Ask before checking out a commit directly, which leaves you on no branch.',
+  },
+  {
+    key: 'removeRemote',
+    label: 'Remove remote',
+    description: 'Ask before removing a remote and its remote-tracking branches.',
+  },
+  {
+    key: 'abortOperation',
+    label: 'Abort merge or rebase',
+    description: 'Ask before discarding an in-progress merge, rebase, cherry-pick, or revert.',
+  },
+  {
+    key: 'skipCommit',
+    label: 'Skip commit',
+    description: "Ask before dropping the current commit's changes during a rebase or cherry-pick.",
+  },
+  {
+    key: 'submoduleUpdate',
+    label: 'Update submodule',
+    description: "Ask before checking out the recorded commit in a submodule's working tree.",
+  },
+  {
+    key: 'pruneWorktrees',
+    label: 'Prune worktrees',
+    description: 'Ask before pruning stale worktree entries.',
+  },
+];
+
+const NODE_MANAGERS = ['fnm', 'volta', 'nvm', 'system'] as const;
+const PYTHON_MANAGERS = ['venv', 'pyenv'] as const;
+const FLUTTER_MANAGERS = ['fvm', 'flutter'] as const;
+
 const SETTINGS_NAV: Array<{ id: SettingsSection; label: string }> = [
   { id: 'general', label: 'General' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'tools', label: 'Editors' },
+  { id: 'processes', label: 'Processes' },
   { id: 'toolchains', label: 'Toolchains' },
   { id: 'files', label: 'Files' },
   { id: 'git', label: 'Git' },
@@ -74,6 +200,7 @@ export function SettingsPage() {
       {section === 'general' && <GeneralSection />}
       {section === 'appearance' && <AppearanceSection />}
       {section === 'tools' && <ToolsSection />}
+      {section === 'processes' && <ProcessesSettingsSection />}
       {section === 'toolchains' && <ToolchainsSettingsSection />}
       {section === 'files' && <FilesSettingsSection />}
       {section === 'git' && <GitSettingsSection />}
@@ -129,6 +256,39 @@ function FilesSettingsSection() {
           label="Show ignored files"
         />
       </div>
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Editor text size</div>
+          <div className="settings-row__desc">
+            Type size in the code editor. The app-wide interface scale applies on top of this.
+          </div>
+        </div>
+        <div className="segmented" role="group" aria-label="Editor text size">
+          {EDITOR_FONT_SIZES.map((size) => (
+            <button
+              key={size}
+              type="button"
+              className={files.editorFontSize === size ? 'active' : ''}
+              onClick={() => void updateSettings({ files: { editorFontSize: size } })}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Line numbers</div>
+          <div className="settings-row__desc">Show the line-number gutter in the code editor.</div>
+        </div>
+        <Checkbox
+          checked={files.lineNumbers}
+          onCheckedChange={(lineNumbers) => void updateSettings({ files: { lineNumbers } })}
+          label="Show line numbers"
+        />
+      </div>
+
       <div className="settings-row">
         <div>
           <div className="settings-row__label">Editor wrapping</div>
@@ -314,6 +474,19 @@ function GitSettingsSection() {
       </div>
       <div className="settings-row">
         <div>
+          <div className="settings-row__label">Refresh on focus</div>
+          <div className="settings-row__desc">
+            Also refresh the Git tab whenever Bureau regains focus (never fetches).
+          </div>
+        </div>
+        <Checkbox
+          checked={settings.general.refreshOnFocus}
+          onCheckedChange={(refreshOnFocus) => void updateSettings({ general: { refreshOnFocus } })}
+          label="Refresh on window focus"
+        />
+      </div>
+      <div className="settings-row">
+        <div>
           <div className="settings-row__label">Default sign-off</div>
           <div className="settings-row__desc">Pre-check --signoff on new commits.</div>
         </div>
@@ -366,21 +539,21 @@ function GitSettingsSection() {
           }
         />
       </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Conflict overwrite</div>
-          <div className="settings-row__desc">
-            Allow conflict resolution to overwrite files without an extra confirmation.
+      {CONFIRMATION_ROWS.map((row) => (
+        <div className="settings-row" key={row.key}>
+          <div>
+            <div className="settings-row__label">{row.label}</div>
+            <div className="settings-row__desc">{row.description}</div>
           </div>
+          <Checkbox
+            checked={settings.confirmations[row.key]}
+            onCheckedChange={(checked) =>
+              void updateSettings({ confirmations: { [row.key]: checked } })
+            }
+            label="Ask first"
+          />
         </div>
-        <Checkbox
-          checked={settings.confirmations.conflictOverwrite}
-          onCheckedChange={(checked) =>
-            void updateSettings({ confirmations: { conflictOverwrite: checked } })
-          }
-          label="Overwrite without confirmation"
-        />
-      </div>
+      ))}
     </section>
   );
 }
@@ -641,6 +814,39 @@ function GeneralSection() {
           </button>
         </div>
       </div>
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Notifications</div>
+          <div className="settings-row__desc">
+            Show a desktop notification when a background operation finishes while Bureau is not
+            focused.
+          </div>
+        </div>
+        <Checkbox
+          checked={settings.notifications.enabled}
+          onCheckedChange={(enabled) => void updateSettings({ notifications: { enabled } })}
+          label="Enable notifications"
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Notify for</div>
+          <div className="settings-row__desc">
+            Limit notifications to operations that run longer than 10 seconds, instead of every
+            completed operation.
+          </div>
+        </div>
+        <Checkbox
+          checked={settings.notifications.longRunningOnly}
+          disabled={!settings.notifications.enabled}
+          onCheckedChange={(longRunningOnly) =>
+            void updateSettings({ notifications: { longRunningOnly } })
+          }
+          label="Long-running operations only"
+        />
+      </div>
+
       <UpdateSection />
     </section>
   );
@@ -739,7 +945,152 @@ function AppearanceSection() {
           label="Enable immersive mode"
         />
       </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Interface scale</div>
+          <div className="settings-row__desc">
+            Scales the whole interface. Does not affect the previewed page, which has its own zoom.
+          </div>
+        </div>
+        <div className="segmented" role="group" aria-label="Interface scale">
+          {UI_SCALES.map((scale) => (
+            <button
+              key={scale}
+              type="button"
+              className={settings.appearance.uiScale === scale ? 'active' : ''}
+              onClick={() => void updateSettings({ appearance: { uiScale: scale } })}
+            >
+              {Math.round(scale * 100)}%
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Reduce motion</div>
+          <div className="settings-row__desc">
+            Cut animations and transitions throughout the app. Bureau already follows your
+            system’s reduce-motion setting; this turns it on regardless.
+          </div>
+        </div>
+        <Checkbox
+          checked={settings.appearance.reduceMotion}
+          onCheckedChange={(reduceMotion) => void updateSettings({ appearance: { reduceMotion } })}
+          label="Always reduce motion"
+        />
+      </div>
+
+      <div className="settings-row settings-row--stacked">
+        <div>
+          <div className="settings-row__label">Workspace tabs</div>
+          <div className="settings-row__desc">
+            Drag to reorder the tabs shown in every project workspace, or use the arrows. Saved
+            automatically.
+          </div>
+        </div>
+        <ProjectTabOrderEditor
+          order={settings.appearance.projectTabOrder}
+          onReorder={(projectTabOrder) => void updateSettings({ appearance: { projectTabOrder } })}
+        />
+      </div>
     </section>
+  );
+}
+
+function ProjectTabOrderEditor({
+  order: saved,
+  onReorder,
+}: {
+  order: ProjectTabId[] | undefined;
+  onReorder(order: ProjectTabId[] | undefined): void;
+}) {
+  const [draft, setDraft] = useState<ProjectTabId[] | null>(null);
+  const [draggingId, setDraggingId] = useState<ProjectTabId | null>(null);
+
+  const base = orderProjectTabs(saved);
+  const order = draft ?? base;
+  const isDefault = base.join(' ') === PROJECT_TAB_IDS.join(' ');
+
+  const commit = (next: ProjectTabId[]) => {
+    setDraggingId(null);
+    setDraft(null);
+    // Reset to the canonical order clears the override; otherwise persist the change.
+    if (next.join(' ') === PROJECT_TAB_IDS.join(' ')) {
+      if (!isDefault) onReorder(undefined);
+    } else if (next.join(' ') !== base.join(' ')) {
+      onReorder(next);
+    }
+  };
+
+  const move = (id: ProjectTabId, delta: number) =>
+    commit(reorderByDrag(order, id, order[order.indexOf(id) + delta]));
+
+  return (
+    <div className="tab-order">
+      <ul className="tab-order__list">
+        {order.map((id, index) => (
+          <li
+            key={id}
+            className={['tab-order__item', draggingId === id ? 'dragging' : ''].join(' ')}
+            draggable
+            onDragStart={(event: DragEvent) => {
+              setDraggingId(id);
+              setDraft(order);
+              event.dataTransfer.effectAllowed = 'move';
+              // Firefox requires drag data for a drag to begin.
+              event.dataTransfer.setData('text/plain', id);
+            }}
+            onDragEnd={() => {
+              setDraggingId(null);
+              setDraft(null);
+            }}
+            onDragOver={(event: DragEvent) => {
+              if (!draggingId) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              const next = reorderByDrag(order, draggingId, id);
+              if (next.join(' ') !== order.join(' ')) setDraft(next);
+            }}
+            onDrop={(event: DragEvent) => {
+              if (!draggingId) return;
+              event.preventDefault();
+              commit(reorderByDrag(order, draggingId, id));
+            }}
+          >
+            <span className="tab-order__grip" aria-hidden title="Drag to reorder">
+              <GripIcon size={14} />
+            </span>
+            <span className="tab-order__index mono">{index + 1}</span>
+            <span className="tab-order__label">{PROJECT_TAB_LABELS[id]}</span>
+            <span className="tab-order__move">
+              <IconButton
+                label={`Move ${PROJECT_TAB_LABELS[id]} up`}
+                disabled={index === 0}
+                onClick={() => move(id, -1)}
+              >
+                <ArrowUpIcon size={14} />
+              </IconButton>
+              <IconButton
+                label={`Move ${PROJECT_TAB_LABELS[id]} down`}
+                disabled={index === order.length - 1}
+                onClick={() => move(id, 1)}
+              >
+                <ArrowDownIcon size={14} />
+              </IconButton>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {!isDefault && (
+        <div className="tab-order__actions">
+          <Button variant="ghost" onClick={() => commit([...PROJECT_TAB_IDS])}>
+            Reset to default
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -750,10 +1101,12 @@ function ToolsSection() {
   const chooseCustomEditor = useAppStore((s) => s.chooseCustomEditor);
   const setTerminalPreset = useAppStore((s) => s.setTerminalPreset);
   const chooseCustomTerminal = useAppStore((s) => s.chooseCustomTerminal);
+  const updateSettings = useAppStore((s) => s.updateSettings);
   if (!settings || !capabilities) return null;
 
   const editor = settings.editor;
   const terminal = settings.terminal;
+  const tools = settings.tools;
 
   const editorPresets = unique<EditorPreset>([
     ...(editor.kind === 'preset' ? [editor.preset] : []),
@@ -847,6 +1200,241 @@ function ToolsSection() {
       {terminal.kind === 'custom' && (
         <p className="settings-path mono">{terminal.executablePath}</p>
       )}
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Project actions</div>
+          <div className="settings-row__desc">
+            Which “Open in…” buttons appear on the project Overview and in the Git tab.
+          </div>
+        </div>
+        <div className="settings-checks">
+          <Checkbox
+            checked={tools.showOpenInEditor}
+            onCheckedChange={(showOpenInEditor) =>
+              void updateSettings({ tools: { showOpenInEditor } })
+            }
+            label="Open in editor"
+          />
+          <Checkbox
+            checked={tools.showOpenInTerminal}
+            onCheckedChange={(showOpenInTerminal) =>
+              void updateSettings({ tools: { showOpenInTerminal } })
+            }
+            label="Open in terminal"
+          />
+          <Checkbox
+            checked={tools.showOpenInExplorer}
+            onCheckedChange={(showOpenInExplorer) =>
+              void updateSettings({ tools: { showOpenInExplorer } })
+            }
+            label="Open in explorer"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ManagerRow<T extends string>({
+  label,
+  description,
+  options,
+  value,
+  onSelect,
+}: {
+  label: string;
+  description: string;
+  options: readonly T[];
+  value: T | undefined;
+  onSelect: (value: T | undefined) => void;
+}) {
+  return (
+    <div className="settings-row">
+      <div>
+        <div className="settings-row__label">{label}</div>
+        <div className="settings-row__desc">{description}</div>
+      </div>
+      <div className="segmented" role="group" aria-label={`Preferred ${label} version manager`}>
+        <button
+          type="button"
+          className={value === undefined ? 'active' : ''}
+          onClick={() => onSelect(undefined)}
+        >
+          Auto
+        </button>
+        {options.map((manager) => (
+          <button
+            key={manager}
+            type="button"
+            className={value === manager ? 'active' : ''}
+            onClick={() => onSelect(manager)}
+          >
+            {manager}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProcessesSettingsSection() {
+  const settings = useAppStore((s) => s.settings);
+  const updateSettings = useAppStore((s) => s.updateSettings);
+  if (!settings) return null;
+
+  const { processes, preview, embeddedTerminal } = settings;
+
+  return (
+    <section className="settings-section">
+      <h2>Processes &amp; Preview</h2>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Log buffer</div>
+          <div className="settings-row__desc">
+            Log lines kept per process before the oldest are dropped. Higher values use more memory.
+          </div>
+        </div>
+        <Dropdown
+          className="settings-dropdown"
+          label="Log buffer"
+          value={String(processes.logBufferLines)}
+          options={LOG_BUFFER_CHOICES.map((lines) => ({
+            value: String(lines),
+            label: `${lines.toLocaleString()} lines`,
+          }))}
+          onChange={(value) =>
+            void updateSettings({
+              processes: { logBufferLines: Number(value) as (typeof LOG_BUFFER_CHOICES)[number] },
+            })
+          }
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Crash auto-restart</div>
+          <div className="settings-row__desc">
+            How many times in a row Bureau restarts a crashing process before giving up. Only
+            applies to processes configured to auto-restart.
+          </div>
+        </div>
+        <Dropdown
+          className="settings-dropdown"
+          label="Crash auto-restart"
+          value={String(processes.maxCrashRestarts)}
+          options={MAX_CRASH_RESTART_CHOICES.map((count) => ({
+            value: String(count),
+            label: count === 0 ? 'Never restart' : `${count} attempts`,
+          }))}
+          onChange={(value) =>
+            void updateSettings({
+              processes: {
+                maxCrashRestarts: Number(value) as (typeof MAX_CRASH_RESTART_CHOICES)[number],
+              },
+            })
+          }
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Default viewport</div>
+          <div className="settings-row__desc">The size the Preview tab opens with.</div>
+        </div>
+        <div className="segmented" role="group" aria-label="Default viewport">
+          {VIEWPORT_PRESETS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={preview.defaultViewport === option ? 'active' : ''}
+              onClick={() => void updateSettings({ preview: { defaultViewport: option } })}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Preview console</div>
+          <div className="settings-row__desc">
+            Capture the previewed page’s console output into the Preview console panel.
+          </div>
+        </div>
+        <Checkbox
+          checked={preview.captureConsole}
+          onCheckedChange={(captureConsole) => void updateSettings({ preview: { captureConsole } })}
+          label="Capture console output"
+        />
+      </div>
+
+      <h2 style={{ marginTop: 'var(--space-6)' }}>Embedded terminal</h2>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Terminal text size</div>
+          <div className="settings-row__desc">Type size in the attached terminal pane.</div>
+        </div>
+        <div className="segmented" role="group" aria-label="Terminal text size">
+          {TERMINAL_FONT_SIZES.map((size) => (
+            <button
+              key={size}
+              type="button"
+              className={embeddedTerminal.fontSize === size ? 'active' : ''}
+              onClick={() => void updateSettings({ embeddedTerminal: { fontSize: size } })}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Scrollback</div>
+          <div className="settings-row__desc">
+            Lines the terminal keeps in history. Applies to terminals opened from now on.
+          </div>
+        </div>
+        <Dropdown
+          className="settings-dropdown"
+          label="Scrollback"
+          value={String(embeddedTerminal.scrollback)}
+          options={TERMINAL_SCROLLBACKS.map((lines) => ({
+            value: String(lines),
+            label: `${lines.toLocaleString()} lines`,
+          }))}
+          onChange={(value) =>
+            void updateSettings({
+              embeddedTerminal: {
+                scrollback: Number(value) as (typeof TERMINAL_SCROLLBACKS)[number],
+              },
+            })
+          }
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Cursor</div>
+          <div className="settings-row__desc">Terminal cursor shape.</div>
+        </div>
+        <div className="segmented" role="group" aria-label="Terminal cursor">
+          {TERMINAL_CURSOR_STYLES.map((style) => (
+            <button
+              key={style}
+              type="button"
+              className={embeddedTerminal.cursorStyle === style ? 'active' : ''}
+              onClick={() => void updateSettings({ embeddedTerminal: { cursorStyle: style } })}
+            >
+              {style}
+            </button>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
@@ -862,74 +1450,37 @@ function ToolchainsSettingsSection() {
     <section className="settings-section">
       <h2>Toolchains</h2>
       <p className="settings-help">
-        Preferred version managers when multiple are installed. Bureau still detects all managers;
-        these settings nudge precedence only.
+        When several version managers are installed for a runtime, Bureau prefers the one you pick
+        here. It still detects every manager — this only nudges precedence. Leave a runtime on Auto
+        to let Bureau decide.
       </p>
-      <div className="settings-field">
-        <label>Node manager</label>
-        <div className="chip-row">
-          {(['fnm', 'volta', 'nvm', 'system'] as const).map((manager) => (
-            <button
-              key={manager}
-              type="button"
-              className={['chip', toolchains.preferredNodeManager === manager ? 'active' : ''].join(
-                ' '
-              )}
-              onClick={() =>
-                void updateSettings({
-                  toolchains: { ...toolchains, preferredNodeManager: manager },
-                })
-              }
-            >
-              {manager}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="settings-field">
-        <label>Python manager</label>
-        <div className="chip-row">
-          {(['venv', 'pyenv'] as const).map((manager) => (
-            <button
-              key={manager}
-              type="button"
-              className={[
-                'chip',
-                toolchains.preferredPythonManager === manager ? 'active' : '',
-              ].join(' ')}
-              onClick={() =>
-                void updateSettings({
-                  toolchains: { ...toolchains, preferredPythonManager: manager },
-                })
-              }
-            >
-              {manager}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="settings-field">
-        <label>Flutter manager</label>
-        <div className="chip-row">
-          {(['fvm', 'flutter'] as const).map((manager) => (
-            <button
-              key={manager}
-              type="button"
-              className={[
-                'chip',
-                toolchains.preferredFlutterManager === manager ? 'active' : '',
-              ].join(' ')}
-              onClick={() =>
-                void updateSettings({
-                  toolchains: { ...toolchains, preferredFlutterManager: manager },
-                })
-              }
-            >
-              {manager}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ManagerRow
+        label="Node.js"
+        description="Used when more than one of fnm, Volta, or nvm is installed. System uses the Node.js on your PATH."
+        options={NODE_MANAGERS}
+        value={toolchains.preferredNodeManager}
+        onSelect={(preferredNodeManager) =>
+          void updateSettings({ toolchains: { preferredNodeManager } })
+        }
+      />
+      <ManagerRow
+        label="Python"
+        description="pyenv selects an interpreter version; venv activates the project's virtual environment."
+        options={PYTHON_MANAGERS}
+        value={toolchains.preferredPythonManager}
+        onSelect={(preferredPythonManager) =>
+          void updateSettings({ toolchains: { preferredPythonManager } })
+        }
+      />
+      <ManagerRow
+        label="Flutter"
+        description="fvm pins a per-project SDK version; flutter uses your global install."
+        options={FLUTTER_MANAGERS}
+        value={toolchains.preferredFlutterManager}
+        onSelect={(preferredFlutterManager) =>
+          void updateSettings({ toolchains: { preferredFlutterManager } })
+        }
+      />
     </section>
   );
 }

@@ -29,7 +29,6 @@ describe('FileApplicationService', () => {
       canonicalPath: root,
       stack: [],
       addedAt: new Date().toISOString(),
-      configPresent: false,
     };
     const catalogue = { get: (id: string) => id === projectId ? project : undefined } as ProjectCatalogue;
     service = createFileApplicationService({

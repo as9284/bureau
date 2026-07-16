@@ -29,6 +29,7 @@
 .conflict-resolve-bar__preview {
   width: 100%;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-supporting);
 }
 

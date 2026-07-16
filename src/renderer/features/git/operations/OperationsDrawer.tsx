@@ -1,6 +1,9 @@
-import { useEffect, type ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import { useGitStore } from '@renderer/store/gitStore';
+import { useAppStore } from '@renderer/store/appStore';
 import { Button } from '@renderer/components/Button';
+import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import './OperationsDrawer.css';
 
 function formatState(state: string): string {
@@ -24,8 +27,12 @@ export function OperationsDrawer(): ReactElement | null {
   const open = useGitStore((s) => s.operationDrawerOpen);
   const setOpen = useGitStore((s) => s.setOperationDrawerOpen);
   const operations = useGitStore((s) => s.operations);
+  const operationsLoading = useGitStore((s) => s.operationsLoading);
+  const operationsError = useGitStore((s) => s.operationsError);
   const loadOperations = useGitStore((s) => s.loadOperations);
   const cancelOperation = useGitStore((s) => s.cancelOperation);
+  const announce = useAppStore((s) => s.announce);
+  const lastStates = useRef(new Map<string, string>());
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +42,34 @@ export function OperationsDrawer(): ReactElement | null {
     }, 2000);
     return () => window.clearInterval(interval);
   }, [open, loadOperations]);
+
+  // The 2s poll silently rewrote Queued → Running → Succeeded. Diff each operation's
+  // state against the previous poll and push only real transitions to the live region;
+  // an id we have not seen before is the first paint, not a change worth announcing.
+  useEffect(() => {
+    if (!open) {
+      lastStates.current.clear();
+      return;
+    }
+    operations.forEach((op) => {
+      const previous = lastStates.current.get(op.id);
+      if (previous !== undefined && previous !== op.state) {
+        announce(`${op.summary}: ${formatState(op.state)}`);
+      }
+      lastStates.current.set(op.id, op.state);
+    });
+  }, [open, operations, announce]);
+
+  // The drawer hand-rolls role="dialog", so it has to hand-roll Escape too — the
+  // Dialog primitive's handler never runs here. Mirrors DiffPanel's expanded view.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, setOpen]);
 
   if (!open) return null;
 
@@ -54,8 +89,26 @@ export function OperationsDrawer(): ReactElement | null {
           </Button>
         </header>
         <div className="operations-drawer__body">
-          {operations.length === 0 ? (
-            <p className="operations-drawer__empty">No recent operations.</p>
+          {operationsError ? (
+            <PanelError
+              title="Could not load operations"
+              message={operationsError.message}
+              onRetry={() => void loadOperations()}
+            />
+          ) : null}
+
+          {/* "No recent operations" used to show during the very first load, stating
+              as fact something not yet known. Skeletons until the list has answered. */}
+          {operationsLoading && operations.length === 0 ? (
+            <div className="operations-drawer__loading">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} width="100%" height="var(--size-hub-row)" />
+              ))}
+            </div>
+          ) : operations.length === 0 ? (
+            operationsError ? null : (
+              <p className="operations-drawer__empty">No recent operations.</p>
+            )
           ) : (
             <ul className="operations-drawer__list">
               {operations.map((op) => (

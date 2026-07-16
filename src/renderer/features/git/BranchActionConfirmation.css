@@ -25,6 +25,7 @@
   white-space: nowrap;
   color: var(--color-accent-primary);
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-supporting);
 }
 
@@ -46,6 +47,7 @@
 .git-branch-confirmation__switch-note code {
   color: var(--color-accent-primary);
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .git-branch-confirmation__error {

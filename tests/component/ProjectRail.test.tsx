@@ -13,7 +13,6 @@ const PROJECTS: TrackedProject[] = [
     canonicalPath: 'c:\\bureau',
     stack: ['node'],
     addedAt: new Date().toISOString(),
-    configPresent: false,
   },
   {
     projectId: 'project-two',
@@ -22,7 +21,6 @@ const PROJECTS: TrackedProject[] = [
     canonicalPath: 'c:\\missing',
     stack: [],
     addedAt: new Date().toISOString(),
-    configPresent: false,
     missing: true,
   },
 ];
@@ -30,9 +28,15 @@ const PROJECTS: TrackedProject[] = [
 beforeEach(() => {
   useAppStore.setState({
     projects: PROJECTS,
+    // Preloaded so the rail's process-warming effect skips the IPC call.
+    processesByProject: {
+      'project-one': { definitions: [], runtimes: [] },
+      'project-two': { definitions: [], runtimes: [] },
+    },
     activeSection: 'projects',
     view: 'hub',
     selectedProjectId: null,
+    projectQuery: '',
     contextMenu: null,
   });
 });
@@ -86,8 +90,78 @@ describe('ProjectRail', () => {
     expect(items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ type: 'item', label: 'Open' }),
+        expect.objectContaining({ type: 'item', label: 'Pin to top' }),
         expect.objectContaining({ type: 'item', label: 'Remove project', danger: true }),
       ])
     );
+  });
+
+  it('splits pinned projects into their own icon-marked group with a reorder + unpin affordance', () => {
+    useAppStore.setState({
+      projects: [
+        { ...PROJECTS[0], pinned: true, pinnedRank: 0 },
+        PROJECTS[1],
+      ],
+    });
+    render(<ProjectRail />);
+
+    expect(screen.getByRole('group', { name: 'Pinned' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Recent' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unpin project' })).toBeInTheDocument();
+  });
+
+  it('shows a running status dot for a project with live processes', () => {
+    useAppStore.setState({
+      processesByProject: {
+        'project-one': {
+          definitions: [],
+          runtimes: [
+            {
+              projectId: 'project-one',
+              processId: 'dev',
+              status: 'running',
+              restartCount: 0,
+              ready: true,
+            },
+          ],
+        },
+        'project-two': { definitions: [], runtimes: [] },
+      },
+    });
+    render(<ProjectRail />);
+
+    expect(screen.getByRole('img', { name: 'Running' })).toBeInTheDocument();
+  });
+
+  it('filters the list via the search field', async () => {
+    render(<ProjectRail />);
+
+    await userEvent.setup().type(screen.getByLabelText('Filter projects'), 'bureau');
+
+    expect(screen.getByRole('button', { name: 'bureau' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'unavailable-project' })).not.toBeInTheDocument();
+  });
+
+  it('renders a large project list inside the scroll container without breaking', () => {
+    const many: TrackedProject[] = Array.from({ length: 40 }, (_, i) => ({
+      projectId: `bulk-${i}`,
+      name: `project-${i}`,
+      path: `C:\\p\\${i}`,
+      canonicalPath: `c:\\p\\${i}`,
+      stack: [],
+      addedAt: new Date().toISOString(),
+    }));
+    useAppStore.setState({
+      projects: many,
+      processesByProject: Object.fromEntries(
+        many.map((p) => [p.projectId, { definitions: [], runtimes: [] }])
+      ),
+    });
+    const { container } = render(<ProjectRail />);
+
+    // The scrollable list container is present and every row rendered.
+    expect(container.querySelector('.project-rail__projects')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'project-0' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'project-39' })).toBeInTheDocument();
   });
 });

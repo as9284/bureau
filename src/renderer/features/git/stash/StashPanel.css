@@ -94,6 +94,7 @@
 .stash-panel__copy code {
   display: block;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
   color: var(--color-accent-primary);
   margin-bottom: 2px;
@@ -148,12 +149,14 @@
 
 .stash-panel__file-status {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
   color: var(--color-text-muted);
 }
 
 .stash-panel__file-path {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

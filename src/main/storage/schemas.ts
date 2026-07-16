@@ -1,8 +1,15 @@
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import type { EditorConfig, PublicSettings, TerminalConfig } from '@shared/contracts/settings';
+import type { EditorConfig, PublicSettings, TerminalConfig, UiScale } from '@shared/contracts/settings';
+import {
+  PROJECT_TAB_IDS,
+  TERMINAL_CURSOR_STYLES,
+  UI_SCALES,
+  VIEWPORT_PRESETS,
+} from '@shared/contracts/settings';
 import type { TrackedProject } from '@shared/contracts/projects';
 import { STACK_TAGS } from '@shared/contracts/projects';
+import { processDefinitionSchema } from '@shared/validation/requests';
 import {
   DEFAULT_ACCENT_COLOR,
   DEFAULT_ANDROID_SETTINGS,
@@ -16,7 +23,9 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   DEFAULT_TOOLS_SETTINGS,
   DEFAULT_TOOLCHAINS_SETTINGS,
-  DEFAULT_HUB_SETTINGS,
+  DEFAULT_PROCESSES_SETTINGS,
+  DEFAULT_PREVIEW_SETTINGS,
+  DEFAULT_EMBEDDED_TERMINAL_SETTINGS,
   DEFAULT_FILES_SETTINGS,
   DEFAULT_ONBOARDING_SETTINGS,
 } from '@shared/contracts/settings';
@@ -88,6 +97,15 @@ export const settingsFileSchema = z.object({
     density: z.enum(['compact', 'comfortable']),
     accentColor: accentColorSchema,
     immersiveMode: z.boolean(),
+    reduceMotion: z.boolean(),
+    uiScale: z.union([
+      z.literal(0.9),
+      z.literal(1),
+      z.literal(1.1),
+      z.literal(1.25),
+      z.literal(1.5),
+    ]),
+    projectTabOrder: z.array(z.enum(PROJECT_TAB_IDS)).max(PROJECT_TAB_IDS.length).optional(),
   }),
   gitBehavior: z.object({
     pullStrategy: z.enum(['ff-only', 'merge', 'rebase']),
@@ -115,6 +133,18 @@ export const settingsFileSchema = z.object({
     conflictOverwrite: z.boolean(),
     deleteRemoteBranch: z.boolean(),
     deleteRemoteTag: z.boolean(),
+    abortOperation: z.boolean(),
+    skipCommit: z.boolean(),
+    stashPop: z.boolean(),
+    restoreStashFiles: z.boolean(),
+    submoduleUpdate: z.boolean(),
+    pruneWorktrees: z.boolean(),
+    mergeBranch: z.boolean(),
+    rebaseBranch: z.boolean(),
+    resetBranch: z.boolean(),
+    resetHard: z.boolean(),
+    checkoutCommit: z.boolean(),
+    removeRemote: z.boolean(),
   }),
   commit: z.object({
     defaultSignOff: z.boolean(),
@@ -138,9 +168,23 @@ export const settingsFileSchema = z.object({
     preferredPythonManager: z.enum(['pyenv', 'venv', 'system']).optional(),
     preferredFlutterManager: z.enum(['fvm', 'flutter']).optional(),
   }),
-  hub: z.object({
-    defaultSort: z.enum(['attention', 'name', 'recentlyRefreshed', 'changedFiles']),
-    recentCount: z.number().int().min(1).max(50),
+  processes: z.object({
+    logBufferLines: z.union([
+      z.literal(1000),
+      z.literal(5000),
+      z.literal(10000),
+      z.literal(20000),
+    ]),
+    maxCrashRestarts: z.union([z.literal(0), z.literal(3), z.literal(5), z.literal(10)]),
+  }),
+  preview: z.object({
+    defaultViewport: z.enum(VIEWPORT_PRESETS),
+    captureConsole: z.boolean(),
+  }),
+  embeddedTerminal: z.object({
+    fontSize: z.union([z.literal(11), z.literal(12), z.literal(13), z.literal(14)]),
+    scrollback: z.union([z.literal(1000), z.literal(5000), z.literal(10000)]),
+    cursorStyle: z.enum(TERMINAL_CURSOR_STYLES),
   }),
   files: z.object({
     wordWrap: z.boolean(),
@@ -151,6 +195,8 @@ export const settingsFileSchema = z.object({
     remoteImages: z.enum(['ask', 'block']),
     tabSize: z.union([z.literal(2), z.literal(4)]),
     readerWidth: z.enum(['narrow', 'standard', 'wide']),
+    editorFontSize: z.union([z.literal(12), z.literal(13), z.literal(14), z.literal(16)]),
+    lineNumbers: z.boolean(),
   }),
   onboarding: z.object({
     completedVersion: z.string().max(64).nullable(),
@@ -166,10 +212,10 @@ export const trackedProjectSchema = z.object({
   addedAt: z.string().datetime(),
   lastOpenedAt: z.string().datetime().optional(),
   pinned: z.boolean().optional(),
+  pinnedRank: z.number().int().min(0).optional(),
   archived: z.boolean().optional(),
   tags: z.array(z.string().max(64)).max(50).optional(),
   groupIds: z.array(z.string().uuid()).max(20).optional(),
-  configPresent: z.boolean(),
   missing: z.boolean().optional(),
   nestedRoots: z.array(z.string().max(MAX_PATH_LENGTH)).max(100).optional(),
 });
@@ -180,8 +226,48 @@ export const projectCatalogueFileSchema = z.object({
   projects: z.array(trackedProjectSchema).max(MAX_RECORDS),
 });
 
+const projectToolchainsSchema = z
+  .object({
+    node: z
+      .object({
+        version: z.string().max(64),
+        manager: z.enum(['fnm', 'volta', 'nvm', 'system']).optional(),
+      })
+      .optional(),
+    python: z
+      .object({
+        version: z.string().max(64),
+        manager: z.enum(['pyenv', 'venv', 'system']).optional(),
+        venv: z.string().max(256).optional(),
+      })
+      .optional(),
+    flutter: z
+      .object({
+        version: z.string().max(64),
+        manager: z.enum(['fvm', 'flutter']).optional(),
+      })
+      .optional(),
+  })
+  .strict();
+
+export const projectConfigSchema = z
+  .object({
+    packageManager: z.enum(['npm', 'pnpm', 'yarn', 'bun']).optional(),
+    processes: z.array(processDefinitionSchema).max(100),
+    toolchains: projectToolchainsSchema.optional(),
+  })
+  .strict();
+
+/** Per-project runnable commands + runtime pins, keyed by projectId. Lives in Bureau's userData. */
+export const projectConfigsFileSchema = z.object({
+  schemaVersion: z.literal(1),
+  updatedAt: z.string().datetime(),
+  configs: z.record(z.string().uuid(), projectConfigSchema),
+});
+
 export type SettingsFileV1 = z.infer<typeof settingsFileSchema>;
 export type ProjectCatalogueFileV1 = z.infer<typeof projectCatalogueFileSchema>;
+export type ProjectConfigsFileV1 = z.infer<typeof projectConfigsFileSchema>;
 
 export function createDefaultSettings(): SettingsFileV1 {
   return {
@@ -208,7 +294,9 @@ export function createDefaultSettings(): SettingsFileV1 {
     notifications: { ...DEFAULT_NOTIFICATION_SETTINGS },
     android: { ...DEFAULT_ANDROID_SETTINGS },
     toolchains: { ...DEFAULT_TOOLCHAINS_SETTINGS },
-    hub: { ...DEFAULT_HUB_SETTINGS },
+    processes: { ...DEFAULT_PROCESSES_SETTINGS },
+    preview: { ...DEFAULT_PREVIEW_SETTINGS },
+    embeddedTerminal: { ...DEFAULT_EMBEDDED_TERMINAL_SETTINGS },
     files: { ...DEFAULT_FILES_SETTINGS },
     onboarding: { ...DEFAULT_ONBOARDING_SETTINGS },
   };
@@ -220,6 +308,18 @@ export function createDefaultProjectCatalogue(): ProjectCatalogueFileV1 {
     updatedAt: new Date().toISOString(),
     projects: [],
   };
+}
+
+export function createDefaultProjectConfigs(): ProjectConfigsFileV1 {
+  return {
+    schemaVersion: 1,
+    updatedAt: new Date().toISOString(),
+    configs: {},
+  };
+}
+
+export function validateProjectConfigs(value: unknown): ProjectConfigsFileV1 {
+  return projectConfigsFileSchema.parse(value);
 }
 
 /** Lenient: deep-merge incoming over defaults, then strict-parse. Older/partial files upgrade silently. */
@@ -243,6 +343,13 @@ export function validateSettings(value: unknown): SettingsFileV1 {
       immersiveMode: normalizeBoolean(
         isRecord(incoming.appearance) ? incoming.appearance.immersiveMode : undefined,
         defaults.appearance.immersiveMode
+      ),
+      reduceMotion: normalizeBoolean(
+        isRecord(incoming.appearance) ? incoming.appearance.reduceMotion : undefined,
+        defaults.appearance.reduceMotion
+      ),
+      uiScale: normalizeUiScale(
+        isRecord(incoming.appearance) ? incoming.appearance.uiScale : undefined
       ),
     },
     gitBehavior: {
@@ -275,7 +382,15 @@ export function validateSettings(value: unknown): SettingsFileV1 {
       ...defaults.toolchains,
       ...(isRecord(incoming.toolchains) ? incoming.toolchains : {}),
     },
-    hub: { ...defaults.hub, ...(isRecord(incoming.hub) ? incoming.hub : {}) },
+    processes: {
+      ...defaults.processes,
+      ...(isRecord(incoming.processes) ? incoming.processes : {}),
+    },
+    preview: { ...defaults.preview, ...(isRecord(incoming.preview) ? incoming.preview : {}) },
+    embeddedTerminal: {
+      ...defaults.embeddedTerminal,
+      ...(isRecord(incoming.embeddedTerminal) ? incoming.embeddedTerminal : {}),
+    },
     files: { ...defaults.files, ...(isRecord(incoming.files) ? incoming.files : {}) },
     onboarding: {
       ...defaults.onboarding,
@@ -321,7 +436,9 @@ export function settingsFileToPublic(file: SettingsFileV1): PublicSettings {
     notifications: file.notifications,
     android: file.android,
     toolchains: file.toolchains,
-    hub: file.hub,
+    processes: file.processes,
+    preview: file.preview,
+    embeddedTerminal: file.embeddedTerminal,
     files: file.files,
     onboarding: file.onboarding,
   };
@@ -346,4 +463,9 @@ function normalizeAccent(value: unknown): string {
 
 function normalizeBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+/** Unknown/retired scales fall back to 100% rather than failing the whole settings parse. */
+function normalizeUiScale(value: unknown): UiScale {
+  return UI_SCALES.includes(value as UiScale) ? (value as UiScale) : 1;
 }

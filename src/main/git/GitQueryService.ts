@@ -4,7 +4,8 @@ import type { GitExecutableResolver } from './GitExecutableResolver';
 import type { GitRunner } from './GitRunner';
 import { assertGitSuccess } from './gitResult';
 import type { BureauError } from '@shared/contracts/errors';
-import type { CommitFileChange, CommitFileChangeKind, DiffRequest, DiffResult, ListCommitFilesRequest, ListCommitFilesResult, RecentCommit, StashEntry } from '@shared/contracts/operations';
+import type { CommitFileChange, CommitFileChangeKind, DiffRequest, DiffResult, ListCommitFilesRequest, ListCommitFilesResult, StashEntry } from '@shared/contracts/operations';
+import type { ListRemotesRequest, RemoteEntry } from '@shared/contracts/remotes';
 import { toBureauError } from '../ipc/errors';
 
 const QUERY_TIMEOUT_MS = 30_000;
@@ -12,8 +13,8 @@ const QUERY_TIMEOUT_MS = 30_000;
 export type GitQueryService = {
   getDiff(input: DiffRequest): Promise<DiffResult>;
   listCommitFiles(input: ListCommitFilesRequest): Promise<ListCommitFilesResult>;
-  listRecentCommits(input: { projectId: string; limit?: number }): Promise<RecentCommit[]>;
   stashList(input: { projectId: string }): Promise<StashEntry[]>;
+  listRemotes(input: ListRemotesRequest): Promise<RemoteEntry[]>;
 };
 
 export function createGitQueryService(params: {
@@ -161,48 +162,6 @@ export function createGitQueryService(params: {
     }
   }
 
-  async function listRecentCommits(input: {
-    projectId: string;
-    limit?: number;
-  }): Promise<RecentCommit[]> {
-    return coordinator.runProjectRead(input.projectId, async () => {
-      const repo = catalogue.get(input.projectId);
-      if (!repo) throw new Error(`Repository ${input.projectId} not found.`);
-
-      const executablePath = await resolveExecutable(input.projectId);
-      const limit = Math.min(Math.max(input.limit ?? 30, 1), 100);
-      const result = await runner.run(executablePath, {
-        args: [
-          '-C',
-          repo.canonicalPath,
-          'log',
-          `-n`,
-          String(limit),
-          '--format=%H%x00%h%x00%an%x00%cI%x00%s',
-          '-z',
-        ],
-        timeoutMs: QUERY_TIMEOUT_MS,
-        stdoutLimitBytes: 4 * 1024 * 1024,
-      });
-      assertGitSuccess(result, 'git.listRecentCommits', input.projectId);
-
-      // No filter(Boolean): an empty commit subject occupies its own field slot; dropping it
-      // would shift every following field. The loop ignores any lone trailing token.
-      const records = result.stdout.split('\0');
-      const commits: RecentCommit[] = [];
-      for (let i = 0; i + 4 < records.length; i += 5) {
-        commits.push({
-          oid: records[i]!,
-          abbreviatedOid: records[i + 1]!,
-          authorName: records[i + 2]!,
-          committedAt: records[i + 3]!,
-          subject: records[i + 4]!,
-        });
-      }
-      return commits;
-    });
-  }
-
   async function stashList(input: { projectId: string }): Promise<StashEntry[]> {
     return coordinator.runProjectRead(input.projectId, async () => {
       const repo = catalogue.get(input.projectId);
@@ -233,7 +192,61 @@ export function createGitQueryService(params: {
     });
   }
 
-  return { getDiff, listCommitFiles, listRecentCommits, stashList };
+  async function listRemotes(input: ListRemotesRequest): Promise<RemoteEntry[]> {
+    return coordinator.runProjectRead(input.projectId, async () => {
+      const repo = catalogue.get(input.projectId);
+      if (!repo) throw new Error(`Repository ${input.projectId} not found.`);
+      const executablePath = await resolveExecutable(input.projectId);
+
+      const result = await runner.run(executablePath, {
+        args: ['-C', repo.canonicalPath, 'remote', '--verbose'],
+        timeoutMs: QUERY_TIMEOUT_MS,
+      });
+      // A repo with no remotes exits 0 with empty stdout; a hard failure here is not
+      // worth an error state for what is a list panel, so it degrades to "none".
+      if (result.exitCode !== 0) return [];
+
+      return parseRemoteVerbose(result.stdout);
+    });
+  }
+
+  return { getDiff, listCommitFiles, stashList, listRemotes };
+}
+
+/**
+ * `git remote -v` emits two lines per remote — `<name>\t<url> (fetch)` and the same
+ * for `(push)` — and the push URL genuinely differs when `remote.<name>.pushurl` is
+ * set. Split on the tab rather than whitespace: URLs cannot contain a tab, but local
+ * path remotes ("C:\My Repos\x") certainly contain spaces.
+ */
+export function parseRemoteVerbose(stdout: string): RemoteEntry[] {
+  const byName = new Map<string, RemoteEntry>();
+
+  for (const line of stdout.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const tab = line.indexOf('\t');
+    if (tab < 0) continue;
+
+    const name = line.slice(0, tab).trim();
+    const rest = line.slice(tab + 1);
+    const match = /^(.*)\s+\((fetch|push)\)$/.exec(rest);
+    if (!name || !match) continue;
+
+    const url = match[1].trim();
+    const kind = match[2];
+    const existing = byName.get(name) ?? { name, fetchUrl: '', pushUrl: '' };
+    if (kind === 'fetch') existing.fetchUrl = url;
+    else existing.pushUrl = url;
+    byName.set(name, existing);
+  }
+
+  // A remote is always listed with both lines, but tolerate a missing one rather than
+  // rendering a blank URL cell.
+  return [...byName.values()].map((entry) => ({
+    ...entry,
+    fetchUrl: entry.fetchUrl || entry.pushUrl,
+    pushUrl: entry.pushUrl || entry.fetchUrl,
+  }));
 }
 
 function parseNameStatus(stdout: string): CommitFileChange[] {

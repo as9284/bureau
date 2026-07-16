@@ -137,6 +137,7 @@
 
 .changes-panel__codes {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
   flex-shrink: 0;
   width: 2ch;
@@ -147,6 +148,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-label);
 }
 

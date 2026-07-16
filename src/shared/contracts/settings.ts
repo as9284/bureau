@@ -27,14 +27,57 @@ export type ThemePreference = 'dark' | 'light' | 'system';
 export type DensityPreference = 'compact' | 'comfortable';
 export type StartupViewPreference = 'hub' | 'lastOpened';
 export type PullStrategy = 'ff-only' | 'merge' | 'rebase';
-export type HubSortPreference = 'attention' | 'name' | 'recentlyRefreshed' | 'changedFiles';
 
-export type HubSettings = {
-  defaultSort: HubSortPreference;
-  recentCount: number;
-};
+/** App-wide interface scale. Applied as CSS `zoom` on the document root. */
+export type UiScale = 0.9 | 1 | 1.1 | 1.25 | 1.5;
+export const UI_SCALES: readonly UiScale[] = [0.9, 1, 1.1, 1.25, 1.5];
 
 export type RefreshIntervalMs = 0 | 5000 | 15000 | 30000 | 60000;
+
+/** Preview surface sizes. Canonical list; the renderer's ViewportPreset aliases this. */
+export const VIEWPORT_PRESETS = ['fill', 'mobile', 'tablet', 'desktop'] as const;
+export type ViewportPreset = (typeof VIEWPORT_PRESETS)[number];
+
+export type LogBufferLines = 1000 | 5000 | 10000 | 20000;
+export const LOG_BUFFER_CHOICES: readonly LogBufferLines[] = [1000, 5000, 10000, 20000];
+
+/** 0 = never auto-restart a crashing process. */
+export type MaxCrashRestarts = 0 | 3 | 5 | 10;
+export const MAX_CRASH_RESTART_CHOICES: readonly MaxCrashRestarts[] = [0, 3, 5, 10];
+
+export type ProcessesSettings = {
+  /** Log lines the renderer keeps per process before dropping the oldest. */
+  logBufferLines: LogBufferLines;
+  /** Consecutive crashes before Bureau stops auto-restarting a process. */
+  maxCrashRestarts: MaxCrashRestarts;
+};
+
+export type PreviewSettings = {
+  /** Viewport the preview opens with. */
+  defaultViewport: ViewportPreset;
+  /** Capture the previewed page's console output into the Preview console. */
+  captureConsole: boolean;
+};
+
+export type TerminalFontSize = 11 | 12 | 13 | 14;
+export const TERMINAL_FONT_SIZES: readonly TerminalFontSize[] = [11, 12, 13, 14];
+export type TerminalScrollback = 1000 | 5000 | 10000;
+export const TERMINAL_SCROLLBACKS: readonly TerminalScrollback[] = [1000, 5000, 10000];
+export const TERMINAL_CURSOR_STYLES = ['block', 'underline', 'bar'] as const;
+export type TerminalCursorStyle = (typeof TERMINAL_CURSOR_STYLES)[number];
+
+/**
+ * The embedded xterm pane. Named apart from `terminal`, which is the *external*
+ * terminal launcher config (a discriminated union).
+ */
+export type EmbeddedTerminalSettings = {
+  fontSize: TerminalFontSize;
+  scrollback: TerminalScrollback;
+  cursorStyle: TerminalCursorStyle;
+};
+
+export type EditorFontSize = 12 | 13 | 14 | 16;
+export const EDITOR_FONT_SIZES: readonly EditorFontSize[] = [12, 13, 14, 16];
 
 export type PaneWidthSettings = {
   files: number;
@@ -51,6 +94,10 @@ export type FilesSettings = {
   remoteImages: 'ask' | 'block';
   tabSize: 2 | 4;
   readerWidth: 'narrow' | 'standard' | 'wide';
+  /** Code editor type size. Independent of the app-wide uiScale, which also applies. */
+  editorFontSize: EditorFontSize;
+  /** Show the code editor's line-number gutter. */
+  lineNumbers: boolean;
 };
 
 export type GeneralSettings = {
@@ -68,6 +115,7 @@ export type HistorySettings = {
   commitLimit: number;
 };
 
+/** Each key gates one destructive git action; true = ask before running it. */
 export type ConfirmationSettings = {
   discardChanges: boolean;
   deleteBranch: boolean;
@@ -76,6 +124,43 @@ export type ConfirmationSettings = {
   conflictOverwrite: boolean;
   deleteRemoteBranch: boolean;
   deleteRemoteTag: boolean;
+  /** Abort an in-progress merge/rebase/cherry-pick/revert (discards the work). */
+  abortOperation: boolean;
+  /** Skip the current commit during a rebase/cherry-pick/revert (discards its changes). */
+  skipCommit: boolean;
+  /** Pop a stash (drops it on success and can conflict). */
+  stashPop: boolean;
+  /** Restore file(s) from a stash over the working tree. */
+  restoreStashFiles: boolean;
+  /** Check out the recorded commit into a submodule's working tree. */
+  submoduleUpdate: boolean;
+  /** Prune stale worktree administrative entries. */
+  pruneWorktrees: boolean;
+  /** Merge another branch into the current one (rewrites the working tree, can conflict). */
+  mergeBranch: boolean;
+  /** Rebase the current branch onto another (rewrites the current branch's history). */
+  rebaseBranch: boolean;
+  /**
+   * Move the current branch to another commit with `reset --soft`/`--mixed`. Working-tree
+   * files survive, and the reflog can restore the old HEAD.
+   */
+  resetBranch: boolean;
+  /**
+   * `reset --hard`. Kept apart from `resetBranch` on purpose: it is the only reset that
+   * overwrites the working tree, and uncommitted work it destroys is in no reflog — so
+   * turning the soft/mixed prompt off must not also disarm this one.
+   */
+  resetHard: boolean;
+  /**
+   * Check out a commit directly, detaching HEAD. Nothing is destroyed, but landing on
+   * no branch is a state users reach by accident and struggle to get out of.
+   */
+  checkoutCommit: boolean;
+  /**
+   * Remove a remote. The remote's URL and its remote-tracking branches go with it, and
+   * Bureau cannot put them back — but the commits themselves are untouched.
+   */
+  removeRemote: boolean;
 };
 
 export type CommitSettings = {
@@ -84,12 +169,38 @@ export type CommitSettings = {
   commitTemplate?: string;
 };
 
+/** Canonical id + default order of the per-project workspace tabs. */
+export const PROJECT_TAB_IDS = [
+  'overview',
+  'files',
+  'processes',
+  'preview',
+  'android',
+  'toolchains',
+  'ports',
+  'git',
+] as const;
+export type ProjectTabId = (typeof PROJECT_TAB_IDS)[number];
+
 export type AppearanceSettings = {
   theme: ThemePreference;
   density: DensityPreference;
   accentColor: string;
   /** Auto-hide the project rail; reveal it from the workspace edge. */
   immersiveMode: boolean;
+  /**
+   * Force-reduce animations even when the OS does not ask for it. The app always
+   * honours `prefers-reduced-motion: reduce`; this only adds an app-level override.
+   */
+  reduceMotion: boolean;
+  /** App-wide interface scale; 1 = 100%. */
+  uiScale: UiScale;
+  /**
+   * User-chosen order of the per-project workspace tabs. Omitted = the default
+   * PROJECT_TAB_IDS order. Sanitised at read time (unknown ids dropped, missing
+   * ones appended) so it survives tabs being added or removed across versions.
+   */
+  projectTabOrder?: ProjectTabId[];
 };
 
 export type ToolsVisibilitySettings = {
@@ -155,7 +266,9 @@ export type PublicSettings = {
   notifications: NotificationSettings;
   android: AndroidSettings;
   toolchains: ToolchainsSettings;
-  hub: HubSettings;
+  processes: ProcessesSettings;
+  preview: PreviewSettings;
+  embeddedTerminal: EmbeddedTerminalSettings;
   files?: FilesSettings;
   onboarding: OnboardingSettings;
 };
@@ -178,7 +291,9 @@ export type SettingsPatch = {
   notifications?: Partial<NotificationSettings>;
   android?: Partial<AndroidSettings>;
   toolchains?: Partial<ToolchainsSettings>;
-  hub?: Partial<HubSettings>;
+  processes?: Partial<ProcessesSettings>;
+  preview?: Partial<PreviewSettings>;
+  embeddedTerminal?: Partial<EmbeddedTerminalSettings>;
   files?: Partial<FilesSettings>;
   onboarding?: Partial<OnboardingSettings>;
 };
@@ -212,6 +327,18 @@ export const DEFAULT_CONFIRMATION_SETTINGS: ConfirmationSettings = {
   conflictOverwrite: true,
   deleteRemoteBranch: true,
   deleteRemoteTag: true,
+  abortOperation: true,
+  skipCommit: true,
+  stashPop: true,
+  restoreStashFiles: true,
+  submoduleUpdate: true,
+  pruneWorktrees: true,
+  mergeBranch: true,
+  rebaseBranch: true,
+  resetBranch: true,
+  resetHard: true,
+  checkoutCommit: true,
+  removeRemote: true,
 };
 
 export const DEFAULT_COMMIT_SETTINGS: CommitSettings = {
@@ -224,6 +351,8 @@ export const DEFAULT_APPEARANCE_SETTINGS: AppearanceSettings = {
   density: 'compact',
   accentColor: DEFAULT_ACCENT_COLOR,
   immersiveMode: false,
+  reduceMotion: false,
+  uiScale: 1,
 };
 
 export const DEFAULT_TOOLS_SETTINGS: ToolsVisibilitySettings = {
@@ -245,6 +374,14 @@ export const DEFAULT_FILES_SETTINGS: FilesSettings = {
   remoteImages: 'ask',
   tabSize: 2,
   readerWidth: 'standard',
+  editorFontSize: 13,
+  lineNumbers: true,
+};
+
+export const DEFAULT_EMBEDDED_TERMINAL_SETTINGS: EmbeddedTerminalSettings = {
+  fontSize: 12,
+  scrollback: 1000,
+  cursorStyle: 'block',
 };
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -261,4 +398,13 @@ export const DEFAULT_ANDROID_SETTINGS: AndroidSettings = {
 
 export const DEFAULT_TOOLCHAINS_SETTINGS: ToolchainsSettings = {};
 
-export const DEFAULT_HUB_SETTINGS: HubSettings = { defaultSort: 'attention', recentCount: 8 };
+export const DEFAULT_PROCESSES_SETTINGS: ProcessesSettings = {
+  logBufferLines: 5000,
+  maxCrashRestarts: 5,
+};
+
+export const DEFAULT_PREVIEW_SETTINGS: PreviewSettings = {
+  defaultViewport: 'fill',
+  captureConsole: true,
+};
+

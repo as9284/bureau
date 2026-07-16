@@ -124,6 +124,8 @@ export function useBranchContextMenuItems({
   onPublish,
 }: BranchMenuParams): ContextMenuItemDef[] {
   const switchBranch = useGitStore((s) => s.switchBranch);
+  const mergeBranch = useGitStore((s) => s.mergeBranch);
+  const rebaseBranch = useGitStore((s) => s.rebaseBranch);
 
   return useMemo((): ContextMenuItemDef[] => {
     const items: ContextMenuItemDef[] = [
@@ -135,6 +137,28 @@ export function useBranchContextMenuItems({
     ];
 
     if (!readOnly && revision) {
+      // Integrating a branch with itself is meaningless, so both are current-only
+      // exclusions. `readOnly` is the blocked-repo flag, so neither is offered on
+      // top of an interrupted operation. Both take a ref, so a remote-tracking
+      // branch (`origin/main`) works exactly like a local one.
+      const integrationItems: ContextMenuItemDef[] = branch.current
+        ? []
+        : [
+            {
+              id: 'merge-into-current',
+              label: 'Merge into current',
+              disabled: busy,
+              separatorBefore: true,
+              onClick: () => void mergeBranch(projectId, revision, branch.shortName),
+            },
+            {
+              id: 'rebase-onto',
+              label: 'Rebase current onto this',
+              disabled: busy,
+              onClick: () => void rebaseBranch(projectId, revision, branch.shortName),
+            },
+          ];
+
       if (branch.kind === 'local') {
         if (!branch.current) {
           items.push({
@@ -145,6 +169,7 @@ export function useBranchContextMenuItems({
             onClick: () => switchBranch(projectId, revision, branch.shortName),
           });
         }
+        items.push(...integrationItems);
         if (!branch.published) {
           items.push({
             id: 'publish',
@@ -196,10 +221,14 @@ export function useBranchContextMenuItems({
           separatorBefore: true,
           onClick: onCheckout,
         });
+        items.push(...integrationItems);
         items.push({
           id: 'delete-remote',
           label: 'Delete remote branch',
           destructive: true,
+          // Separated now that the integration items sit above it, matching the
+          // local `delete` row rather than sitting flush against Rebase.
+          separatorBefore: true,
           disabled: busy,
           onClick: onDeleteRemote,
         });
@@ -221,6 +250,8 @@ export function useBranchContextMenuItems({
     onUnsetUpstream,
     onPublish,
     switchBranch,
+    mergeBranch,
+    rebaseBranch,
   ]);
 }
 
@@ -306,7 +337,6 @@ export function useStashFileContextMenuItems({
 }
 
 type CommitMenuParams = {
-  projectId: string;
   commit: HistoryCommit;
   revision?: string;
   readOnly: boolean;
@@ -314,12 +344,15 @@ type CommitMenuParams = {
   compareBaseOid?: string;
   onCreateBranch: () => void;
   onCreateTag: () => void;
+  onReset: () => void;
+  onCheckout: () => void;
+  onCherryPick: () => void;
+  onRevert: () => void;
   onSetCompareBase: () => void;
   onCompareWithBase: () => void;
 };
 
 export function useCommitContextMenuItems({
-  projectId,
   commit,
   revision,
   readOnly,
@@ -327,13 +360,18 @@ export function useCommitContextMenuItems({
   compareBaseOid,
   onCreateBranch,
   onCreateTag,
+  onReset,
+  onCheckout,
+  onCherryPick,
+  onRevert,
   onSetCompareBase,
   onCompareWithBase,
 }: CommitMenuParams): ContextMenuItemDef[] {
-  const cherryPick = useGitStore((s) => s.cherryPick);
-  const revertCommit = useGitStore((s) => s.revertCommit);
-
   return useMemo((): ContextMenuItemDef[] => {
+    // Git requires `-m <parent>` to revert or cherry-pick a merge and rejects it
+    // otherwise, so the two cases are genuinely different actions: a merge opens the
+    // parent picker (hence the ellipsis), an ordinary commit runs straight away.
+    const isMerge = commit.parentOids.length > 1;
     const items: ContextMenuItemDef[] = [
       {
         id: 'copy-subject',
@@ -371,16 +409,22 @@ export function useCommitContextMenuItems({
       items.push(
         {
           id: 'cherry-pick',
-          label: 'Cherry-pick',
+          label: isMerge ? 'Cherry-pick merge…' : 'Cherry-pick',
           disabled: busy,
           separatorBefore: true,
-          onClick: () => cherryPick(projectId, revision, commit.oid),
+          onClick: onCherryPick,
         },
         {
           id: 'revert',
-          label: 'Revert commit',
+          label: isMerge ? 'Revert merge…' : 'Revert commit',
           disabled: busy,
-          onClick: () => revertCommit(projectId, revision, commit.oid),
+          onClick: onRevert,
+        },
+        {
+          id: 'checkout',
+          label: 'Checkout commit',
+          disabled: busy,
+          onClick: onCheckout,
         },
         {
           id: 'create-branch',
@@ -393,24 +437,36 @@ export function useCommitContextMenuItems({
           label: 'Create tag…',
           disabled: busy,
           onClick: onCreateTag,
+        },
+        {
+          // Opens the mode picker rather than resetting on click: the three modes
+          // differ enormously in blast radius, so the user must choose one before
+          // the confirmation can state what is actually lost.
+          id: 'reset',
+          label: 'Reset to this commit…',
+          destructive: true,
+          separatorBefore: true,
+          disabled: busy,
+          onClick: onReset,
         }
       );
     }
 
     return items;
   }, [
-    projectId,
     commit,
     revision,
     readOnly,
     busy,
     onCreateBranch,
     onCreateTag,
+    onReset,
+    onCheckout,
+    onCherryPick,
+    onRevert,
     onSetCompareBase,
     onCompareWithBase,
     compareBaseOid,
-    cherryPick,
-    revertCommit,
   ]);
 }
 

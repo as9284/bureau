@@ -1,5 +1,5 @@
 // The three runtimes Bureau can switch (version managers + PATH injection). Only these
-// are pinnable in .bureau/config.json and accepted by the set-active IPC.
+// are pinnable in a project's stored config and accepted by the set-active IPC.
 export type SwitchableRuntimeKind = 'node' | 'python' | 'flutter';
 
 // Every runtime Bureau surfaces a row for. The switchable three plus a set of

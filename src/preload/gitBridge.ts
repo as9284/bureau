@@ -1,5 +1,5 @@
 import type { CompareCommitsRequest } from '@shared/contracts/history';
-import type { DiffRequest, RecentCommit, StashEntry } from '@shared/contracts/operations';
+import type { DiffRequest, StashEntry } from '@shared/contracts/operations';
 import { IPC_CHANNELS } from '@shared/contracts/channels';
 import type { BureauApiV1 } from '@shared/contracts/api';
 import type {
@@ -40,8 +40,6 @@ export function createGitBridge(invoke: Invoke): Pick<BureauApiV1, 'git' | 'gith
     openUrl: (input: { url: string }) => invoke(IPC_CHANNELS.GITHUB_OPEN_URL, input),
     },
     git: {
-    listBranches: (input: { projectId: string }) =>
-      invoke<string[]>(IPC_CHANNELS.GIT_LIST_BRANCHES, input),
     listBranchDetails: (input: { projectId: string }) =>
       invoke(IPC_CHANNELS.GIT_LIST_BRANCH_DETAILS, input),
     switchBranch: (input: BranchSwitchRequest) =>
@@ -60,6 +58,24 @@ export function createGitBridge(invoke: Invoke): Pick<BureauApiV1, 'git' | 'gith
       invoke(IPC_CHANNELS.GIT_CHECKOUT_TRACKING, input),
     deleteRemoteBranch: (input: import('@shared/contracts/branches').BranchDeleteRemoteRequest) =>
       invoke(IPC_CHANNELS.GIT_DELETE_REMOTE_BRANCH, input),
+    mergeBranch: (input: import('@shared/contracts/branches').MergeBranchRequest) =>
+      invoke(IPC_CHANNELS.GIT_MERGE_BRANCH, input),
+    rebaseBranch: (input: import('@shared/contracts/branches').RebaseBranchRequest) =>
+      invoke(IPC_CHANNELS.GIT_REBASE_BRANCH, input),
+    resetToCommit: (input: import('@shared/contracts/history').ResetToCommitRequest) =>
+      invoke(IPC_CHANNELS.GIT_RESET_TO_COMMIT, input),
+    checkoutCommit: (input: import('@shared/contracts/history').CheckoutCommitRequest) =>
+      invoke(IPC_CHANNELS.GIT_CHECKOUT_COMMIT, input),
+    listRemotes: (input: import('@shared/contracts/remotes').ListRemotesRequest) =>
+      invoke(IPC_CHANNELS.GIT_LIST_REMOTES, input),
+    addRemote: (input: import('@shared/contracts/remotes').AddRemoteRequest) =>
+      invoke(IPC_CHANNELS.GIT_ADD_REMOTE, input),
+    renameRemote: (input: import('@shared/contracts/remotes').RenameRemoteRequest) =>
+      invoke(IPC_CHANNELS.GIT_RENAME_REMOTE, input),
+    removeRemote: (input: import('@shared/contracts/remotes').RemoveRemoteRequest) =>
+      invoke(IPC_CHANNELS.GIT_REMOVE_REMOTE, input),
+    setRemoteUrl: (input: import('@shared/contracts/remotes').SetRemoteUrlRequest) =>
+      invoke(IPC_CHANNELS.GIT_SET_REMOTE_URL, input),
     fetch: (input: RepoMutationRequest) => invoke<MutationResult>(IPC_CHANNELS.GIT_FETCH, input),
     stageFile: (input: FileMutationRequest) =>
       invoke<MutationResult>(IPC_CHANNELS.GIT_STAGE_FILE, input),
@@ -98,10 +114,10 @@ export function createGitBridge(invoke: Invoke): Pick<BureauApiV1, 'git' | 'gith
     getDiff: (input: DiffRequest) => invoke<DiffResult>(IPC_CHANNELS.GIT_GET_DIFF, input),
     listCommitFiles: (input: ListCommitFilesRequest) =>
       invoke<ListCommitFilesResult>(IPC_CHANNELS.GIT_LIST_COMMIT_FILES, input),
-    listRecentCommits: (input: { projectId: string; limit?: number }) =>
-      invoke<RecentCommit[]>(IPC_CHANNELS.GIT_LIST_RECENT_COMMITS, input),
     listHistory: (input: import('@shared/contracts/history').ListHistoryRequest) =>
       invoke(IPC_CHANNELS.GIT_LIST_HISTORY, input),
+    listReflog: (input: import('@shared/contracts/history').ListReflogRequest) =>
+      invoke(IPC_CHANNELS.GIT_LIST_REFLOG, input),
     listTags: (input: import('@shared/contracts/history').ListTagsRequest) =>
       invoke(IPC_CHANNELS.GIT_LIST_TAGS, input),
     cherryPick: (input: import('@shared/contracts/history').CherryPickRequest) =>
@@ -125,7 +141,6 @@ export function createGitBridge(invoke: Invoke): Pick<BureauApiV1, 'git' | 'gith
       invoke<MutationResult>(IPC_CHANNELS.GIT_APPLY_HUNK, input),
     getOperationState: (input: { projectId: string }) =>
       invoke(IPC_CHANNELS.GIT_GET_OPERATION_STATE, input),
-    getBisectState: (input: { projectId: string }) => invoke(IPC_CHANNELS.GIT_GET_BISECT_STATE, input),
     getConflictVersion: (input: import('@shared/contracts/recovery').ConflictVersionRequest) =>
       invoke(IPC_CHANNELS.GIT_GET_CONFLICT_VERSION, input),
     resolveConflict: (input: import('@shared/contracts/recovery').ConflictResolveRequest) =>

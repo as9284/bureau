@@ -42,6 +42,25 @@ const remoteUrlSchema = z
         LOCAL_PATH_RE.test(value)),
     'remote URL must be an http(s)/ssh/git/file URL, scp-style host:path, or local path'
   );
+// Remote names reach `git remote add/rename/remove/set-url` as argv *and* are
+// interpolated into refspecs (`<name>/<branch>`). The leading `[A-Za-z0-9]` is what
+// enforces refSchema's dash guard here — a `-`-leading name would be read as an
+// option — and the rest of the class keeps the name usable as a refspec component.
+const remoteNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
+    'remote name must start with a letter or number and contain only letters, numbers, dot, underscore or dash'
+  );
+
+// `-m <n>` picks which parent of a merge commit is the mainline. It is a number by the
+// time it reaches argv, so no dash guard applies; the bound just keeps it a plausible
+// parent index. Octopus merges are rare but real, hence 16 rather than 2.
+const mainlineSchema = z.number().int().min(1).max(16);
+
 const stashIndexSchema = z.number().int().min(0).max(999);
 const pageSchema = z.object({
   cursor: z.string().max(1024).optional(),
@@ -144,11 +163,6 @@ export const listCommitFilesRequestSchema = z.object({
   commitOid: oidSchema,
 });
 
-export const recentCommitsRequestSchema = z.object({
-  projectId: projectIdSchema,
-  limit: z.number().int().min(1).max(100).optional(),
-});
-
 export const commitRequestSchema = z.object({
   projectId: projectIdSchema,
   snapshotRevision: snapshotRevisionSchema,
@@ -248,9 +262,39 @@ export const branchCheckoutTrackingRequestSchema = repoMutationRequestSchema
 export const branchDeleteRemoteRequestSchema = repoMutationRequestSchema
   .extend({ remoteName: refSchema, branchName: refSchema })
   .strict();
+// `branchName`/`ontoRef` reach `git merge <ref>` / `git rebase <ref>` as argv, so the
+// dash guard in refSchema is what stops e.g. `--exec=…` from becoming an option.
+export const mergeBranchRequestSchema = repoMutationRequestSchema
+  .extend({ branchName: refSchema })
+  .strict();
+export const rebaseBranchRequestSchema = repoMutationRequestSchema
+  .extend({ ontoRef: refSchema })
+  .strict();
 export const commitOidMutationRequestSchema = repoMutationRequestSchema
   .extend({ commitOid: oidSchema })
   .strict();
+// Reverting/cherry-picking a *merge* commit needs `-m <parent>`; git errors out
+// without it and rejects it on an ordinary commit. `mainline` is optional here and
+// the picker only sets it for a multi-parent target — main passes it straight
+// through, so a wrong value surfaces as git's own error rather than a silent guess.
+export const cherryPickRequestSchema = commitOidMutationRequestSchema
+  .extend({ mainline: mainlineSchema.optional() })
+  .strict();
+export const revertCommitRequestSchema = commitOidMutationRequestSchema
+  .extend({ mainline: mainlineSchema.optional() })
+  .strict();
+// Detached-HEAD checkout: the target is always an oid picked from history, so the
+// oid-only guard that protects reset applies here for the same reason.
+export const checkoutCommitRequestSchema = commitOidMutationRequestSchema;
+// The reset target is always an oid the user picked from history/reflog, never a
+// free-form revision: `git reset --<mode> <target>` would otherwise take a
+// dash-leading option, and oidSchema is the tightest guard that still works here.
+// `mode` is a closed enum, so interpolating it into `--${mode}` cannot inject.
+export const resetToCommitRequestSchema = commitOidMutationRequestSchema
+  .extend({ mode: z.enum(['soft', 'mixed', 'hard']) })
+  .strict();
+// Reflog is HEAD-only, so there is no ref to validate — just the page window.
+export const reflogRequestSchema = pageSchema.extend({ projectId: projectIdSchema }).strict();
 export const branchFromCommitRequestSchema = commitOidMutationRequestSchema
   .extend({ branchName: refSchema })
   .strict();
@@ -276,6 +320,23 @@ export const stashBranchRequestSchema = stashMutationRequestSchema
   .strict();
 export const stashRestoreFilesRequestSchema = stashMutationRequestSchema
   .extend({ paths: z.array(boundedPathSchema).min(1).max(500) })
+  .strict();
+// Remote management. `url` reuses remoteUrlSchema — the same guard that protects
+// clone/publish — because `git remote add`/`set-url` stores a URL that later `fetch`
+// and `push` hand to a transport: an `ext::sh -c …` or `fd::` remote-helper URL is
+// arbitrary code execution on the next sync, and a `-`-leading value is an option.
+export const listRemotesRequestSchema = z.object({ projectId: projectIdSchema }).strict();
+export const addRemoteRequestSchema = repoMutationRequestSchema
+  .extend({ name: remoteNameSchema, url: remoteUrlSchema })
+  .strict();
+export const renameRemoteRequestSchema = repoMutationRequestSchema
+  .extend({ name: remoteNameSchema, newName: remoteNameSchema })
+  .strict();
+export const removeRemoteRequestSchema = repoMutationRequestSchema
+  .extend({ name: remoteNameSchema })
+  .strict();
+export const setRemoteUrlRequestSchema = repoMutationRequestSchema
+  .extend({ name: remoteNameSchema, url: remoteUrlSchema })
   .strict();
 export const submoduleActionRequestSchema = fileMutationRequestSchema.strict();
 export const blameRequestSchema = z

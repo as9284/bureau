@@ -86,8 +86,11 @@ Bureau spawns real OS processes and renders untrusted localhost content, so secu
 - **Renderer sandbox:** `contextIsolation:true`, `nodeIntegration:false`, `sandbox:true`,
   `webSecurity:true`, strict CSP, `will-navigate`/`setWindowOpenHandler` deny. The preview view runs in an
   isolated session partition, no preload, denied window-open/permissions/downloads, loopback-only navigation.
-- **`.bureau/config.json` is untrusted input** (may arrive via a cloned repo). Display commands; never
-  blind auto-run; parse defensively.
+- **Detected commands are untrusted input.** Process definitions are derived from repo-controlled files
+  (`package.json` scripts, `pubspec.yaml`, …) which may arrive via a cloned repo, so a command string is
+  attacker-controlled. Display commands; never blind auto-run; parse defensively. Bureau stores the
+  definitions in its **own app storage** keyed by projectId (`ProjectConfigStore`) — a repo cannot ship
+  process definitions, and in particular cannot set `runOnOpen`.
 - **Static guard:** `scripts/check-forbidden-apis.mjs` (`npm run test:security`) bans `shell:true`,
   `exec`/`execSync`/`spawnSync`, hardcoded credentials, unvalidated `argv[0]`, and `<webview>`/`allowpopups`.
   **Keep it green.**
@@ -227,10 +230,7 @@ Deferred with StarGit: interactive rebase, three-way merge editor, LFS, force-pu
 - The metrics `setInterval` sampler is `unref`'d but never `.stop()`-ed on shutdown.
 - `ProcessSupervisor`'s launch-time cwd check is lexical (`path.resolve`, no `fs.realpath`), so a symlink
   escaping the project root would pass the `startsWith` check.
-- `src/main/ports/portKill.ts` `killPidTree`/`killChildProcess` are dead code (the supervisor uses
-  `treeKill.ts`); `PortScanner.processName` is always `null` (owning-process name not resolved yet).
-- `gitStore` still carries unused StarGit hub-meta helpers (`repositories.*` for groups/saved views);
-  safe to delete when touching that area.
+- `PortScanner.processName` is always `null` (owning-process name not resolved yet).
 
 (The earlier "big three" Phase 2 gaps — Windows metrics reading ~0, inverted ports-conflict tinting, and
 npm-only task discovery — have been fixed: metrics now sum the whole process tree, conflicts are

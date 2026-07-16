@@ -6,7 +6,9 @@ import type {
   AddProjectRequest,
   ProjectIdRequest,
   RemoveProcessRequest,
+  ReorderPinnedRequest,
   SaveProcessRequest,
+  SetPinnedRequest,
   StackDetectionResult,
   TrackedProject,
 } from '@shared/contracts/projects';
@@ -116,6 +118,10 @@ export const bureauApi = Object.freeze({
       invoke<Result<{ project: TrackedProject }>>(IPC_CHANNELS.PROJECTS_ADD, input),
     remove: (input: ProjectIdRequest) => invoke<void>(IPC_CHANNELS.PROJECTS_REMOVE, input),
     touch: (input: ProjectIdRequest) => invoke<TrackedProject>(IPC_CHANNELS.PROJECTS_TOUCH, input),
+    setPinned: (input: SetPinnedRequest) =>
+      invoke<TrackedProject[]>(IPC_CHANNELS.PROJECTS_SET_PINNED, input),
+    reorderPinned: (input: ReorderPinnedRequest) =>
+      invoke<TrackedProject[]>(IPC_CHANNELS.PROJECTS_REORDER_PINNED, input),
   },
   processes: {
     list: (input: ProjectIdRequest) => invoke<ProjectProcesses>(IPC_CHANNELS.PROCESSES_LIST, input),

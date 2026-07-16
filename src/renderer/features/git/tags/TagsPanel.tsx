@@ -7,6 +7,7 @@ import { Checkbox } from '@renderer/components/Checkbox';
 import { Dialog } from '@renderer/components/Dialog';
 import { EmptyState } from '@renderer/components/EmptyState';
 import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { TextInput } from '@renderer/components/TextInput';
 import { Badge } from '@renderer/components/Badge';
 import './TagsPanel.css';
@@ -72,6 +73,7 @@ function TagRow({
 export function TagsPanel({ projectId, snapshot, readOnly }: Props): ReactElement {
   const tags = useGitStore((s) => s.tags);
   const tagsLoading = useGitStore((s) => s.tagsLoading);
+  const tagsError = useGitStore((s) => s.tagsError);
   const tagsHasMore = useGitStore((s) => s.tagsHasMore);
   const loadTags = useGitStore((s) => s.loadTags);
   const createTag = useGitStore((s) => s.createTag);
@@ -117,17 +119,27 @@ export function TagsPanel({ projectId, snapshot, readOnly }: Props): ReactElemen
         </div>
       </header>
 
+      {tagsError ? (
+        <PanelError
+          title="Could not load tags"
+          message={tagsError.message}
+          onRetry={() => void loadTags(projectId)}
+        />
+      ) : null}
+
       {tagsLoading && tags.length === 0 ? (
         <div className="tags-panel__loading">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height="40px" />
+            <Skeleton key={i} width="100%" height="var(--size-hub-row)" />
           ))}
         </div>
       ) : tags.length === 0 ? (
-        <EmptyState title="No tags" description="Create a tag to mark a release or milestone." />
+        tagsError ? null : (
+          <EmptyState title="No tags" description="Create a tag to mark a release or milestone." />
+        )
       ) : (
         <>
-          <ul className="tags-panel__list">
+          <ul className={`tags-panel__list ${tagsLoading ? 'git-stale' : ''}`} aria-busy={tagsLoading}>
             {tags.map((tag) => (
               <TagRow
                 key={tag.name}
@@ -222,7 +234,11 @@ export function TagsPanel({ projectId, snapshot, readOnly }: Props): ReactElemen
       <Dialog
         open={Boolean(deleteTarget)}
         title="Delete tag?"
-        description={`Local tag "${deleteTarget?.name}" will be removed.`}
+        description={
+          <>
+            Local tag <span className="mono">{deleteTarget?.name}</span> will be removed.
+          </>
+        }
         onClose={() => setDeleteTarget(null)}
         actions={
           <>
@@ -247,7 +263,12 @@ export function TagsPanel({ projectId, snapshot, readOnly }: Props): ReactElemen
       <Dialog
         open={Boolean(deleteRemoteTarget)}
         title="Delete remote tag?"
-        description={`Tag "${deleteRemoteTarget?.name}" will be deleted from origin.`}
+        description={
+          <>
+            Tag <span className="mono">{deleteRemoteTarget?.name}</span> will be deleted from
+            origin.
+          </>
+        }
         onClose={() => setDeleteRemoteTarget(null)}
         actions={
           <>

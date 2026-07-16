@@ -41,6 +41,9 @@ type CodeEditorProps = {
   languageId: string;
   readOnly: boolean;
   wordWrap?: boolean;
+  /** Overrides the --font-size-body token when set. */
+  fontSize?: number;
+  lineNumbers?: boolean;
   onChange(value: string): void;
   onCursor?(line: number, column: number): void;
 };
@@ -109,7 +112,7 @@ function tokenHighlightStyle(): Extension {
   ]), { fallback: true });
 }
 
-function tokenTheme(): Extension {
+function tokenTheme(fontSize?: number): Extension {
   const token = (name: string, fallback: string) => readToken(name, fallback);
   return [
     EditorView.theme({
@@ -118,7 +121,7 @@ function tokenTheme(): Extension {
         color: token('--color-text-primary', 'CanvasText'),
         backgroundColor: token('--color-surface-canvas', 'Canvas'),
         fontFamily: token('--font-family-mono', 'monospace'),
-        fontSize: token('--font-size-body', '13px'),
+        fontSize: fontSize ? `${fontSize}px` : token('--font-size-body', '13px'),
       },
       '.cm-content': { caretColor: token('--color-accent-primary', 'Highlight'), padding: token('--space-2', '8px') + ' 0' },
       '.cm-cursor, .cm-dropCursor': { borderLeftColor: token('--color-accent-primary', 'Highlight') },
@@ -142,16 +145,19 @@ function tokenTheme(): Extension {
   ];
 }
 
-export function CodeEditor({ value, languageId, readOnly, wordWrap = false, onChange, onCursor }: CodeEditorProps) {
+export function CodeEditor({ value, languageId, readOnly, wordWrap = false, fontSize, lineNumbers: showLineNumbers = true, onChange, onCursor }: CodeEditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const changeRef = useRef(onChange);
   const cursorRef = useRef(onCursor);
+  const fontSizeRef = useRef(fontSize);
+  fontSizeRef.current = fontSize;
   const language = useRef(new Compartment());
   const theme = useRef(new Compartment());
   const editable = useRef(new Compartment());
   const wrapping = useRef(new Compartment());
-  const initial = useRef({ value, readOnly, wordWrap });
+  const gutter = useRef(new Compartment());
+  const initial = useRef({ value, readOnly, wordWrap, fontSize, showLineNumbers });
   changeRef.current = onChange;
   cursorRef.current = onCursor;
 
@@ -160,12 +166,13 @@ export function CodeEditor({ value, languageId, readOnly, wordWrap = false, onCh
     const state = EditorState.create({
       doc: initial.current.value,
       extensions: [
-        lineNumbers(), highlightActiveLineGutter(), highlightSpecialChars(), history(), foldGutter(),
+        gutter.current.of(initial.current.showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []),
+        highlightSpecialChars(), history(), foldGutter(),
         drawSelection(), dropCursor(), EditorState.allowMultipleSelections.of(true), indentOnInput(),
         bracketMatching(), closeBrackets(),
         highlightActiveLine(), highlightSelectionMatches(), indentUnit.of('  '),
         keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
-        language.current.of([]), theme.current.of(tokenTheme()),
+        language.current.of([]), theme.current.of(tokenTheme(initial.current.fontSize)),
         editable.current.of([EditorState.readOnly.of(initial.current.readOnly), EditorView.editable.of(!initial.current.readOnly)]),
         wrapping.current.of(initial.current.wordWrap ? EditorView.lineWrapping : []),
         EditorView.updateListener.of((update) => {
@@ -180,7 +187,7 @@ export function CodeEditor({ value, languageId, readOnly, wordWrap = false, onCh
     });
     const view = new EditorView({ state, parent: hostRef.current });
     viewRef.current = view;
-    const observer = new MutationObserver(() => view.dispatch({ effects: theme.current.reconfigure(tokenTheme()) }));
+    const observer = new MutationObserver(() => view.dispatch({ effects: theme.current.reconfigure(tokenTheme(fontSizeRef.current)) }));
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-density', 'class'] });
     return () => { observer.disconnect(); view.destroy(); viewRef.current = null; };
   }, []);
@@ -198,6 +205,18 @@ export function CodeEditor({ value, languageId, readOnly, wordWrap = false, onCh
   useEffect(() => {
     viewRef.current?.dispatch({ effects: wrapping.current.reconfigure(wordWrap ? EditorView.lineWrapping : []) });
   }, [wordWrap]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({ effects: theme.current.reconfigure(tokenTheme(fontSize)) });
+  }, [fontSize]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: gutter.current.reconfigure(
+        showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []
+      ),
+    });
+  }, [showLineNumbers]);
 
   useEffect(() => {
     let cancelled = false;

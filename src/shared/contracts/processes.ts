@@ -20,7 +20,7 @@ export type ProcessRuntime = {
   memoryBytes?: number;
 };
 
-/** Definitions (from .bureau config) joined with their live runtime state. */
+/** Stored definitions joined with their live runtime state. */
 export type ProjectProcesses = {
   definitions: ProcessDefinition[];
   runtimes: ProcessRuntime[];

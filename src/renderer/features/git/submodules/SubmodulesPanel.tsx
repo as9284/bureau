@@ -5,6 +5,7 @@ import { useGitStore } from '@renderer/store/gitStore';
 import { Button } from '@renderer/components/Button';
 import { EmptyState } from '@renderer/components/EmptyState';
 import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import './SubmodulesPanel.css';
 
 type Props = {
@@ -65,6 +66,7 @@ function SubmoduleRow({
 export function SubmodulesPanel({ projectId, snapshot, readOnly }: Props): ReactElement {
   const submodules = useGitStore((s) => s.submodules);
   const submodulesLoading = useGitStore((s) => s.submodulesLoading);
+  const submodulesError = useGitStore((s) => s.submodulesError);
   const loadSubmodules = useGitStore((s) => s.loadSubmodules);
   const submoduleInit = useGitStore((s) => s.submoduleInit);
   const submoduleUpdate = useGitStore((s) => s.submoduleUpdate);
@@ -82,19 +84,32 @@ export function SubmodulesPanel({ projectId, snapshot, readOnly }: Props): React
         </Button>
       </header>
 
-      {submodulesLoading ? (
+      {submodulesError ? (
+        <PanelError
+          title="Could not load submodules"
+          message={submodulesError.message}
+          onRetry={() => void loadSubmodules(projectId)}
+        />
+      ) : null}
+
+      {submodulesLoading && submodules.length === 0 ? (
         <div className="submodules-panel__loading">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} width="100%" height="40px" />
+            <Skeleton key={i} width="100%" height="var(--size-hub-row)" />
           ))}
         </div>
       ) : submodules.length === 0 ? (
-        <EmptyState
-          title="No submodules"
-          description="This repository does not declare any Git submodules."
-        />
+        submodulesError ? null : (
+          <EmptyState
+            title="No submodules"
+            description="This repository does not declare any Git submodules."
+          />
+        )
       ) : (
-        <ul className="submodules-panel__list">
+        <ul
+          className={`submodules-panel__list ${submodulesLoading ? 'git-stale' : ''}`}
+          aria-busy={submodulesLoading}
+        >
           {submodules.map((entry) =>
             revision ? (
               <SubmoduleRow

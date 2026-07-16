@@ -1,18 +1,17 @@
 import type { EnvResolver } from '../processes/ProcessSupervisor';
-import type { ProjectCatalogue } from '../projects/ProjectCatalogue';
-import { readProjectConfig } from '../projects/BureauConfigStore';
+import type { ProjectConfigStore } from '../projects/ProjectConfigStore';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { mergeEnv, sanitizeEnv } from './pathMerge';
 import { resolveToolchainPathEntries } from './RuntimeDetector';
 
 export function createToolchainEnvResolver(deps: {
-  catalogue: ProjectCatalogue;
   settingsStore: SettingsStore;
+  configStore: ProjectConfigStore;
 }): EnvResolver {
-  return async ({ projectRoot, definition, overrides }) => {
+  return async ({ projectId, projectRoot, definition, overrides }) => {
     const base = sanitizeEnv();
     const settings = deps.settingsStore.get();
-    const { config } = await readProjectConfig(projectRoot);
+    const config = deps.configStore.get(projectId);
     const pathEntries = await resolveToolchainPathEntries(
       projectRoot,
       config,

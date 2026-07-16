@@ -33,6 +33,23 @@ describe('detectStack', () => {
     expect(dev?.args).toEqual(['run', 'dev']);
   });
 
+  it('surfaces a release script ahead of lower-priority ones, and never auto-runs it', async () => {
+    // Ordered so `release` would fall outside the cap on package.json order alone; it must be
+    // pulled in by NODE_SCRIPT_PRIORITY rather than by where the key happens to sit.
+    const scripts: Record<string, string> = { start: 'x', lint: 'x' };
+    for (let i = 0; i < 12; i += 1) scripts[`filler${i}`] = 'x';
+    scripts.release = 'npm run release:patch && git push origin main --follow-tags';
+    await write('package.json', JSON.stringify({ scripts }));
+
+    const result = await detectStack(dir);
+    const release = result.suggestedProcesses.find((p) => p.id === 'release');
+    expect(release).toBeDefined();
+    expect(release?.args).toEqual(['run', 'release']);
+    // A release pushes to a remote — it must never fire on open or restart itself.
+    expect(release?.runOnOpen).toBe(false);
+    expect(release?.autoRestart).toBe(false);
+  });
+
   it('defaults package manager to npm without a lockfile', async () => {
     await write('package.json', JSON.stringify({ scripts: { start: 'node .' } }));
     const result = await detectStack(dir);

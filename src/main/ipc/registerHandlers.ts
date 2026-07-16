@@ -12,6 +12,8 @@ import {
   previewSetZoomSchema,
   processTargetRequestSchema,
   projectIdRequestSchema,
+  reorderPinnedRequestSchema,
+  setPinnedRequestSchema,
   removeProcessRequestSchema,
   saveProcessRequestSchema,
   setEditorPresetSchema,
@@ -145,6 +147,20 @@ export function registerHandlers(
     const input = projectIdRequestSchema.parse(args);
     return services.projects.touch(input);
   });
+
+  register(IPC_CHANNELS.PROJECTS_SET_PINNED, 'projects.setPinned', async (args: unknown) => {
+    const input = setPinnedRequestSchema.parse(args);
+    return services.projects.setPinned(input);
+  });
+
+  register(
+    IPC_CHANNELS.PROJECTS_REORDER_PINNED,
+    'projects.reorderPinned',
+    async (args: unknown) => {
+      const input = reorderPinnedRequestSchema.parse(args);
+      return services.projects.reorderPinned(input);
+    }
+  );
 
   registerFileHandlers(services, register);
 

@@ -3,7 +3,9 @@ import type {
   AddProjectRequest,
   ProjectIdRequest,
   RemoveProcessRequest,
+  ReorderPinnedRequest,
   SaveProcessRequest,
+  SetPinnedRequest,
   StackDetectionResult,
   TrackedProject,
 } from './projects';
@@ -51,7 +53,6 @@ import type {
   ListCommitFilesRequest,
   ListCommitFilesResult,
   MutationResult,
-  RecentCommit,
   RepoMutationRequest,
   StashEntry,
   StashPushRequest,
@@ -69,9 +70,10 @@ import type {
   BranchPublishRequest,
   BranchRenameRequest,
   BranchSetUpstreamRequest,
+  MergeBranchRequest,
+  RebaseBranchRequest,
 } from './branches';
 import type {
-  BisectState,
   ConflictResolveRequest,
   ConflictVersionRequest,
   ConflictVersionResult,
@@ -79,6 +81,7 @@ import type {
   RecoveryActionRequest,
 } from './recovery';
 import type {
+  CheckoutCommitRequest,
   CherryPickRequest,
   CompareCommitsRequest,
   CompareCommitsResult,
@@ -88,11 +91,22 @@ import type {
   DeleteTagRequest,
   ListHistoryRequest,
   ListHistoryResult,
+  ListReflogRequest,
+  ListReflogResult,
   ListTagsRequest,
   ListTagsResult,
   PushTagRequest,
+  ResetToCommitRequest,
   RevertCommitRequest,
 } from './history';
+import type {
+  AddRemoteRequest,
+  ListRemotesRequest,
+  RemoteEntry,
+  RemoveRemoteRequest,
+  RenameRemoteRequest,
+  SetRemoteUrlRequest,
+} from './remotes';
 import type {
   StashApplyRequest,
   StashBranchRequest,
@@ -144,6 +158,8 @@ export type BureauApiV1 = {
     add(input: AddProjectRequest): Promise<Result<{ project: TrackedProject }>>;
     remove(input: ProjectIdRequest): Promise<void>;
     touch(input: ProjectIdRequest): Promise<TrackedProject>;
+    setPinned(input: SetPinnedRequest): Promise<TrackedProject[]>;
+    reorderPinned(input: ReorderPinnedRequest): Promise<TrackedProject[]>;
   };
   processes: {
     list(input: ProjectIdRequest): Promise<ProjectProcesses>;
@@ -202,7 +218,6 @@ export type BureauApiV1 = {
     snapshot(input: GitSnapshotRequest): Promise<GitSnapshot>;
     clone(input: CloneRequest): Promise<CloneResult>;
     initRepository(input: InitRepositoryRequest): Promise<InitRepositoryResult>;
-    listBranches(input: { projectId: string }): Promise<string[]>;
     listBranchDetails(input: { projectId: string }): Promise<BranchDetail[]>;
     switchBranch(input: BranchSwitchRequest): Promise<MutationResult>;
     createBranch(input: BranchCreateRequest): Promise<MutationResult>;
@@ -212,6 +227,15 @@ export type BureauApiV1 = {
     renameBranch(input: BranchRenameRequest): Promise<MutationResult>;
     checkoutTracking(input: BranchCheckoutTrackingRequest): Promise<MutationResult>;
     deleteRemoteBranch(input: BranchDeleteRemoteRequest): Promise<MutationResult>;
+    mergeBranch(input: MergeBranchRequest): Promise<MutationResult>;
+    rebaseBranch(input: RebaseBranchRequest): Promise<MutationResult>;
+    resetToCommit(input: ResetToCommitRequest): Promise<MutationResult>;
+    checkoutCommit(input: CheckoutCommitRequest): Promise<MutationResult>;
+    listRemotes(input: ListRemotesRequest): Promise<RemoteEntry[]>;
+    addRemote(input: AddRemoteRequest): Promise<MutationResult>;
+    renameRemote(input: RenameRemoteRequest): Promise<MutationResult>;
+    removeRemote(input: RemoveRemoteRequest): Promise<MutationResult>;
+    setRemoteUrl(input: SetRemoteUrlRequest): Promise<MutationResult>;
     fetch(input: RepoMutationRequest): Promise<MutationResult>;
     stageFile(input: FileMutationRequest): Promise<MutationResult>;
     unstageFile(input: FileMutationRequest): Promise<MutationResult>;
@@ -233,8 +257,8 @@ export type BureauApiV1 = {
     stashRestoreFiles(input: StashRestoreFilesRequest): Promise<MutationResult>;
     getDiff(input: DiffRequest): Promise<DiffResult>;
     listCommitFiles(input: ListCommitFilesRequest): Promise<ListCommitFilesResult>;
-    listRecentCommits(input: { projectId: string; limit?: number }): Promise<RecentCommit[]>;
     listHistory(input: ListHistoryRequest): Promise<ListHistoryResult>;
+    listReflog(input: ListReflogRequest): Promise<ListReflogResult>;
     listTags(input: ListTagsRequest): Promise<ListTagsResult>;
     cherryPick(input: CherryPickRequest): Promise<MutationResult>;
     revertCommit(input: RevertCommitRequest): Promise<MutationResult>;
@@ -246,7 +270,6 @@ export type BureauApiV1 = {
     compareCommits(input: CompareCommitsRequest): Promise<CompareCommitsResult>;
     applyHunk(input: HunkMutationRequest): Promise<MutationResult>;
     getOperationState(input: { projectId: string }): Promise<OperationStateDetails>;
-    getBisectState(input: { projectId: string }): Promise<BisectState>;
     getConflictVersion(input: ConflictVersionRequest): Promise<ConflictVersionResult>;
     resolveConflict(input: ConflictResolveRequest): Promise<MutationResult>;
     mergeContinue(input: RecoveryActionRequest): Promise<MutationResult>;

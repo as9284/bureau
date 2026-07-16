@@ -50,6 +50,7 @@
 
 .submodules-panel__path {
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-medium);
   overflow: hidden;
@@ -62,6 +63,7 @@
   font-size: var(--font-size-label);
   color: var(--color-text-muted);
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

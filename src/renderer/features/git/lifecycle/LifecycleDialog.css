@@ -5,6 +5,17 @@
   margin-bottom: var(--space-4);
 }
 
+/* The fields column already spaces its children; the banner's own margin would double it. */
+.lifecycle-dialog__fields .git-panel-error {
+  margin-bottom: 0;
+}
+
+.lifecycle-dialog__status {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-supporting);
+}
+
 .lifecycle-dialog__path-row {
   display: flex;
   align-items: flex-end;

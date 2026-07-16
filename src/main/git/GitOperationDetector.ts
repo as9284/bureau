@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { resolveGitDir } from './gitDir';
 
 export type BlockedOperationKind =
   'unmerged' | 'merge' | 'rebase' | 'cherryPick' | 'revert' | 'bisect';
@@ -12,7 +13,10 @@ export type OperationDetectionResult = {
 export async function detectBlockedOperations(
   repositoryRoot: string
 ): Promise<OperationDetectionResult> {
-  const gitDir = path.join(repositoryRoot, '.git');
+  // Not path.join(root, '.git') — that breaks in linked worktrees/submodules
+  // where .git is a file pointing at the real gitdir.
+  const gitDir = await resolveGitDir(repositoryRoot);
+  if (!gitDir) return { blocked: false, kinds: [] };
   const kinds: BlockedOperationKind[] = [];
 
   const checks: Array<{ file: string; kind: BlockedOperationKind }> = [

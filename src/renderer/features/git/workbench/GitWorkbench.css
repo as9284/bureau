@@ -69,22 +69,19 @@
   font-size: var(--font-size-label);
   color: var(--color-text-muted);
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.repo-workbench__banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin: 0;
+/* Between the header and the mode strip, the banner is a full-width region of the
+   workbench column rather than a floating card. */
+.repo-workbench > .git-panel-error {
+  margin-bottom: 0;
   padding: var(--space-2) var(--space-4);
-  background: var(--color-status-danger-soft);
-  color: var(--color-status-danger);
-  font-size: var(--font-size-supporting);
   border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
   flex-shrink: 0;
 }
 
@@ -120,6 +117,13 @@
 .repo-workbench__mode:hover {
   color: var(--color-text-primary);
   background: var(--color-surface-hover);
+}
+
+/* The mode strip clips (overflow: hidden), so the global +2px ring would be cut off.
+   Inset it the way the title brand does. */
+.repo-workbench__mode:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 .repo-workbench__mode--active {

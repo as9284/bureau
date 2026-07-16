@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PROJECT_TAB_IDS, TERMINAL_CURSOR_STYLES, VIEWPORT_PRESETS } from '../contracts/settings';
 
 const MAX_PATH_LENGTH = 4096;
 
@@ -100,6 +101,14 @@ export const settingsPatchSchema = z
         density: z.enum(['compact', 'comfortable']).optional(),
         accentColor: accentColorSchema.optional(),
         immersiveMode: z.boolean().optional(),
+        reduceMotion: z.boolean().optional(),
+        uiScale: z
+          .union([z.literal(0.9), z.literal(1), z.literal(1.1), z.literal(1.25), z.literal(1.5)])
+          .optional(),
+        projectTabOrder: z
+          .array(z.enum(PROJECT_TAB_IDS))
+          .max(PROJECT_TAB_IDS.length)
+          .optional(),
       })
       .strict()
       .optional(),
@@ -144,6 +153,18 @@ export const settingsPatchSchema = z
         conflictOverwrite: z.boolean().optional(),
         deleteRemoteBranch: z.boolean().optional(),
         deleteRemoteTag: z.boolean().optional(),
+        abortOperation: z.boolean().optional(),
+        skipCommit: z.boolean().optional(),
+        stashPop: z.boolean().optional(),
+        restoreStashFiles: z.boolean().optional(),
+        submoduleUpdate: z.boolean().optional(),
+        pruneWorktrees: z.boolean().optional(),
+        mergeBranch: z.boolean().optional(),
+        rebaseBranch: z.boolean().optional(),
+        resetBranch: z.boolean().optional(),
+        resetHard: z.boolean().optional(),
+        checkoutCommit: z.boolean().optional(),
+        removeRemote: z.boolean().optional(),
       })
       .strict()
       .optional(),
@@ -181,6 +202,34 @@ export const settingsPatchSchema = z
       })
       .strict()
       .optional(),
+    processes: z
+      .object({
+        logBufferLines: z
+          .union([z.literal(1000), z.literal(5000), z.literal(10000), z.literal(20000)])
+          .optional(),
+        maxCrashRestarts: z
+          .union([z.literal(0), z.literal(3), z.literal(5), z.literal(10)])
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    preview: z
+      .object({
+        defaultViewport: z.enum(VIEWPORT_PRESETS).optional(),
+        captureConsole: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+    embeddedTerminal: z
+      .object({
+        fontSize: z
+          .union([z.literal(11), z.literal(12), z.literal(13), z.literal(14)])
+          .optional(),
+        scrollback: z.union([z.literal(1000), z.literal(5000), z.literal(10000)]).optional(),
+        cursorStyle: z.enum(TERMINAL_CURSOR_STYLES).optional(),
+      })
+      .strict()
+      .optional(),
     files: z
       .object({
         wordWrap: z.boolean().optional(),
@@ -191,6 +240,10 @@ export const settingsPatchSchema = z
         remoteImages: z.enum(['ask', 'block']).optional(),
         tabSize: z.union([z.literal(2), z.literal(4)]).optional(),
         readerWidth: z.enum(['narrow', 'standard', 'wide']).optional(),
+        editorFontSize: z
+          .union([z.literal(12), z.literal(13), z.literal(14), z.literal(16)])
+          .optional(),
+        lineNumbers: z.boolean().optional(),
       })
       .strict()
       .optional(),
@@ -258,6 +311,14 @@ export const processDefinitionSchema = z
 export const addProjectRequestSchema = z.object({ path: boundedPath }).strict();
 export const detectRequestSchema = z.object({ path: boundedPath }).strict();
 export const projectIdRequestSchema = z.object({ projectId: projectIdField }).strict();
+
+export const setPinnedRequestSchema = z
+  .object({ projectId: projectIdField, pinned: z.boolean() })
+  .strict();
+
+export const reorderPinnedRequestSchema = z
+  .object({ orderedIds: z.array(projectIdField).max(500) })
+  .strict();
 
 export const saveProcessRequestSchema = z
   .object({ projectId: projectIdField, definition: processDefinitionSchema })
@@ -471,7 +532,6 @@ export {
   stashIndexRequestSchema,
   diffRequestSchema,
   listCommitFilesRequestSchema,
-  recentCommitsRequestSchema,
   commitRequestSchema,
   operationCancelRequestSchema,
   addWorktreeRequestSchema,
@@ -489,7 +549,19 @@ export {
   branchRenameRequestSchema,
   branchCheckoutTrackingRequestSchema,
   branchDeleteRemoteRequestSchema,
+  mergeBranchRequestSchema,
+  rebaseBranchRequestSchema,
+  resetToCommitRequestSchema,
+  reflogRequestSchema,
   commitOidMutationRequestSchema,
+  cherryPickRequestSchema,
+  revertCommitRequestSchema,
+  checkoutCommitRequestSchema,
+  listRemotesRequestSchema,
+  addRemoteRequestSchema,
+  renameRemoteRequestSchema,
+  removeRemoteRequestSchema,
+  setRemoteUrlRequestSchema,
   branchFromCommitRequestSchema,
   createTagRequestSchema,
   tagMutationRequestSchema,

@@ -8,7 +8,7 @@ import type {
   ToolchainConfig,
 } from '@shared/contracts/toolchains';
 import type {
-  BureauProjectConfig,
+  ProjectConfig,
   ProcessDefinition,
   ProjectStack,
 } from '@shared/contracts/projects';
@@ -128,7 +128,7 @@ export async function probeRuntimes(): Promise<RuntimeProbe[]> {
 export async function buildProjectToolchains(
   projectId: string,
   projectRoot: string,
-  config: BureauProjectConfig,
+  config: ProjectConfig,
   settings: ToolchainSettings,
   stack: ProjectStack[] = []
 ): Promise<ProjectToolchains> {
@@ -167,7 +167,7 @@ export async function buildProjectToolchains(
 
 export async function resolveToolchainPathEntries(
   projectRoot: string,
-  config: BureauProjectConfig,
+  config: ProjectConfig,
   definition: ProcessDefinition,
   settings: ToolchainSettings
 ): Promise<string[]> {

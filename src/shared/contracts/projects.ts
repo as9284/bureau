@@ -37,11 +37,11 @@ export type TrackedProject = {
   addedAt: string;
   lastOpenedAt?: string;
   pinned?: boolean;
+  /** Manual order within the pinned group (ascending). Absent when not pinned. */
+  pinnedRank?: number;
   archived?: boolean;
   tags?: string[];
   groupIds?: string[];
-  /** Whether a committable .bureau/config.json was found in the project. */
-  configPresent: boolean;
   /** Set when the folder no longer exists on disk. */
   missing?: boolean;
   /** Nested package roots relative to the project (monorepo). */
@@ -50,7 +50,7 @@ export type TrackedProject = {
 
 export type ProcessRunMode = 'log' | 'terminal';
 
-/** A managed command, stored in the project's committable .bureau/config.json. */
+/** A managed command, stored per-project in Bureau's app storage. */
 export type ProcessDefinition = {
   id: string;
   label: string;
@@ -72,10 +72,11 @@ export type ProcessDefinition = {
   };
 };
 
-export type BureauProjectConfig = {
-  schemaVersion: 1;
-  name: string;
-  stack: ProjectStack[];
+/**
+ * Per-project runnable commands + runtime pins. Bureau owns this in its own app storage,
+ * keyed by projectId; `name`/`stack` are not repeated here because the catalogue record owns them.
+ */
+export type ProjectConfig = {
   packageManager?: PackageManager;
   processes: ProcessDefinition[];
   toolchains?: ToolchainConfig;
@@ -94,5 +95,7 @@ export type StackDetectionResult = {
 
 export type AddProjectRequest = { path: string };
 export type ProjectIdRequest = { projectId: string };
+export type SetPinnedRequest = { projectId: string; pinned: boolean };
+export type ReorderPinnedRequest = { orderedIds: string[] };
 export type SaveProcessRequest = { projectId: string; definition: ProcessDefinition };
 export type RemoveProcessRequest = { projectId: string; processId: string };

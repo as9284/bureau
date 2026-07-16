@@ -131,7 +131,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }): Reac
   );
 }
 
-export function useContextMenu(): ContextMenuApi {
+function useContextMenu(): ContextMenuApi {
   const ctx = useContext(ContextMenuContext);
   if (!ctx) {
     throw new Error('useContextMenu must be used within ContextMenuProvider');
@@ -163,15 +163,4 @@ export function ContextMenuTrigger({
       openAt(e.clientX, e.clientY, menu);
     },
   });
-}
-
-export function openContextMenuFromEvent(
-  e: React.MouseEvent,
-  openAt: ContextMenuApi['openAt'],
-  items: ContextMenuItemDef[]
-): void {
-  if (items.length === 0) return;
-  e.preventDefault();
-  e.stopPropagation();
-  openAt(e.clientX, e.clientY, items);
 }

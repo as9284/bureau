@@ -42,6 +42,7 @@ export type StartInput = {
 };
 
 export type ResolveEnvInput = {
+  projectId: string;
   projectRoot: string;
   definition: ProcessDefinition;
   overrides: Record<string, string>;
@@ -52,6 +53,8 @@ export type EnvResolver = (input: ResolveEnvInput) => Promise<NodeJS.ProcessEnv>
 export type ProcessSupervisorOptions = {
   resolveEnv?: EnvResolver;
   orphanStore?: OrphanStore;
+  /** Read per-crash so a settings change applies without a restart. */
+  getMaxCrashRestarts?: () => number;
 };
 
 export type ProcessSupervisor = {
@@ -271,10 +274,11 @@ export function createProcessSupervisor(options: ProcessSupervisorOptions = {}):
       memoryBytes: undefined,
     });
 
+    const maxCrashRestarts = options?.getMaxCrashRestarts?.() ?? MAX_CONSECUTIVE_CRASHES;
     if (
       status === 'crashed' &&
       instance.definition.autoRestart &&
-      instance.consecutiveCrashes < MAX_CONSECUTIVE_CRASHES
+      instance.consecutiveCrashes < maxCrashRestarts
     ) {
       pushLine(instance, 'system', `Auto-restarting in ${RESTART_BACKOFF_MS}ms…`);
       instance.restartTimer = setTimeout(() => {
@@ -291,7 +295,7 @@ export function createProcessSupervisor(options: ProcessSupervisorOptions = {}):
   }
 
   async function launch(instance: Instance): Promise<void> {
-    const { definition, projectRoot } = instance;
+    const { definition, projectRoot, projectId } = instance;
 
     const cwd = path.resolve(projectRoot, definition.cwd || '.');
     const normalizedRoot = path.resolve(projectRoot);
@@ -311,6 +315,7 @@ export function createProcessSupervisor(options: ProcessSupervisorOptions = {}):
     }
 
     const env = await resolveEnv({
+      projectId,
       projectRoot,
       definition,
       overrides: definition.env,

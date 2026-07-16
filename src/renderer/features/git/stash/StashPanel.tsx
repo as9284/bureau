@@ -7,6 +7,7 @@ import { ContextMenuTrigger } from '@renderer/components/GitContextMenu';
 import { Dialog } from '@renderer/components/Dialog';
 import { EmptyState } from '@renderer/components/EmptyState';
 import { Skeleton } from '@renderer/components/Skeleton';
+import { PanelError } from '@renderer/features/git/PanelState';
 import { TextInput } from '@renderer/components/TextInput';
 import {
   useStashContextMenuItems,
@@ -140,6 +141,7 @@ function StashFileRow({
 export function StashPanel({ projectId, snapshot, readOnly }: Props): ReactElement {
   const stashEntries = useGitStore((s) => s.stashEntries);
   const stashLoading = useGitStore((s) => s.stashLoading);
+  const stashError = useGitStore((s) => s.stashError);
   const selectedStashIndex = useGitStore((s) => s.selectedStashIndex);
   const stashFiles = useGitStore((s) => s.stashFiles);
   const selectedFile = useGitStore((s) => s.selectedFile);
@@ -196,19 +198,32 @@ export function StashPanel({ projectId, snapshot, readOnly }: Props): ReactEleme
           </div>
         </header>
 
-        {stashLoading ? (
+        {stashError ? (
+          <PanelError
+            title="Could not load stashes"
+            message={stashError.message}
+            onRetry={() => void loadStash(projectId)}
+          />
+        ) : null}
+
+        {stashLoading && stashEntries.length === 0 ? (
           <div className="stash-panel__loading">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} width="100%" height="40px" />
+              <Skeleton key={i} width="100%" height="var(--size-hub-row)" />
             ))}
           </div>
         ) : stashEntries.length === 0 ? (
-          <EmptyState
-            title="No stashes"
-            description="Stash your current changes to switch branches without committing."
-          />
+          stashError ? null : (
+            <EmptyState
+              title="No stashes"
+              description="Stash your current changes to switch branches without committing."
+            />
+          )
         ) : (
-          <ul className="stash-panel__list">
+          <ul
+            className={`stash-panel__list ${stashLoading ? 'git-stale' : ''}`}
+            aria-busy={stashLoading}
+          >
             {stashEntries.map((entry) => (
               <StashRow
                 key={entry.index}
@@ -239,7 +254,9 @@ export function StashPanel({ projectId, snapshot, readOnly }: Props): ReactEleme
       <div className="stash-panel__files-pane" aria-label="Stash files">
         <header className="stash-panel__header">
           <h2>Files</h2>
-          <p className="stash-panel__hint">
+          {/* Machine text when it names a stash, prose when it prompts — so the mono
+              treatment follows the content rather than the element. */}
+          <p className={`stash-panel__hint${selectedStashIndex != null ? ' mono' : ''}`}>
             {selectedStashIndex != null
               ? `stash@{${selectedStashIndex}}`
               : 'Select a stash to browse files'}
@@ -305,7 +322,11 @@ export function StashPanel({ projectId, snapshot, readOnly }: Props): ReactEleme
       <Dialog
         open={branchTarget !== null}
         title="Create branch from stash"
-        description={`Create a branch from stash@{${branchTarget}}.`}
+        description={
+          <>
+            Create a branch from <span className="mono">{`stash@{${branchTarget}}`}</span>.
+          </>
+        }
         onClose={() => setBranchTarget(null)}
         actions={
           <>

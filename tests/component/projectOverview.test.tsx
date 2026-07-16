@@ -39,7 +39,6 @@ beforeEach(() => {
         stack: ['git', 'node'],
         addedAt: new Date('2026-07-01').toISOString(),
         lastOpenedAt: new Date('2026-07-14').toISOString(),
-        configPresent: true,
       },
     ],
     processesByProject: {
@@ -90,7 +89,7 @@ describe('ProjectOverview', () => {
     expect(screen.getByText('main')).toBeInTheDocument();
     expect(screen.getByText('3 changes')).toBeInTheDocument();
     // Details card.
-    expect(screen.getByText('.bureau/config.json')).toBeInTheDocument();
+    expect(screen.getByText('Added')).toBeInTheDocument();
   });
 
   it('invokes the editor launcher when the Editor action is clicked', async () => {

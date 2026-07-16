@@ -5,6 +5,10 @@ import type { ExecutablePickerAdapter } from '../settings/SettingsApplicationSer
 import { createCapabilityService } from '../capabilities/CapabilityService';
 import { createProjectCatalogue, createProjectCatalogueStore } from '../projects/ProjectCatalogue';
 import { createProjectApplicationService } from '../projects/ProjectApplicationService';
+import {
+  createProjectConfigStore,
+  createProjectConfigStoreSource,
+} from '../projects/ProjectConfigStore';
 import { createProcessSupervisor, type ProcessSupervisor } from '../processes/ProcessSupervisor';
 import { createProcessApplicationService } from '../processes/ProcessApplicationService';
 import { createPreviewViewManager } from '../preview/PreviewViewManager';
@@ -82,12 +86,15 @@ export async function createAppServices(
 
   const settingsStoreSource = createSettingsStoreFromPath(`${dataPath}/settings.v1.json`);
   const projectStoreSource = createProjectCatalogueStore(`${dataPath}/projects.v1.json`);
+  const projectConfigSource = createProjectConfigStoreSource(`${dataPath}/projectConfigs.v1.json`);
 
   await settingsStoreSource.load();
   await projectStoreSource.load();
+  await projectConfigSource.load();
 
   const settingsStore = createSettingsStore(settingsStoreSource);
   const catalogue = createProjectCatalogue(projectStoreSource);
+  const projectConfigStore = createProjectConfigStore(projectConfigSource);
   const filesPersistence = await createFilesPersistence(dataPath);
   const documentExport = overrides?.documentExport ?? createDocumentExportService(dataPath);
   const files = createFileApplicationService({
@@ -101,11 +108,18 @@ export async function createAppServices(
     printDocument: documentExport.printDocument,
     disposeExports: documentExport.dispose,
   });
-  const resolveEnv = createToolchainEnvResolver({ catalogue, settingsStore });
+  const resolveEnv = createToolchainEnvResolver({
+    settingsStore,
+    configStore: projectConfigStore,
+  });
   const orphanStoreSource = createOrphanStore(`${dataPath}/runtime-orphans.v1.json`);
   await orphanStoreSource.load();
   const orphanStore = createOrphanStoreApi(orphanStoreSource);
-  const supervisor = createProcessSupervisor({ resolveEnv, orphanStore });
+  const supervisor = createProcessSupervisor({
+    resolveEnv,
+    orphanStore,
+    getMaxCrashRestarts: () => settingsStore.get().processes.maxCrashRestarts,
+  });
   await supervisor.adoptOrphans();
 
   const terminalLauncher = createTerminalLauncher();
@@ -241,7 +255,7 @@ export async function createAppServices(
     resolver: gitResolver,
     pickerAdapter,
   });
-  const projects = createProjectApplicationService(catalogue);
+  const projects = createProjectApplicationService(catalogue, projectConfigStore);
   const gitLifecycle = createGitLifecycleService({
     projects,
     validator: gitValidator,
@@ -309,7 +323,7 @@ export async function createAppServices(
     },
   };
 
-  const processes = createProcessApplicationService(catalogue, supervisor);
+  const processes = createProcessApplicationService(catalogue, supervisor, projectConfigStore);
   const preview = createPreviewViewManager();
   const executableAdapter = overrides?.executableAdapter ?? createExecutableAdapter();
   const sdkResolver = createSdkResolver(settingsStore);
@@ -335,7 +349,11 @@ export async function createAppServices(
     terminalLauncher,
     sdkResolver
   );
-  const toolchains = createToolchainApplicationService({ catalogue, settingsStore });
+  const toolchains = createToolchainApplicationService({
+    catalogue,
+    settingsStore,
+    configStore: projectConfigStore,
+  });
   const ports = createPortsApplicationService(
     createPortScanner({ catalogue, supervisor, processes })
   );

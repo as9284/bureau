@@ -7,12 +7,11 @@ import type { GitExecutableResolver } from './GitExecutableResolver';
 import type { GitRunner } from './GitRunner';
 import type { GitStatusService } from './GitStatusService';
 import { detectBlockedOperations } from './GitOperationDetector';
+import { resolveGitDir } from './gitDir';
 import type {
-  BisectState,
   ConflictResolveRequest,
   ConflictVersionRequest,
   ConflictVersionResult,
-  GetBisectStateRequest,
   GetOperationStateRequest,
   OperationStateDetails,
   RecoveryActionRequest,
@@ -31,7 +30,6 @@ function gitArgs(repoPath: string, subcommand: string[]): string[] {
 
 export type GitRecoveryService = {
   getOperationState(input: GetOperationStateRequest): Promise<OperationStateDetails>;
-  getBisectState(input: GetBisectStateRequest): Promise<BisectState>;
   getConflictVersion(input: ConflictVersionRequest): Promise<ConflictVersionResult>;
   resolveConflict(input: ConflictResolveRequest): Promise<MutationResult>;
   mergeContinue(input: RecoveryActionRequest): Promise<MutationResult>;
@@ -111,17 +109,6 @@ export function createGitRecoveryService(params: {
       totalSteps: steps?.total,
       conflictedFiles,
       instructions: instructionsFor(activeKind),
-    };
-  }
-
-  async function getBisectState(input: GetBisectStateRequest): Promise<BisectState> {
-    const repo = catalogue.get(input.projectId);
-    if (!repo) return { active: false, summary: '' };
-    const logPath = path.join(repo.canonicalPath, '.git', 'BISECT_LOG');
-    const active = await fileExists(logPath);
-    return {
-      active,
-      summary: active ? 'Bisect in progress. Use Reset bisect to end.' : '',
     };
   }
 
@@ -381,7 +368,6 @@ export function createGitRecoveryService(params: {
 
   return {
     getOperationState,
-    getBisectState,
     getConflictVersion,
     resolveConflict,
     mergeContinue,
@@ -480,7 +466,8 @@ async function readRebaseSteps(
   kind: RecoveryOperationKind
 ): Promise<{ current?: number; total?: number } | undefined> {
   if (kind !== 'rebase') return undefined;
-  const gitDir = path.join(repoPath, '.git');
+  const gitDir = await resolveGitDir(repoPath);
+  if (!gitDir) return undefined;
   for (const sub of ['rebase-merge', 'rebase-apply']) {
     const dir = path.join(gitDir, sub);
     if (!(await fileExists(dir))) continue;

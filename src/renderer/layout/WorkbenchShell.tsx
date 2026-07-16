@@ -20,6 +20,7 @@ import { ProjectWorkspace } from '../pages/ProjectWorkspace';
 import { AddProjectDialog } from '../features/projects/AddProjectDialog';
 import { CloneDialog } from '../features/git/lifecycle/CloneDialog';
 import { InitDialog } from '../features/git/lifecycle/InitDialog';
+import { GitConfirmDialog } from '../features/git/GitConfirmDialog';
 import { PublishToGitHubDialog } from '../features/git/github/PublishToGitHubDialog';
 import { OperationsDrawer } from '../features/git/operations/OperationsDrawer';
 import { buildEditMenuItems } from '../lib/contextMenu';
@@ -96,6 +97,7 @@ export function WorkbenchShell() {
         <AddProjectDialog />
         <CloneDialog />
         <InitDialog />
+        <GitConfirmDialog />
         <PublishToGitHubDialog />
         <OperationsDrawer />
         <ToastStack />

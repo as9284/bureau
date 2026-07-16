@@ -49,11 +49,3 @@ export type RecoveryActionRequest = {
   snapshotRevision: string;
 };
 
-export type BisectState = {
-  active: boolean;
-  summary: string;
-};
-
-export type GetBisectStateRequest = {
-  projectId: string;
-};

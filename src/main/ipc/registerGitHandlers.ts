@@ -11,7 +11,6 @@ import {
   stashPushRequestSchema,
   stashIndexRequestSchema,
   diffRequestSchema,
-  recentCommitsRequestSchema,
   listCommitFilesRequestSchema,
   operationCancelRequestSchema,
   hunkMutationRequestSchema,
@@ -29,7 +28,18 @@ import {
   branchRenameRequestSchema,
   branchCheckoutTrackingRequestSchema,
   branchDeleteRemoteRequestSchema,
-  commitOidMutationRequestSchema,
+  mergeBranchRequestSchema,
+  rebaseBranchRequestSchema,
+  resetToCommitRequestSchema,
+  reflogRequestSchema,
+  cherryPickRequestSchema,
+  revertCommitRequestSchema,
+  checkoutCommitRequestSchema,
+  listRemotesRequestSchema,
+  addRemoteRequestSchema,
+  renameRemoteRequestSchema,
+  removeRemoteRequestSchema,
+  setRemoteUrlRequestSchema,
   branchFromCommitRequestSchema,
   createTagRequestSchema,
   tagMutationRequestSchema,
@@ -120,9 +130,6 @@ export function registerGitHandlers(services: AppServices, register: RegisterFn)
   register(IPC_CHANNELS.GIT_DISCARD_ALL, 'git.discardAll', async (args: unknown) =>
     services.git.discardAll(repoMutationRequestSchema.parse(args))
   );
-  projectId(IPC_CHANNELS.GIT_LIST_BRANCHES, 'git.listBranches', (id) =>
-    services.git.listBranches({ projectId: id })
-  );
   register(IPC_CHANNELS.GIT_SWITCH_BRANCH, 'git.switchBranch', async (args: unknown) =>
     services.git.switchBranch(branchSwitchRequestSchema.parse(args))
   );
@@ -165,18 +172,12 @@ export function registerGitHandlers(services: AppServices, register: RegisterFn)
   register(IPC_CHANNELS.GIT_LIST_COMMIT_FILES, 'git.listCommitFiles', async (args: unknown) =>
     services.git.listCommitFiles(listCommitFilesRequestSchema.parse(args))
   );
-  register(IPC_CHANNELS.GIT_LIST_RECENT_COMMITS, 'git.listRecentCommits', async (args: unknown) =>
-    services.git.listRecentCommits(recentCommitsRequestSchema.parse(args))
-  );
 
   projectId(IPC_CHANNELS.GIT_LIST_BRANCH_DETAILS, 'git.listBranchDetails', (id) =>
     services.git.listBranchDetails({ projectId: id })
   );
   projectId(IPC_CHANNELS.GIT_GET_OPERATION_STATE, 'git.getOperationState', (id) =>
     services.git.getOperationState({ projectId: id })
-  );
-  projectId(IPC_CHANNELS.GIT_GET_BISECT_STATE, 'git.getBisectState', (id) =>
-    services.git.getBisectState({ projectId: id })
   );
   projectId(IPC_CHANNELS.GIT_LIST_WORKTREES, 'git.listWorktrees', (id) =>
     services.git.listWorktrees({ projectId: id })
@@ -201,6 +202,9 @@ export function registerGitHandlers(services: AppServices, register: RegisterFn)
   );
   register(IPC_CHANNELS.GIT_LIST_HISTORY, 'git.listHistory', async (args: unknown) =>
     services.git.listHistory(historyRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.GIT_LIST_REFLOG, 'git.listReflog', async (args: unknown) =>
+    services.git.listReflog(reflogRequestSchema.parse(args))
   );
   register(IPC_CHANNELS.GIT_LIST_TAGS, 'git.listTags', async (args: unknown) =>
     services.git.listTags(tagsRequestSchema.parse(args))
@@ -255,11 +259,40 @@ export function registerGitHandlers(services: AppServices, register: RegisterFn)
   register(IPC_CHANNELS.GIT_DELETE_REMOTE_BRANCH, 'git.deleteRemoteBranch', async (a: unknown) =>
     services.git.deleteRemoteBranch(branchDeleteRemoteRequestSchema.parse(a))
   );
+  register(IPC_CHANNELS.GIT_MERGE_BRANCH, 'git.mergeBranch', async (a: unknown) =>
+    services.git.mergeBranch(mergeBranchRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_REBASE_BRANCH, 'git.rebaseBranch', async (a: unknown) =>
+    services.git.rebaseBranch(rebaseBranchRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_RESET_TO_COMMIT, 'git.resetToCommit', async (a: unknown) =>
+    services.git.resetToCommit(resetToCommitRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_CHECKOUT_COMMIT, 'git.checkoutCommit', async (a: unknown) =>
+    services.git.checkoutCommit(checkoutCommitRequestSchema.parse(a))
+  );
+  // These two carry the optional `-m <parent>` mainline, so they no longer share the
+  // plain commit-oid schema with the other commit actions.
   register(IPC_CHANNELS.GIT_CHERRY_PICK, 'git.cherryPick', async (a: unknown) =>
-    services.git.cherryPick(commitOidMutationRequestSchema.parse(a))
+    services.git.cherryPick(cherryPickRequestSchema.parse(a))
   );
   register(IPC_CHANNELS.GIT_REVERT_COMMIT, 'git.revertCommit', async (a: unknown) =>
-    services.git.revertCommit(commitOidMutationRequestSchema.parse(a))
+    services.git.revertCommit(revertCommitRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_LIST_REMOTES, 'git.listRemotes', async (a: unknown) =>
+    services.git.listRemotes(listRemotesRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_ADD_REMOTE, 'git.addRemote', async (a: unknown) =>
+    services.git.addRemote(addRemoteRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_RENAME_REMOTE, 'git.renameRemote', async (a: unknown) =>
+    services.git.renameRemote(renameRemoteRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_REMOVE_REMOTE, 'git.removeRemote', async (a: unknown) =>
+    services.git.removeRemote(removeRemoteRequestSchema.parse(a))
+  );
+  register(IPC_CHANNELS.GIT_SET_REMOTE_URL, 'git.setRemoteUrl', async (a: unknown) =>
+    services.git.setRemoteUrl(setRemoteUrlRequestSchema.parse(a))
   );
   register(IPC_CHANNELS.GIT_CREATE_BRANCH_FROM_COMMIT, 'git.createBranchFromCommit', async (a: unknown) =>
     services.git.createBranchFromCommit(branchFromCommitRequestSchema.parse(a))
