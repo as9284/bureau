@@ -191,6 +191,7 @@ export const settingsPatchSchema = z
         defaultLogcatFilter: z.string().max(256).optional(),
         reactNativeMetroPort: z.number().int().min(1024).max(65535).optional(),
         reactNativeAutoReverse: z.boolean().optional(),
+        emulatorDisplayMode: z.enum(['embedded', 'window']).optional(),
       })
       .strict()
       .optional(),
@@ -437,6 +438,7 @@ export const startAvdRequestSchema = z
           .regex(/^[A-Za-z0-9.:-]+$/, 'invalid DNS server')
           .optional(),
         writableSystem: z.boolean(),
+        displayMode: z.enum(['embedded', 'window']).optional(),
       })
       .strict(),
     confirmedWipe: z.boolean(),
@@ -493,6 +495,59 @@ export const reactNativeDeviceRequestSchema = z
     deviceId: deviceIdField.optional(),
     port: z.number().int().min(1024).max(65535).optional(),
     packageName: packageField.optional(),
+  })
+  .strict();
+
+export const emulatorDisplayStartRequestSchema = z
+  .object({
+    avdName: avdNameField,
+    width: z.number().int().min(16).max(8192),
+    height: z.number().int().min(16).max(8192),
+  })
+  .strict();
+export const emulatorDisplayStopRequestSchema = z.object({ avdName: avdNameField }).strict();
+export const emulatorMouseRequestSchema = z
+  .object({
+    avdName: avdNameField,
+    x: z.number().int().min(0).max(32767),
+    y: z.number().int().min(0).max(32767),
+    buttons: z.number().int().min(0).max(7),
+  })
+  .strict();
+export const emulatorKeyRequestSchema = z
+  .object({
+    avdName: avdNameField,
+    eventType: z.enum(['keydown', 'keyup', 'keypress']),
+    key: z.string().min(1).max(32).optional(),
+    text: z.string().min(1).max(1024).optional(),
+  })
+  .strict()
+  .refine((value) => Boolean(value.key) !== Boolean(value.text), 'provide exactly one of key or text');
+export const emulatorButtonRequestSchema = z
+  .object({
+    avdName: avdNameField,
+    deviceId: deviceIdField.optional(),
+    button: z.enum(['back', 'home', 'overview', 'power', 'volumeUp', 'volumeDown']),
+  })
+  .strict();
+export const emulatorRotateRequestSchema = z
+  .object({ deviceId: deviceIdField.optional() })
+  .strict();
+export const emulatorPasteRequestSchema = z.object({ avdName: avdNameField }).strict();
+export const emulatorScreenshotRequestSchema = z.object({ avdName: avdNameField }).strict();
+const snapshotNameField = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, 'invalid snapshot name');
+export const emulatorSnapshotRequestSchema = z
+  .object({ deviceId: deviceIdField.optional(), name: snapshotNameField })
+  .strict();
+export const geoFixRequestSchema = z
+  .object({
+    deviceId: deviceIdField.optional(),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
   })
   .strict();
 

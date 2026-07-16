@@ -53,8 +53,20 @@ import type {
   ApkUninstallRequest,
   AvdBootStatus,
   AvdBootStatusRequest,
+  EmulatorButtonRequest,
+  EmulatorDisplayEvent,
+  EmulatorDisplayStartRequest,
+  EmulatorDisplayStopRequest,
+  EmulatorKeyRequest,
+  EmulatorMouseRequest,
+  EmulatorPasteRequest,
+  EmulatorRotateRequest,
+  EmulatorScreenshotRequest,
+  EmulatorSnapshotListResult,
+  EmulatorSnapshotRequest,
   FilePickerResult,
   FlutterRunRequest,
+  GeoFixRequest,
   LogcatEvent,
   LogcatPauseRequest,
   LogcatSnapshot,
@@ -242,9 +254,34 @@ export const bureauApi = Object.freeze({
       invoke<OkResult>(IPC_CHANNELS.ANDROID_REACT_NATIVE_RELOAD, input),
     openReactNativeDevMenu: (input: ReactNativeDeviceRequest) =>
       invoke<OkResult>(IPC_CHANNELS.ANDROID_REACT_NATIVE_DEV_MENU, input),
+    startDisplay: (input: EmulatorDisplayStartRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_START, input),
+    stopDisplay: (input: EmulatorDisplayStopRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_STOP, input),
+    sendDisplayMouse: (input: EmulatorMouseRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_MOUSE, input),
+    sendDisplayKey: (input: EmulatorKeyRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_KEY, input),
+    pressDisplayButton: (input: EmulatorButtonRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_BUTTON, input),
+    rotateDevice: (input: EmulatorRotateRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_ROTATE, input),
+    pasteToDevice: (input: EmulatorPasteRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_DISPLAY_PASTE, input),
+    saveScreenshot: (input: EmulatorScreenshotRequest) =>
+      invoke<FilePickerResult>(IPC_CHANNELS.ANDROID_DISPLAY_SCREENSHOT, input),
+    listSnapshots: (input: AndroidDeviceRequest) =>
+      invoke<EmulatorSnapshotListResult>(IPC_CHANNELS.ANDROID_SNAPSHOT_LIST, input),
+    saveSnapshot: (input: EmulatorSnapshotRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_SNAPSHOT_SAVE, input),
+    loadSnapshot: (input: EmulatorSnapshotRequest) =>
+      invoke<OkResult>(IPC_CHANNELS.ANDROID_SNAPSHOT_LOAD, input),
+    sendGeoFix: (input: GeoFixRequest) => invoke<OkResult>(IPC_CHANNELS.ANDROID_GEO_FIX, input),
     pathForFile: (file: File) => webUtils.getPathForFile(file),
     onLogcat: (listener: (event: LogcatEvent) => void) =>
       subscribe<LogcatEvent>(IPC_CHANNELS.ANDROID_LOGCAT_EVENT, listener),
+    onDisplay: (listener: (event: EmulatorDisplayEvent) => void) =>
+      subscribe<EmulatorDisplayEvent>(IPC_CHANNELS.ANDROID_DISPLAY_EVENT, listener),
   },
   toolchains: {
     get: (input: ProjectIdRequest) => invoke<ProjectToolchains>(IPC_CHANNELS.TOOLCHAINS_GET, input),

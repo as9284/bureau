@@ -3,7 +3,11 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  min-width: 0;
   background: var(--color-surface-base);
+  /* See GitWorkbench.css: the tab is inset by the project rail and scaled by uiScale, so
+     its own width — not the viewport's — is what the fixed-width panels below have to fit. */
+  container: android-panel / inline-size;
 }
 
 .android-header {
@@ -95,7 +99,31 @@
   flex: 1;
   min-height: 0;
   display: flex;
+  flex-direction: row;
+}
+
+.android-dashboard__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
+  /* The emulator panel sits to the right; never let squeezed content (for
+     example the logcat filter grid) paint underneath it. */
+  overflow: hidden;
+}
+
+.android-dashboard__display-panel {
+  height: 100%;
+  flex: 0 0 auto;
+  border-left: 1px solid var(--color-border-subtle);
+}
+
+.android-dashboard__display-panel > .emulator-pane {
+  width: 100%;
+  height: 100%;
+  border-right: 0;
+  border-bottom: 0;
 }
 
 .android-dashboard__top-panel {
@@ -135,6 +163,10 @@
   flex: 1 1 0;
   border-right: 0;
   border-bottom: 0;
+  /* The filter bar adapts to the pane's own width (it competes with the
+     emulator panel for space), not the viewport. Named so that adding an outer
+     container (.android-panel) cannot silently retarget the query below. */
+  container: logcat-pane / inline-size;
 }
 .android-pane__header {
   height: 32px;
@@ -353,6 +385,12 @@
   padding: 6px 8px;
   border-bottom: 1px solid var(--color-border-subtle);
 }
+/* Narrow pane: fields on one row, action buttons wrap onto the next. */
+@container logcat-pane (max-width: 720px) {
+  .logcat-filterbar {
+    grid-template-columns: minmax(70px, 1fr) 62px minmax(90px, 1fr) minmax(90px, 1fr);
+  }
+}
 /* Wrapper keeps the "Jump to latest" button pinned while the console scrolls inside it. */
 .logcat-view {
   position: relative;
@@ -453,12 +491,175 @@
   }
 }
 
-@media (max-width: 900px) {
+/* ---------- Embedded emulator display ---------- */
+
+.emulator-pane {
+  background: var(--color-surface-sunken);
+}
+.emulator-pane .android-pane__header span {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Immersive: the pane becomes a fixed overlay above the app chrome; only the
+   emulator and its controls remain visible. Escape or the toggle exits. */
+.emulator-pane--immersive {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-immersive);
+  border: 0;
+  background: var(--color-surface-canvas);
+}
+.emulator-pane--immersive .emulator-toolbar {
+  justify-content: center;
+}
+.emulator-pane--immersive .emulator-stage {
+  padding: var(--space-4);
+}
+.emulator-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.emulator-toolbar__divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--space-1);
+  background: var(--color-border-subtle);
+}
+.emulator-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: var(--space-2);
+}
+.emulator-stage__canvas {
+  display: none;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-canvas);
+}
+.emulator-stage__canvas[data-visible] {
+  display: block;
+}
+.emulator-stage__canvas:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.emulator-stage__connecting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+}
+.emulator-stage__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-primary);
+  animation: emulator-pulse 1.2s ease-in-out infinite;
+}
+@keyframes emulator-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emulator-stage__pulse {
+    animation: none;
+  }
+}
+.emulator-stage__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 280px;
+  text-align: center;
+}
+.emulator-stage__error strong {
+  font-size: var(--font-size-body);
+  color: var(--color-text-primary);
+}
+.emulator-stage__error span {
+  font-size: var(--font-size-supporting);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.emulator-snapshots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.emulator-snapshots__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+}
+.emulator-snapshots__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.emulator-snapshots__list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-supporting);
+}
+.emulator-snapshots__save {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+@container android-panel (max-width: 760px) {
   .android-tool-status {
     display: none;
   }
   .android-dashboard {
     overflow: auto;
+    flex-direction: column;
+  }
+  .android-dashboard__main {
+    flex: 0 0 auto;
+  }
+  .android-dashboard__display-panel {
+    width: 100%;
+    height: auto;
+    flex: 0 0 auto;
+    border-left: 0;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+  .emulator-stage {
+    min-height: 420px;
   }
   .android-dashboard__top-panel,
   .android-dashboard__avd-panel {

@@ -21,6 +21,7 @@ import { EmptyState } from '@renderer/components/EmptyState';
 import { useActiveRepositoryContextMenuItems } from '@renderer/lib/gitContextMenuItems';
 import {
   clampPaneWidths,
+  clampListPaneWidth,
   DEFAULT_PANE_WIDTHS,
   MIN_FILES,
   MIN_COMMIT,
@@ -28,6 +29,9 @@ import {
 import './GitWorkbench.css';
 
 type Props = { projectId: string };
+
+/** Only used for the first render, before the ResizeObserver has measured the real container. */
+const FALLBACK_CONTAINER_WIDTH = 1200;
 
 const MODES = [
   { id: 'changes' as const, label: 'Changes' },
@@ -63,20 +67,34 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
   const settings = useGitStore((s) => s.settings);
   const updateSettings = useGitStore((s) => s.updateSettings);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [paneWidths, setPaneWidths] = useState(() =>
-    clampPaneWidths(settings?.layout.paneWidths ?? DEFAULT_PANE_WIDTHS, 1200)
+  /* `preferredWidths` is what the user asked for; `paneWidths` is what actually fits
+     right now. Keeping them separate means a narrow container clamps the panes instead
+     of overflowing, and widening it again restores the width the user chose rather than
+     leaving them stuck at whatever the narrowest moment allowed. */
+  const [preferredWidths, setPreferredWidths] = useState(
+    () => settings?.layout.paneWidths ?? DEFAULT_PANE_WIDTHS
   );
+  const [containerWidth, setContainerWidth] = useState(FALLBACK_CONTAINER_WIDTH);
+  const paneWidths = clampPaneWidths(preferredWidths, containerWidth);
   const paneWidthsRef = useRef(paneWidths);
   paneWidthsRef.current = paneWidths;
 
   useEffect(() => {
-    if (settings?.layout.paneWidths) {
-      setPaneWidths(
-        clampPaneWidths(settings.layout.paneWidths, containerRef.current?.clientWidth ?? 1200)
-      );
-    }
+    if (settings?.layout.paneWidths) setPreferredWidths(settings.layout.paneWidths);
   }, [settings?.layout.paneWidths]);
+
+  /* The panes container is a per-mode element, so this is a callback ref: switching
+     modes mounts a new node that has to be re-observed. Measuring the container rather
+     than the window is what keeps this honest under uiScale's CSS `zoom`, where the
+     container's CSS-pixel width is the window's divided by the scale factor. */
+  const observeContainer = useCallback((node: HTMLDivElement | null) => {
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const measure = (): void => setContainerWidth(node.clientWidth || FALLBACK_CONTAINER_WIDTH);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     refreshRepo(projectId).catch(() => undefined);
@@ -117,23 +135,28 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
     loadTags,
   ]);
 
+  /* Dragging starts from the width on screen, not the preferred width, so a pane that is
+     currently clamped narrower than the preference doesn't jump on the first pointer move. */
   const resizeFiles = useCallback((delta: number) => {
-    setPaneWidths((w) =>
+    setPreferredWidths(
       clampPaneWidths(
-        { ...w, files: Math.max(MIN_FILES, w.files + delta) },
-        containerRef.current?.clientWidth ?? 1200
+        { ...paneWidthsRef.current, files: Math.max(MIN_FILES, paneWidthsRef.current.files + delta) },
+        containerWidth
       )
     );
-  }, []);
+  }, [containerWidth]);
 
   const resizeCommit = useCallback((delta: number) => {
-    setPaneWidths((w) =>
+    setPreferredWidths(
       clampPaneWidths(
-        { ...w, commit: Math.max(MIN_COMMIT, w.commit - delta) },
-        containerRef.current?.clientWidth ?? 1200
+        {
+          ...paneWidthsRef.current,
+          commit: Math.max(MIN_COMMIT, paneWidthsRef.current.commit - delta),
+        },
+        containerWidth
       )
     );
-  }, []);
+  }, [containerWidth]);
 
   const persistPaneWidths = useCallback(() => {
     updateSettings({ layout: { paneWidths: paneWidthsRef.current } });
@@ -235,7 +258,7 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
       </nav>
 
       {repoPanel === 'changes' ? (
-        <div className="repo-workbench__panes repo-workbench__panes--changes" ref={containerRef}>
+        <div className="repo-workbench__panes repo-workbench__panes--changes" ref={observeContainer}>
           <div className="repo-workbench__pane" style={{ width: paneWidths.files, flexShrink: 0 }}>
             <ChangesPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />
           </div>
@@ -264,10 +287,13 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
         <BranchesPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />
       ) : null}
       {repoPanel === 'stash' ? (
-        <div className="repo-workbench__panes" ref={containerRef}>
+        <div className="repo-workbench__panes" ref={observeContainer}>
           <div
             className="repo-workbench__pane"
-            style={{ width: Math.max(paneWidths.files, 360), flexShrink: 0 }}
+            style={{
+              width: clampListPaneWidth(Math.max(paneWidths.files, 360), containerWidth),
+              flexShrink: 0,
+            }}
           >
             <StashPanel projectId={projectId} snapshot={snap} readOnly={readOnly} />
           </div>
@@ -283,10 +309,13 @@ export function GitWorkbench({ projectId }: Props): ReactElement {
         </div>
       ) : null}
       {repoPanel === 'history' ? (
-        <div className="repo-workbench__panes" ref={containerRef}>
+        <div className="repo-workbench__panes" ref={observeContainer}>
           <div
             className="repo-workbench__pane"
-            style={{ width: Math.max(paneWidths.files, 300), flexShrink: 0 }}
+            style={{
+              width: clampListPaneWidth(Math.max(paneWidths.files, 300), containerWidth),
+              flexShrink: 0,
+            }}
           >
             <HistoryPanel projectId={projectId} readOnly={readOnly} />
           </div>

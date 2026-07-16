@@ -5,6 +5,8 @@
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  /* Named so the SyncBar in the header can query the same width the panes below it get. */
+  container: workbench / inline-size;
 }
 
 .repo-workbench__header {
@@ -165,7 +167,12 @@
   min-width: 280px;
 }
 
-@media (max-width: 1100px) {
+/* Container queries, not media queries: the workbench is inset by the project rail and is
+   scaled by the uiScale `zoom`, so the viewport width is not the width these panes get.
+   Measured against the viewport, the stacked layout arrived late (or never, when zoomed in)
+   and the fixed-width panes overflowed instead. Breakpoints are the old viewport values
+   less the rail. */
+@container workbench (max-width: 960px) {
   .repo-workbench__panes {
     flex-direction: column;
   }
@@ -195,7 +202,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@container workbench (max-width: 760px) {
   .repo-workbench__header {
     flex-wrap: wrap;
     align-items: flex-start;
@@ -215,7 +222,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@container workbench (max-width: 620px) {
   .repo-workbench__open-tools {
     padding-left: 0;
     border-left: none;

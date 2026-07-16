@@ -1,4 +1,9 @@
-import type { AndroidDevice, LogcatLine, LogcatPriority } from '@shared/contracts/android';
+import type {
+  AndroidDevice,
+  EmulatorSnapshot,
+  LogcatLine,
+  LogcatPriority,
+} from '@shared/contracts/android';
 
 export function parseAvdList(output: string): string[] {
   return [
@@ -130,6 +135,25 @@ export function parsePackageList(output: string): string[] {
     .map((line) => line.trim().replace(/^package:/, ''))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
+}
+
+// `adb emu avd snapshot list` prints a qemu table terminated by OK/KO:
+//   List of snapshots present on all disks:
+//    ID        TAG                 VM SIZE                DATE       VM CLOCK
+//   --        default_boot         48M 2018-10-22 10:52:41   00:00:51.242
+//   OK
+// A device without snapshots prints "There is no snapshot available." instead.
+export function parseSnapshotList(output: string): EmulatorSnapshot[] {
+  const snapshots: EmulatorSnapshot[] = [];
+  for (const raw of output.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || /^(OK|KO)\b/.test(line)) continue;
+    if (/^List of snapshots|^There is no snapshot|^ID\s+TAG/i.test(line)) continue;
+    const match = line.match(/^(\S+)\s+(\S+)\s+(\S+)/);
+    if (!match) continue;
+    snapshots.push({ name: match[2], sizeLabel: match[3] });
+  }
+  return snapshots;
 }
 
 export function parsePidPackageMap(output: string): Map<number, string> {

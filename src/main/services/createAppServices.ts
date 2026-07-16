@@ -1,4 +1,4 @@
-import { app, shell } from 'electron';
+import { app, clipboard, shell } from 'electron';
 import { createSettingsStoreFromPath, createSettingsStore } from '../settings/SettingsStore';
 import { createSettingsApplicationService } from '../settings/SettingsApplicationService';
 import type { ExecutablePickerAdapter } from '../settings/SettingsApplicationService';
@@ -28,6 +28,7 @@ import { createAdbService } from '../android/AdbService';
 import { createAvdService } from '../android/AvdService';
 import { createLogcatStreamer } from '../android/LogcatStreamer';
 import { createScrcpyLauncher } from '../android/ScrcpyLauncher';
+import { createEmulatorDisplayService } from '../android/EmulatorDisplayService';
 import { createAndroidApplicationService } from '../android/AndroidApplicationService';
 import { createReactNativeService } from '../android/ReactNativeService';
 import { createToolchainEnvResolver } from '../toolchains/toolchainEnvResolver';
@@ -331,6 +332,9 @@ export async function createAppServices(
   const avds = createAvdService(sdkResolver, executableAdapter, adb);
   const logcat = createLogcatStreamer(adb, executableAdapter);
   const scrcpy = createScrcpyLauncher(sdkResolver, executableAdapter, adb);
+  const emulatorDisplay = createEmulatorDisplayService({
+    resolveGrpcPort: (avdName) => avds.getGrpcPort(avdName),
+  });
   const reactNative = createReactNativeService({ catalogue, processes, adb, settingsStore });
   const android = createAndroidApplicationService({
     resolver: sdkResolver,
@@ -338,10 +342,12 @@ export async function createAppServices(
     adb,
     logcat,
     scrcpy,
+    display: emulatorDisplay,
     settingsStore,
     processes,
     dialog: dialogAdapter,
     reactNative,
+    readHostClipboard: () => clipboard.readText(),
   });
   const capabilities = createCapabilityService(
     gitResolver,

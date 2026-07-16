@@ -129,6 +129,7 @@ beforeEach(() => {
         defaultLogcatFilter: '',
         reactNativeMetroPort: 8081,
         reactNativeAutoReverse: true,
+        emulatorDisplayMode: 'embedded' as const,
       },
       toolchains: {},
   git: {},

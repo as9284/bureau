@@ -6,8 +6,16 @@ import type {
   ApkLaunchRequest,
   ApkUninstallRequest,
   AvdBootStatus,
+  EmulatorButtonRequest,
+  EmulatorDisplayStopRequest,
+  EmulatorPasteRequest,
+  EmulatorRotateRequest,
+  EmulatorScreenshotRequest,
+  EmulatorSnapshotListResult,
+  EmulatorSnapshotRequest,
   FilePickerResult,
   FlutterRunRequest,
+  GeoFixRequest,
   LogcatPauseRequest,
   LogcatStartRequest,
   ScrcpyLaunchRequest,
@@ -22,10 +30,12 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import type { NativeDialogAdapter } from '../system/dialogAdapter';
 import type { AdbService } from './AdbService';
 import type { AvdService } from './AvdService';
+import type { EmulatorDisplayService } from './EmulatorDisplayService';
 import type { LogcatStreamer } from './LogcatStreamer';
 import type { ScrcpyLauncher } from './ScrcpyLauncher';
 import type { SdkResolver } from './SdkResolver';
 import type { ReactNativeService } from './ReactNativeService';
+import { parseSnapshotList } from './parsers';
 import { toBureauError } from '../ipc/errors';
 
 export type AndroidApplicationService = ReturnType<typeof createAndroidApplicationService>;
@@ -36,13 +46,27 @@ export function createAndroidApplicationService(params: {
   adb: AdbService;
   logcat: LogcatStreamer;
   scrcpy: ScrcpyLauncher;
+  display: EmulatorDisplayService;
   settingsStore: SettingsStore;
   processes: ProcessApplicationService;
   dialog: NativeDialogAdapter;
   reactNative: ReactNativeService;
+  /** Injected so tests can avoid the electron clipboard. */
+  readHostClipboard: () => string;
 }) {
-  const { resolver, avds, adb, logcat, scrcpy, settingsStore, processes, dialog, reactNative } =
-    params;
+  const {
+    resolver,
+    avds,
+    adb,
+    logcat,
+    scrcpy,
+    display,
+    settingsStore,
+    processes,
+    dialog,
+    reactNative,
+    readHostClipboard,
+  } = params;
 
   async function getOverview(): Promise<AndroidOverview> {
     const sdk = await resolver.resolve();
@@ -195,9 +219,158 @@ export function createAndroidApplicationService(params: {
     }
   }
 
+  const BUTTON_KEYS: Record<string, string> = {
+    back: 'GoBack',
+    home: 'GoHome',
+    overview: 'AppSwitch',
+    power: 'Power',
+  };
+  const VOLUME_KEYCODES: Record<string, string> = { volumeUp: '24', volumeDown: '25' };
+
+  async function pressDisplayButton(input: EmulatorButtonRequest): Promise<OkResult> {
+    const key = BUTTON_KEYS[input.button];
+    if (key) return display.pressKey(input.avdName, key);
+    try {
+      // Volume is not a W3C key value the emulator understands — inject via adb instead.
+      const device = await adb.selectDevice(input.deviceId);
+      const result = await adb.run(
+        ['-s', device.id, 'shell', 'input', 'keyevent', VOLUME_KEYCODES[input.button]],
+        10_000
+      );
+      if (result.code !== 0) throw new Error(result.stderr || 'The key event was rejected.');
+      return { ok: true };
+    } catch (error) {
+      return commandFailure(error, 'android.display.button');
+    }
+  }
+
+  // The qemu console echoes OK/KO per command; adb exits 0 either way, so KO is the
+  // real failure signal for `adb emu …`.
+  async function runEmuConsole(
+    deviceId: string | undefined,
+    command: string[],
+    operation: string,
+    timeoutMs = 15_000
+  ): Promise<{ deviceId: string; stdout: string }> {
+    const device = await adb.selectDevice(deviceId);
+    const result = await adb.run(['-s', device.id, 'emu', ...command], timeoutMs);
+    if (result.code !== 0 || /^KO\b/m.test(result.stdout)) {
+      const detail = result.stdout.match(/^KO:?\s*(.*)$/m)?.[1];
+      throw toBureauError({
+        code: 'COMMAND_FAILED',
+        message: detail || result.stderr || 'The emulator console rejected the command.',
+        operation,
+        subjectId: device.id,
+        retryable: true,
+      });
+    }
+    return { deviceId: device.id, stdout: result.stdout };
+  }
+
+  async function rotateDevice(input: EmulatorRotateRequest): Promise<OkResult> {
+    try {
+      await runEmuConsole(input.deviceId, ['rotate'], 'android.display.rotate');
+      return { ok: true };
+    } catch (error) {
+      return commandFailure(error, 'android.display.rotate');
+    }
+  }
+
+  async function pasteToDevice(input: EmulatorPasteRequest): Promise<OkResult> {
+    try {
+      const text = readHostClipboard();
+      if (!text) {
+        return {
+          ok: false,
+          error: toBureauError({
+            code: 'INVALID_REQUEST',
+            message: 'The clipboard does not contain text.',
+            operation: 'android.display.paste',
+          }),
+        };
+      }
+      await display.setClipboard(input.avdName, text);
+      // Short single-line text is typed directly so it lands in the focused field;
+      // longer or multi-line content stays on the device clipboard for in-app paste.
+      if (text.length <= 256 && !/[\r\n]/.test(text)) await display.typeText(input.avdName, text);
+      return { ok: true };
+    } catch (error) {
+      return commandFailure(error, 'android.display.paste');
+    }
+  }
+
+  async function saveScreenshot(input: EmulatorScreenshotRequest): Promise<FilePickerResult> {
+    const png = await display.screenshotPng(input.avdName);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const target = await dialog.showSaveFileDialog({
+      title: 'Save emulator screenshot',
+      defaultPath: `${input.avdName}-${stamp}.png`,
+      filters: [{ name: 'PNG image', extensions: ['png'] }],
+    });
+    if (!target) return { path: null };
+    await writeFile(target, png);
+    return { path: target };
+  }
+
+  async function listSnapshots(deviceId?: string): Promise<EmulatorSnapshotListResult> {
+    const result = await runEmuConsole(
+      deviceId,
+      ['avd', 'snapshot', 'list'],
+      'android.snapshot.list'
+    );
+    return { deviceId: result.deviceId, snapshots: parseSnapshotList(result.stdout) };
+  }
+
+  async function snapshotAction(
+    action: 'save' | 'load',
+    input: EmulatorSnapshotRequest
+  ): Promise<OkResult> {
+    try {
+      // Saving/loading a snapshot pauses the VM; allow it a generous window.
+      await runEmuConsole(
+        input.deviceId,
+        ['avd', 'snapshot', action, input.name],
+        `android.snapshot.${action}`,
+        120_000
+      );
+      return { ok: true };
+    } catch (error) {
+      return commandFailure(error, `android.snapshot.${action}`);
+    }
+  }
+
+  async function sendGeoFix(input: GeoFixRequest): Promise<OkResult> {
+    try {
+      // qemu expects `geo fix <longitude> <latitude>`.
+      await runEmuConsole(
+        input.deviceId,
+        ['geo', 'fix', String(input.longitude), String(input.latitude)],
+        'android.geo.fix'
+      );
+      return { ok: true };
+    } catch (error) {
+      return commandFailure(error, 'android.geo.fix');
+    }
+  }
+
+  function commandFailure(error: unknown, operation: string): OkResult {
+    return {
+      ok: false,
+      error: isDomainError(error)
+        ? error
+        : toBureauError({
+            code: 'COMMAND_FAILED',
+            message: error instanceof Error ? error.message : 'The emulator command failed.',
+            operation,
+            retryable: true,
+          }),
+    };
+  }
+
   async function dispose(): Promise<void> {
     await logcat.stop();
     scrcpy.dispose();
+    display.dispose();
     await avds.dispose();
   }
 
@@ -208,7 +381,15 @@ export function createAndroidApplicationService(params: {
     restartAdb,
     chooseApk,
     chooseRecordingPath,
-    startAvd: (input: StartAvdRequest) => avds.start(input),
+    startAvd: (input: StartAvdRequest) =>
+      avds.start({
+        ...input,
+        options: {
+          ...input.options,
+          displayMode:
+            input.options.displayMode ?? settingsStore.get().android.emulatorDisplayMode,
+        },
+      }),
     stopAvd: (input: StopAvdRequest) => avds.stop(input),
     getBootStatus: async (deviceId: string): Promise<AvdBootStatus> => ({
       deviceId,
@@ -238,7 +419,20 @@ export function createAndroidApplicationService(params: {
     reverseReactNativePort: (input: ReactNativeDeviceRequest) => reactNative.reversePort(input),
     reloadReactNative: (input: ReactNativeDeviceRequest) => reactNative.reload(input),
     openReactNativeDevMenu: (input: ReactNativeDeviceRequest) => reactNative.openDevMenu(input),
+    startDisplay: display.start,
+    stopDisplay: (input: EmulatorDisplayStopRequest) => display.stop(input.avdName),
+    sendDisplayMouse: display.sendMouse,
+    sendDisplayKey: display.sendKey,
+    pressDisplayButton,
+    rotateDevice,
+    pasteToDevice,
+    saveScreenshot,
+    listSnapshots,
+    saveSnapshot: (input: EmulatorSnapshotRequest) => snapshotAction('save', input),
+    loadSnapshot: (input: EmulatorSnapshotRequest) => snapshotAction('load', input),
+    sendGeoFix,
     onLogcat: logcat.onEvent,
+    onDisplay: display.onEvent,
     dispose,
   };
 }

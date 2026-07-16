@@ -756,7 +756,8 @@
   position: fixed;
   right: 16px;
   bottom: calc(var(--size-statusbar) + 16px);
-  z-index: var(--z-dialog);
+  /* Toasts stay visible above immersive surfaces (fullscreen emulator). */
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   gap: 8px;

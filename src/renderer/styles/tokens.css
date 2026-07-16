@@ -148,6 +148,9 @@
   --z-command-palette: 400;
   --z-dialog: 500;
   --z-app-chrome: 550;
+  /* Immersive surfaces (fullscreen emulator) cover the app chrome/title bar;
+     Escape and an explicit exit button restore the normal layout. */
+  --z-immersive: 560;
   /* Transient menus/popovers portalled to <body> sit above dialogs so they are
      never occluded by a modal scrim (see Dropdown/Select/Menu). */
   --z-popover: 600;

@@ -127,7 +127,10 @@ uses `--font-family-mono` with `font-variant-numeric: tabular-nums`.
 
 --z-base:0; --z-raised:10; --z-dropdown:100; --z-tooltip:200; --z-statusbar:300;
 --z-sidebar-resize:350; --z-command-palette:400; --z-dialog:500;
---z-preview-view: 250;  /* NEW: embedded WebContentsView sits above content, below overlays */
+--z-preview-view: 250;  /* embedded WebContentsView sits above content, below overlays */
+--z-app-chrome: 550;    /* title bar / shell chrome */
+--z-immersive: 560;     /* fullscreen emulator: covers chrome; Escape + button exit */
+--z-popover: 600;       /* menus portalled to <body>, never occluded by a modal scrim */
 ```
 
 ### 2.10 Density

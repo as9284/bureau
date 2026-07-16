@@ -162,6 +162,7 @@ export const settingsFileSchema = z.object({
     defaultLogcatFilter: z.string().max(256),
     reactNativeMetroPort: z.number().int().min(1024).max(65535),
     reactNativeAutoReverse: z.boolean(),
+    emulatorDisplayMode: z.enum(['embedded', 'window']),
   }),
   toolchains: z.object({
     preferredNodeManager: z.enum(['fnm', 'volta', 'nvm', 'system']).optional(),

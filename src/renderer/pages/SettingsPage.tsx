@@ -612,6 +612,25 @@ function AndroidSection() {
       </div>
       <div className="settings-row">
         <div>
+          <div className="settings-row__label">Emulator display</div>
+          <div className="settings-row__desc">
+            Where newly started virtual devices render: embedded in the Android tab or in the
+            emulator&apos;s own window.
+          </div>
+        </div>
+        <Dropdown
+          className="settings-dropdown"
+          label="Emulator display"
+          value={settings.android.emulatorDisplayMode}
+          options={[
+            { value: 'embedded' as const, label: 'Embedded pane' },
+            { value: 'window' as const, label: 'Separate window' },
+          ]}
+          onChange={(mode) => void updateSettings({ android: { emulatorDisplayMode: mode } })}
+        />
+      </div>
+      <div className="settings-row">
+        <div>
           <div className="settings-row__label">Default logcat priority</div>
           <div className="settings-row__desc">Minimum severity selected when opening Android.</div>
         </div>

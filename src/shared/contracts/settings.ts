@@ -225,6 +225,8 @@ export type AndroidSettings = {
   defaultLogcatFilter: string;
   reactNativeMetroPort: number;
   reactNativeAutoReverse: boolean;
+  /** Where newly started AVDs render: Bureau's embedded pane or the emulator's own window. */
+  emulatorDisplayMode: 'embedded' | 'window';
 };
 
 export type ToolchainsSettings = {
@@ -394,6 +396,7 @@ export const DEFAULT_ANDROID_SETTINGS: AndroidSettings = {
   defaultLogcatFilter: '',
   reactNativeMetroPort: 8081,
   reactNativeAutoReverse: true,
+  emulatorDisplayMode: 'embedded',
 };
 
 export const DEFAULT_TOOLCHAINS_SETTINGS: ToolchainsSettings = {};

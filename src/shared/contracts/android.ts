@@ -36,6 +36,8 @@ export type AndroidAvd = {
   serial?: string;
   booted: boolean;
   error?: string;
+  /** gRPC control port when the emulator exposes one (embedded display available). */
+  grpcPort?: number | null;
 };
 
 export type AndroidOverview = {
@@ -45,6 +47,7 @@ export type AndroidOverview = {
 };
 
 export type EmulatorGpuMode = 'auto' | 'host' | 'swiftshader_indirect' | 'angle_indirect' | 'off';
+export type EmulatorDisplayMode = 'embedded' | 'window';
 export type StartAvdRequest = {
   name: string;
   options: {
@@ -53,6 +56,8 @@ export type StartAvdRequest = {
     gpu: EmulatorGpuMode;
     dnsServer?: string;
     writableSystem: boolean;
+    /** Omitted → resolved from settings (android.emulatorDisplayMode). */
+    displayMode?: EmulatorDisplayMode;
   };
   confirmedWipe: boolean;
 };
@@ -108,6 +113,51 @@ export type ScrcpyLaunchRequest = AndroidDeviceRequest & {
 
 export type FlutterRunRequest = { projectId: string; deviceId?: string };
 
+// ---------- Embedded emulator display ----------
+
+export type EmulatorDisplayState = 'connecting' | 'streaming' | 'stopped' | 'error';
+/** Number of 90° content rotations (matches the emulator's SkinRotation enum). */
+export type EmulatorDisplayRotation = 0 | 1 | 2 | 3;
+export type EmulatorDisplayFrame = {
+  seq: number;
+  width: number;
+  height: number;
+  rotation: EmulatorDisplayRotation;
+  /** rgba8888 is raw pixels (width*height*4 bytes) — cheap for the emulator to
+   *  produce, drawn via putImageData; png is a compressed still (screenshots). */
+  format: 'png' | 'rgba8888';
+  data: Uint8Array;
+};
+export type EmulatorDisplayEvent = {
+  avdName: string;
+  state: EmulatorDisplayState;
+  /** Native (unrotated) device screen size, once known. */
+  deviceWidth: number | null;
+  deviceHeight: number | null;
+  error?: string;
+  frame?: EmulatorDisplayFrame;
+};
+export type EmulatorDisplayStartRequest = { avdName: string; width: number; height: number };
+export type EmulatorDisplayStopRequest = { avdName: string };
+/** x/y are device-frame coordinates (renderer maps from canvas via rotation transform). */
+export type EmulatorMouseRequest = { avdName: string; x: number; y: number; buttons: number };
+export type EmulatorKeyEventType = 'keydown' | 'keyup' | 'keypress';
+export type EmulatorKeyRequest = {
+  avdName: string;
+  eventType: EmulatorKeyEventType;
+  key?: string;
+  text?: string;
+};
+export type EmulatorButton = 'back' | 'home' | 'overview' | 'power' | 'volumeUp' | 'volumeDown';
+export type EmulatorButtonRequest = { avdName: string; deviceId?: string; button: EmulatorButton };
+export type EmulatorRotateRequest = { deviceId?: string };
+export type EmulatorPasteRequest = { avdName: string };
+export type EmulatorScreenshotRequest = { avdName: string };
+export type EmulatorSnapshot = { name: string; sizeLabel?: string };
+export type EmulatorSnapshotListResult = { deviceId: string; snapshots: EmulatorSnapshot[] };
+export type EmulatorSnapshotRequest = { deviceId?: string; name: string };
+export type GeoFixRequest = { deviceId?: string; latitude: number; longitude: number };
+
 export type ReactNativeProjectRequest = { projectId: string };
 export type ReactNativeDeviceRequest = ReactNativeProjectRequest & {
   deviceId?: string;
@@ -161,6 +211,19 @@ export type AndroidApi = {
   reverseReactNativePort(input: ReactNativeDeviceRequest): Promise<OkResult>;
   reloadReactNative(input: ReactNativeDeviceRequest): Promise<OkResult>;
   openReactNativeDevMenu(input: ReactNativeDeviceRequest): Promise<OkResult>;
+  startDisplay(input: EmulatorDisplayStartRequest): Promise<OkResult>;
+  stopDisplay(input: EmulatorDisplayStopRequest): Promise<OkResult>;
+  sendDisplayMouse(input: EmulatorMouseRequest): Promise<OkResult>;
+  sendDisplayKey(input: EmulatorKeyRequest): Promise<OkResult>;
+  pressDisplayButton(input: EmulatorButtonRequest): Promise<OkResult>;
+  rotateDevice(input: EmulatorRotateRequest): Promise<OkResult>;
+  pasteToDevice(input: EmulatorPasteRequest): Promise<OkResult>;
+  saveScreenshot(input: EmulatorScreenshotRequest): Promise<FilePickerResult>;
+  listSnapshots(input: AndroidDeviceRequest): Promise<EmulatorSnapshotListResult>;
+  saveSnapshot(input: EmulatorSnapshotRequest): Promise<OkResult>;
+  loadSnapshot(input: EmulatorSnapshotRequest): Promise<OkResult>;
+  sendGeoFix(input: GeoFixRequest): Promise<OkResult>;
   pathForFile(file: File): string;
   onLogcat(listener: (event: LogcatEvent) => void): () => void;
+  onDisplay(listener: (event: EmulatorDisplayEvent) => void): () => void;
 };

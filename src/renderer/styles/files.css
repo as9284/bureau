@@ -110,6 +110,9 @@
   overflow: hidden;
   background: var(--color-surface-canvas);
   color: var(--color-text-primary);
+  /* See GitWorkbench.css: the tab is inset by the project rail and scaled by uiScale, so
+     its own width — not the viewport's — is what its toolbar and sidebar have to fit. */
+  container: files-tab / inline-size;
 }
 
 .files-toolbar {
@@ -559,7 +562,7 @@
   .files-document--split .files-document__editor { border-right: 0; }
 }
 
-@media (max-width: 760px) {
+@container files-tab (max-width: 620px) {
   .files-toolbar__divider,
   .files-toolbar__modes { display: none; }
   .files-sidebar { max-width: 45%; }

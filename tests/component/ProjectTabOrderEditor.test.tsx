@@ -27,6 +27,7 @@ const SETTINGS: PublicSettings = {
     defaultLogcatFilter: '',
     reactNativeMetroPort: 8081,
     reactNativeAutoReverse: true,
+    emulatorDisplayMode: 'embedded' as const,
   },
   toolchains: {},
   processes: { logBufferLines: 5000, maxCrashRestarts: 5 },

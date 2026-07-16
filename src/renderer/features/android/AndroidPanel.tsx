@@ -25,6 +25,7 @@ import { TextField } from '../../components/TextField';
 import { useModalDismiss } from '../../lib/useModalDismiss';
 import { useAppStore } from '../../store/appStore';
 import { errorHeading, toError } from '../../lib/error';
+import { EmulatorDisplay } from './EmulatorDisplay';
 
 const EMPTY_FILTER: LogcatFilter = { priority: 'V', tag: '', packageName: '', regex: '' };
 const PRIORITIES: LogcatPriority[] = ['V', 'D', 'I', 'W', 'E', 'F', 'S'];
@@ -44,6 +45,7 @@ export function AndroidPanel({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState(() => workspace?.selectedDevice ?? '');
   const [startAvd, setStartAvd] = useState<AndroidAvd | null>(null);
+  const [popOutAvd, setPopOutAvd] = useState<AndroidAvd | null>(null);
   const [apkPath, setApkPath] = useState(() => workspace?.apkPath ?? '');
   const [packageName, setPackageName] = useState(() => workspace?.packageName ?? '');
   const [activity, setActivity] = useState(() => workspace?.activity ?? '');
@@ -170,6 +172,11 @@ export function AndroidPanel({ projectId }: { projectId: string }) {
 
   const selected = overview?.devices.find((device) => device.id === selectedDevice);
   const deviceReady = selected?.state === 'device';
+  // The embedded display follows the selected emulator, falling back to the
+  // first live AVD so a single running emulator "just shows up".
+  const liveAvds = overview?.avds.filter((avd) => avd.serial) ?? [];
+  const displayAvd = liveAvds.find((avd) => avd.serial === selectedDevice) ?? liveAvds[0] ?? null;
+  const defaultDetached = (settings?.android.emulatorDisplayMode ?? 'embedded') === 'window';
 
   async function perform(
     key: string,
@@ -353,6 +360,7 @@ export function AndroidPanel({ projectId }: { projectId: string }) {
       )}
 
       <div className="android-dashboard">
+        <div className="android-dashboard__main">
         <ResizablePanel
           axis="vertical"
           className="android-dashboard__top-panel"
@@ -812,12 +820,27 @@ export function AndroidPanel({ projectId }: { projectId: string }) {
           </div>
           <LogcatConsole lines={logcat.lines} paused={logcat.paused} />
         </section>
+        </div>
+        <ResizablePanel
+          axis="horizontal"
+          edge="start"
+          className="android-dashboard__display-panel"
+          defaultSize={380}
+          minSize={280}
+          maxSize={760}
+          minSiblingSize={520}
+          storageKey={`android-display-${projectId}`}
+          resizeLabel="Resize emulator display"
+        >
+          <EmulatorDisplay avd={displayAvd} onPopOut={setPopOutAvd} />
+        </ResizablePanel>
       </div>
 
       {startAvd && (
         <StartAvdDialog
           avd={startAvd}
           busy={busy === `start-${startAvd.name}`}
+          defaultDetached={defaultDetached}
           onCancel={() => setStartAvd(null)}
           onStart={async (options) => {
             const okay = await perform(
@@ -859,6 +882,48 @@ export function AndroidPanel({ projectId }: { projectId: string }) {
               setPackageName('');
               await loadPackageList();
             }
+          }}
+        />
+      )}
+      {popOutAvd && (
+        <ConfirmDialog
+          title="Reopen in a separate window?"
+          body={`${popOutAvd.name} will restart so its display moves to the emulator's own window. Unsaved app state on the device may be lost.`}
+          confirmLabel="Restart in window"
+          onCancel={() => setPopOutAvd(null)}
+          onConfirm={async () => {
+            const avd = popOutAvd;
+            setPopOutAvd(null);
+            const okay = await perform(
+              `popout-${avd.name}`,
+              async () => {
+                const stopped = await window.bureau.android.stopAvd({
+                  name: avd.name,
+                  deviceId: avd.serial,
+                });
+                if (!stopped.ok) return stopped;
+                // The AVD directory stays locked briefly after a kill; poll until the
+                // device is really gone before relaunching (bounded, no fixed sleep).
+                for (let attempt = 0; attempt < 20; attempt += 1) {
+                  const view = await window.bureau.android.getOverview();
+                  if (!view.avds.find((item) => item.name === avd.name)?.serial) break;
+                  await new Promise((resolve) => setTimeout(resolve, 500));
+                }
+                return window.bureau.android.startAvd({
+                  name: avd.name,
+                  options: {
+                    coldBoot: false,
+                    wipeData: false,
+                    gpu: 'auto',
+                    writableSystem: false,
+                    displayMode: 'window',
+                  },
+                  confirmedWipe: false,
+                });
+              },
+              `${avd.name} reopening in its own window`
+            );
+            if (okay) await refresh();
           }}
         />
       )}
@@ -934,11 +999,13 @@ function LogcatConsole({ lines, paused }: { lines: LogcatLine[]; paused: boolean
 function StartAvdDialog({
   avd,
   busy,
+  defaultDetached,
   onCancel,
   onStart,
 }: {
   avd: AndroidAvd;
   busy: boolean;
+  defaultDetached: boolean;
   onCancel(): void;
   onStart(options: {
     coldBoot: boolean;
@@ -946,6 +1013,7 @@ function StartAvdDialog({
     gpu: EmulatorGpuMode;
     dnsServer?: string;
     writableSystem: boolean;
+    displayMode: 'embedded' | 'window';
   }): Promise<void>;
 }) {
   const [coldBoot, setColdBoot] = useState(false);
@@ -953,6 +1021,7 @@ function StartAvdDialog({
   const [gpu, setGpu] = useState<EmulatorGpuMode>('auto');
   const [dnsServer, setDnsServer] = useState('');
   const [writableSystem, setWritableSystem] = useState(false);
+  const [detachedWindow, setDetachedWindow] = useState(defaultDetached);
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalDismiss(onCancel, dialogRef);
   return (
@@ -1011,6 +1080,12 @@ function StartAvdDialog({
             label="Writable system"
             description="Start with a writable system image."
           />
+          <Checkbox
+            checked={detachedWindow}
+            onChange={setDetachedWindow}
+            label="Separate window"
+            description="Show the emulator in its own window instead of the embedded pane."
+          />
         </div>
         <div className="dialog__footer">
           <Button onClick={onCancel}>Cancel</Button>
@@ -1024,6 +1099,7 @@ function StartAvdDialog({
                 gpu,
                 dnsServer: dnsServer || undefined,
                 writableSystem,
+                displayMode: detachedWindow ? 'window' : 'embedded',
               })
             }
           >

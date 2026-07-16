@@ -24,6 +24,16 @@ import {
   apkLaunchRequestSchema,
   apkUninstallRequestSchema,
   avdBootStatusRequestSchema,
+  emulatorButtonRequestSchema,
+  emulatorDisplayStartRequestSchema,
+  emulatorDisplayStopRequestSchema,
+  emulatorKeyRequestSchema,
+  emulatorMouseRequestSchema,
+  emulatorPasteRequestSchema,
+  emulatorRotateRequestSchema,
+  emulatorScreenshotRequestSchema,
+  emulatorSnapshotRequestSchema,
+  geoFixRequestSchema,
   flutterRunRequestSchema,
   reactNativeDeviceRequestSchema,
   reactNativeProjectRequestSchema,
@@ -403,6 +413,45 @@ export function registerHandlers(
     'android.reactNative.devMenu',
     async (args: unknown) =>
       services.android.openReactNativeDevMenu(reactNativeDeviceRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_START, 'android.display.start', async (args: unknown) =>
+    services.android.startDisplay(emulatorDisplayStartRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_STOP, 'android.display.stop', async (args: unknown) =>
+    services.android.stopDisplay(emulatorDisplayStopRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_MOUSE, 'android.display.mouse', async (args: unknown) =>
+    services.android.sendDisplayMouse(emulatorMouseRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_KEY, 'android.display.key', async (args: unknown) =>
+    services.android.sendDisplayKey(emulatorKeyRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_BUTTON, 'android.display.button', async (args: unknown) =>
+    services.android.pressDisplayButton(emulatorButtonRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_ROTATE, 'android.display.rotate', async (args: unknown) =>
+    services.android.rotateDevice(emulatorRotateRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_DISPLAY_PASTE, 'android.display.paste', async (args: unknown) =>
+    services.android.pasteToDevice(emulatorPasteRequestSchema.parse(args))
+  );
+  register(
+    IPC_CHANNELS.ANDROID_DISPLAY_SCREENSHOT,
+    'android.display.screenshot',
+    async (args: unknown) =>
+      services.android.saveScreenshot(emulatorScreenshotRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_SNAPSHOT_LIST, 'android.snapshot.list', async (args: unknown) =>
+    services.android.listSnapshots(androidDeviceRequestSchema.parse(args).deviceId)
+  );
+  register(IPC_CHANNELS.ANDROID_SNAPSHOT_SAVE, 'android.snapshot.save', async (args: unknown) =>
+    services.android.saveSnapshot(emulatorSnapshotRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_SNAPSHOT_LOAD, 'android.snapshot.load', async (args: unknown) =>
+    services.android.loadSnapshot(emulatorSnapshotRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.ANDROID_GEO_FIX, 'android.geo.fix', async (args: unknown) =>
+    services.android.sendGeoFix(geoFixRequestSchema.parse(args))
   );
 
   register(IPC_CHANNELS.SETTINGS_GET, 'settings.get', async () => {

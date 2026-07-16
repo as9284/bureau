@@ -222,6 +222,20 @@ fold-in as a per-project **Git** tab). Phase 4 is complete: the per-project **Fi
 explorer, CodeMirror editor, Monocle reader, search, drafts, conflict-safe saves, export, settings and Git
 handoff) plus its 2026-07-14 security/design follow-ups.
 
+**Embedded emulator display (2026-07-16):** the Android tab renders a running AVD in-app instead of the
+emulator's detached window (Android Studio's approach). Bureau launches with `-qt-hide-window -grpc <port>`
+and streams frames over the emulator's own gRPC API (`src/main/android/EmulatorDisplayService.ts`,
+vendored proto in `src/main/android/proto/`), forwarding input back the same way. Notes for future work:
+- Frames are **raw RGBA** (`w*h*4` bytes per frame) — PNG was too slow, but IPC bandwidth is now the
+  ceiling. The 60fps cap and the stream pixel budget in `EmulatorDisplay.tsx` exist for that reason;
+  going beyond them means replacing raw-pixels-over-IPC with an encoded stream, not raising a constant.
+- gRPC is **emulator-only**. Physical devices still use the scrcpy mirror path.
+- `-grpc <port>` disables the emulator's default JWT auth, so the port is unauthenticated on loopback
+  (no escalation over adb, which is already unauthenticated and strictly more powerful). Harden with
+  `-grpc-use-token` + an auth metadata header if that tradeoff stops being acceptable.
+- A cancelled gRPC stream emits `end`/`error` *after* its replacement is live; stream handlers must stay
+  keyed to their own stream (never a shared flag) or a resize silently kills the session.
+
 **Phase 3 notes:** Git runs only in main (`src/main/git/**`, `github/`); renderer uses `gitStore` +
 `features/git/**`. Bureau Projects hub owns tracking — do not reintroduce StarGit’s multi-repo catalogue.
 Deferred with StarGit: interactive rebase, three-way merge editor, LFS, force-push, full git e2e matrix.

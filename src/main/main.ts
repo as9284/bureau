@@ -64,6 +64,10 @@ app
       if (!mainWindow.isDestroyed())
         mainWindow.webContents.send(IPC_CHANNELS.ANDROID_LOGCAT_EVENT, event);
     });
+    services.android.onDisplay((event) => {
+      if (!mainWindow.isDestroyed())
+        mainWindow.webContents.send(IPC_CHANNELS.ANDROID_DISPLAY_EVENT, event);
+    });
     services.files.onFileEvents((events) => {
       if (!mainWindow.isDestroyed()) mainWindow.webContents.send(IPC_CHANNELS.FILES_EVENT, events);
     });

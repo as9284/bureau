@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import type { ChildProcess } from 'node:child_process';
@@ -12,10 +13,16 @@ import type { SdkResolver } from './SdkResolver';
 import { parseAvdList } from './parsers';
 import { watchEmulatorWindow } from './EmulatorWindowRescue';
 import { sanitizeEmulatorWindowPos } from './windowPosGuard';
+import { discoverRunningEmulators } from './emulatorDiscovery';
 
 export type AvdService = ReturnType<typeof createAvdService>;
 
-type LaunchRecord = { child: ChildProcess; stderr: string; state: 'starting' | 'error' };
+type LaunchRecord = {
+  child: ChildProcess;
+  stderr: string;
+  state: 'starting' | 'error';
+  grpcPort?: number;
+};
 
 export function createAvdService(
   resolver: SdkResolver,
@@ -40,6 +47,7 @@ export function createAvdService(
     if (result.code !== 0)
       throw new Error(result.stderr || 'Could not list Android virtual devices.');
     const devices = status.adb.available ? await adb.listDevices().catch(() => []) : [];
+    const discovered = await discoverRunningEmulators().catch(() => new Map<string, number>());
     return Promise.all(
       parseAvdList(result.stdout).map(async (name): Promise<AndroidAvd> => {
         const device = devices.find((candidate) => candidate.avdName === name);
@@ -54,9 +62,18 @@ export function createAvdService(
           booted,
           state: device ? (booted ? 'running' : 'booting') : (launch?.state ?? 'stopped'),
           error: launch?.state === 'error' ? virtualizationHint(launch.stderr) : undefined,
+          grpcPort: device ? (launch?.grpcPort ?? discovered.get(name) ?? null) : null,
         };
       })
     );
+  }
+
+  /** gRPC control port for a running AVD, if it exposes one. */
+  async function getGrpcPort(name: string): Promise<number | null> {
+    const record = launched.get(name);
+    if (record?.grpcPort) return record.grpcPort;
+    const discovered = await discoverRunningEmulators().catch(() => new Map<string, number>());
+    return discovered.get(name) ?? null;
   }
 
   async function start(input: StartAvdRequest): Promise<OkResult> {
@@ -83,29 +100,40 @@ export function createAvdService(
             subjectId: input.name,
           }),
         };
-      // The emulator restores its own window geometry after the window appears and can
-      // land off-screen regardless of launch flags or config files. The watcher nudges
-      // the window back on-screen only while it is unreachable, then exits. Running it
-      // for an already-started AVD makes "Start" double as a rescue for a lost window.
-      watchEmulatorWindow(adapter, input.name);
+      // Embedded mode has no emulator window, so the window-rescue helpers only run
+      // for detached launches. Callers resolve the default from settings; treating an
+      // omitted mode as 'window' preserves the legacy behavior.
+      const embedded = input.options.displayMode === 'embedded';
+      if (!embedded) {
+        // The emulator restores its own window geometry after the window appears and can
+        // land off-screen regardless of launch flags or config files. The watcher nudges
+        // the window back on-screen only while it is unreachable, then exits. Running it
+        // for an already-started AVD makes "Start" double as a rescue for a lost window.
+        watchEmulatorWindow(adapter, input.name);
+      }
       if (existing.serial || launched.get(input.name)?.state === 'starting') return { ok: true };
       const status = await resolver.resolve();
       if (!status.emulator.path) throw new Error('Android emulator executable not found.');
       // Drop a stale saved window position that would open the emulator off-screen
       // (e.g. after a monitor was disconnected). Best effort — never blocks the launch.
-      await sanitizeEmulatorWindowPos(input.name).catch(() => undefined);
+      if (!embedded) await sanitizeEmulatorWindowPos(input.name).catch(() => undefined);
       const args = ['-avd', input.name];
       if (input.options.coldBoot) args.push('-no-snapshot-load');
       if (input.options.wipeData) args.push('-wipe-data');
       if (input.options.gpu !== 'auto') args.push('-gpu', input.options.gpu);
       if (input.options.dnsServer) args.push('-dns-server', input.options.dnsServer);
       if (input.options.writableSystem) args.push('-writable-system');
+      let grpcPort: number | undefined;
+      if (embedded) {
+        grpcPort = await allocateFreePort();
+        args.push('-qt-hide-window', '-grpc', String(grpcPort));
+      }
       const child = adapter.spawn(status.emulator.path, args, {
         cwd: status.sdkPath ?? undefined,
         // GUI app: inheriting the hidden-window flag would launch it invisible.
         windowsHide: false,
       });
-      const record: LaunchRecord = { child, stderr: '', state: 'starting' };
+      const record: LaunchRecord = { child, stderr: '', state: 'starting', grpcPort };
       launched.set(input.name, record);
       child.stderr?.setEncoding('utf8');
       child.stderr?.on('data', (chunk: string) => {
@@ -201,7 +229,24 @@ export function createAvdService(
     launched.clear();
   }
 
-  return { list, start, stop, dispose };
+  return { list, start, stop, getGrpcPort, dispose };
+}
+
+/** Reserves an ephemeral loopback port for the emulator's gRPC endpoint. */
+function allocateFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      const port = typeof address === 'object' && address ? address.port : 0;
+      server.close(() => {
+        if (port) resolve(port);
+        else reject(new Error('No free port available for the emulator gRPC endpoint.'));
+      });
+    });
+  });
 }
 
 async function readAvdMetadata(name: string): Promise<Pick<AndroidAvd, 'target' | 'apiLevel'>> {
