@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store/appStore';
-import { Dropdown } from '../../components/Dropdown';
 import { Button } from '../../components/Button';
+import { Dropdown } from '../../components/Dropdown';
 import type { RuntimeRow, SwitchableRuntimeKind } from '@shared/contracts/toolchains';
 
 function versionSatisfiesUi(constraint: string, actual: string): boolean {
@@ -52,35 +52,43 @@ function statusLabel(row: RuntimeRow): string {
   return 'Unset';
 }
 
-export function ToolchainsTab({ projectId }: { projectId: string }) {
+/** Prefer switchable / expected / problem rows; fall back to a short detect-only list. */
+function rowsForOverview(rows: RuntimeRow[]): RuntimeRow[] {
+  const primary = rows.filter(
+    (row) => row.switchable || row.expectedVersion || row.mismatch || row.missing
+  );
+  if (primary.length > 0) return primary;
+  return rows.slice(0, 4);
+}
+
+export function ToolchainsCard({ projectId }: { projectId: string }) {
   const toolchains = useAppStore((s) => s.toolchainsByProject[projectId]);
   const loadToolchains = useAppStore((s) => s.loadToolchains);
   const setActiveToolchain = useAppStore((s) => s.setActiveToolchain);
 
-  if (!toolchains) {
-    return <div className="tab-loading">Loading…</div>;
-  }
+  const rows = toolchains ? rowsForOverview(toolchains.rows) : [];
+  const issues = toolchains?.rows.filter((row) => row.mismatch || row.missing).length ?? 0;
 
   return (
-    <div className="toolchains-tab">
-      <div className="toolchains-tab__header">
-        <span className="toolchains-tab__title">Toolchains</span>
-        <Button variant="ghost" onClick={() => void loadToolchains(projectId)}>
-          Refresh
-        </Button>
+    <section className="overview-card overview-card--toolchains">
+      <div className="overview-card__head">
+        <h2 className="overview-card__title">Toolchains</h2>
+        {toolchains ? (
+          <span className="overview-count">
+            {issues > 0 ? `${issues} need attention` : `${toolchains.rows.length} detected`}
+          </span>
+        ) : (
+          <span className="overview-count">Loading…</span>
+        )}
       </div>
 
-      {toolchains.rows.length === 0 ? (
-        <div className="empty-state">
-          <h1>No toolchains</h1>
-          <p>Bureau did not detect a recognized language runtime for this project.</p>
-          <Button variant="ghost" onClick={() => void loadToolchains(projectId)}>
-            Scan again
-          </Button>
-        </div>
+      {!toolchains ? (
+        <p className="overview-card__empty">Scanning project runtimes…</p>
+      ) : rows.length === 0 ? (
+        <p className="overview-card__empty">No recognized language runtimes for this project.</p>
       ) : (
-        <div className="toolchain-list">
-          {toolchains.rows.map((row) => {
+        <div className="toolchain-list overview-toolchain-list">
+          {rows.map((row) => {
             const tone = rowTone(row);
             return (
               <div key={row.kind} className="toolchain-row">
@@ -98,11 +106,6 @@ export function ToolchainsTab({ projectId }: { projectId: string }) {
                   <span className={tone === 'ok' ? undefined : 'toolchain-row__status'}>
                     {statusLabel(row)}
                   </span>
-                  {row.installHint && (
-                    <span className="toolchain-row__hint" title={row.installHint}>
-                      {row.installHint}
-                    </span>
-                  )}
                 </div>
                 {row.switchable ? (
                   <Dropdown
@@ -142,6 +145,12 @@ export function ToolchainsTab({ projectId }: { projectId: string }) {
           })}
         </div>
       )}
-    </div>
+
+      <div className="overview-card__foot">
+        <Button variant="ghost" onClick={() => void loadToolchains(projectId)}>
+          Refresh
+        </Button>
+      </div>
+    </section>
   );
 }

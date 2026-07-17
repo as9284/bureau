@@ -6,6 +6,18 @@ import {
   getAttentionLevel,
 } from '../lib/attention';
 import { markdownStats } from '../features/files/markdown';
+import type { RuntimeRow } from '@shared/contracts/toolchains';
+import type { ListeningPort } from '@shared/contracts/ports';
+
+function toolchainChips(rows: RuntimeRow[]): RuntimeRow[] {
+  const switchable = rows.filter((row) => row.switchable && row.activeVersion);
+  if (switchable.length > 0) return switchable;
+  return rows.filter((row) => row.activeVersion).slice(0, 3);
+}
+
+function bureauPorts(ports: ListeningPort[]): ListeningPort[] {
+  return ports.filter((p) => p.owner === 'bureau').sort((a, b) => a.port - b.port);
+}
 
 export function StatusBar() {
   const capabilities = useAppStore((s) => s.capabilities);
@@ -13,6 +25,12 @@ export function StatusBar() {
   const selectedProjectId = useAppStore((s) => s.selectedProjectId);
   const running = useAppStore(selectRunningCount);
   const projectTab = useAppStore((s) => s.projectTab);
+  const toolchains = useAppStore((s) =>
+    selectedProjectId ? s.toolchainsByProject[selectedProjectId] : undefined
+  );
+  const ports = useAppStore((s) =>
+    selectedProjectId ? s.portsByProject[selectedProjectId] : undefined
+  );
   const filesProject = useAppStore((s) => selectedProjectId ? s.filesByProject[selectedProjectId] : undefined);
   const filesSettings = useAppStore((s) => s.settings?.files);
   const activeFilePath = filesProject?.activePath ?? null;
@@ -34,6 +52,11 @@ export function StatusBar() {
         ? `detached @${snap.branch.headOid.slice(0, 7)}`
         : null;
 
+  const runtimeChips = toolchains ? toolchainChips(toolchains.rows) : [];
+  const mismatchCount = toolchains?.rows.filter((row) => row.mismatch || row.missing).length ?? 0;
+  const activePorts = ports ? bureauPorts(ports.ports) : [];
+  const conflictCount = ports?.ports.filter((p) => p.conflict).length ?? 0;
+
   return (
     <footer className="status-bar">
       <div className="cluster">
@@ -43,6 +66,38 @@ export function StatusBar() {
       <div className="cluster">
         <span className="mono">{projects.length} projects</span>
       </div>
+      {selectedProjectId && ports ? (
+        <div className="cluster status-bar__ports mono">
+          {activePorts.length > 0 ? (
+            <span title="Bureau-owned listeners">
+              {activePorts.map((p) => p.port).join(' · ')}
+            </span>
+          ) : (
+            <span className="status-bar__muted">No ports</span>
+          )}
+          {conflictCount > 0 ? (
+            <span className="status-bar__attention">
+              {conflictCount} conflict{conflictCount === 1 ? '' : 's'}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {selectedProjectId && toolchains ? (
+        <div className="cluster status-bar__toolchains mono">
+          {runtimeChips.length > 0 ? (
+            <span title="Active toolchain versions">
+              {runtimeChips.map((row) => `${row.label} ${row.activeVersion}`).join(' · ')}
+            </span>
+          ) : (
+            <span className="status-bar__muted">No toolchains</span>
+          )}
+          {mismatchCount > 0 ? (
+            <span className="status-bar__attention">
+              {mismatchCount} mismatch{mismatchCount === 1 ? '' : 'es'}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {selectedProjectId && snap ? (
         <div className="cluster status-bar__git mono">
           {branchLabel ? <span>{branchLabel}</span> : null}

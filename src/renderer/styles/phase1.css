@@ -1366,49 +1366,7 @@
   width: 100%;
 }
 
-/* Toolchains + Ports — same list language as Processes */
-.toolchains-tab,
-.ports-tab {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-}
-
-.toolchains-tab__header,
-.ports-tab__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-
-.toolchains-tab__title,
-.ports-tab__title {
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.ports-tab__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ports-tab__count {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
-.ports-tab__sort {
-  width: 108px;
-  flex: 0 0 108px;
-}
-
+/* Toolchains + Ports rows — Overview cards (demoted from workspace tabs) */
 .toolchain-list,
 .port-list {
   display: flex;

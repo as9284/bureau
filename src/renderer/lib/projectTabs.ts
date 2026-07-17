@@ -8,8 +8,6 @@ export const PROJECT_TAB_LABELS: Record<ProjectTabId, string> = {
   terminal: 'Terminal',
   preview: 'Preview',
   android: 'Android',
-  toolchains: 'Toolchains',
-  ports: 'Ports',
   git: 'Git',
 };
 

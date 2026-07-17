@@ -47,8 +47,6 @@ const DEFAULT_ORDER: ProjectTabId[] = [
   'processes',
   'preview',
   'android',
-  'toolchains',
-  'ports',
   'git',
 ];
 
@@ -70,7 +68,7 @@ describe('project tab order editor', () => {
     expect(screen.getByText('Workspace tabs')).toBeInTheDocument();
     // Assert via the unique per-tab move controls ("Files"/"Git" as plain text would
     // also match the settings-nav buttons of the same name).
-    for (const label of ['Overview', 'Files', 'Processes', 'Preview', 'Android', 'Ports', 'Git']) {
+    for (const label of ['Overview', 'Files', 'Processes', 'Preview', 'Android', 'Git']) {
       expect(screen.getByRole('button', { name: `Move ${label} up` })).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'Move Overview up' })).toBeDisabled();
@@ -95,8 +93,6 @@ describe('project tab order editor', () => {
           'terminal',
           'preview',
           'android',
-          'toolchains',
-          'ports',
           'git',
         ],
       },

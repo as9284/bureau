@@ -1,14 +1,16 @@
+import { useEffect } from 'react';
 import { useAppStore } from '../store/appStore';
 import { ProjectOverview } from '../features/overview/ProjectOverview';
 import { ProcessesTab } from '../features/processes/ProcessesTab';
 import { TerminalTab } from '../features/terminal/TerminalTab';
 import { PreviewTab } from '../features/preview/PreviewTab';
 import { AndroidPanel } from '../features/android/AndroidPanel';
-import { ToolchainsTab } from '../features/toolchains/ToolchainsTab';
-import { PortsTab } from '../features/ports/PortsTab';
 import { GitTab } from '../features/git/GitTab';
 import { FilesTab } from '../features/files/FilesTab';
 import { orderProjectTabs, PROJECT_TAB_LABELS } from '../lib/projectTabs';
+import { PROJECT_TAB_IDS, type ProjectTabId } from '@shared/contracts/settings';
+
+const KNOWN_TABS = new Set<ProjectTabId>(PROJECT_TAB_IDS);
 
 export function ProjectWorkspace() {
   const projectId = useAppStore((s) => s.selectedProjectId);
@@ -17,9 +19,15 @@ export function ProjectWorkspace() {
   const setProjectTab = useAppStore((s) => s.setProjectTab);
   const tabOrder = useAppStore((s) => s.settings?.appearance.projectTabOrder);
 
-  if (!projectId || !project) return null;
-
   const tabs = orderProjectTabs(tabOrder);
+  const activeTab = KNOWN_TABS.has(projectTab) ? projectTab : 'overview';
+
+  // Sessions that still hold a removed tab id (Toolchains/Ports) land on Overview.
+  useEffect(() => {
+    if (!KNOWN_TABS.has(projectTab)) setProjectTab('overview');
+  }, [projectTab, setProjectTab]);
+
+  if (!projectId || !project) return null;
 
   return (
     <div className="workspace-view">
@@ -28,8 +36,8 @@ export function ProjectWorkspace() {
           <button
             key={id}
             type="button"
-            className={['workspace-tab', projectTab === id ? 'active' : ''].join(' ')}
-            aria-current={projectTab === id ? 'page' : undefined}
+            className={['workspace-tab', activeTab === id ? 'active' : ''].join(' ')}
+            aria-current={activeTab === id ? 'page' : undefined}
             onClick={() => setProjectTab(id)}
           >
             {PROJECT_TAB_LABELS[id]}
@@ -38,15 +46,13 @@ export function ProjectWorkspace() {
       </div>
 
       <div className="workspace-body">
-        {projectTab === 'overview' && <ProjectOverview projectId={projectId} />}
-        {projectTab === 'files' && <FilesTab projectId={projectId} />}
-        {projectTab === 'processes' && <ProcessesTab projectId={projectId} />}
-        {projectTab === 'terminal' && <TerminalTab projectId={projectId} />}
-        {projectTab === 'preview' && <PreviewTab />}
-        {projectTab === 'android' && <AndroidPanel key={projectId} projectId={projectId} />}
-        {projectTab === 'toolchains' && <ToolchainsTab projectId={projectId} />}
-        {projectTab === 'ports' && <PortsTab projectId={projectId} />}
-        {projectTab === 'git' && <GitTab projectId={projectId} />}
+        {activeTab === 'overview' && <ProjectOverview projectId={projectId} />}
+        {activeTab === 'files' && <FilesTab projectId={projectId} />}
+        {activeTab === 'processes' && <ProcessesTab projectId={projectId} />}
+        {activeTab === 'terminal' && <TerminalTab projectId={projectId} />}
+        {activeTab === 'preview' && <PreviewTab />}
+        {activeTab === 'android' && <AndroidPanel key={projectId} projectId={projectId} />}
+        {activeTab === 'git' && <GitTab projectId={projectId} />}
       </div>
     </div>
   );

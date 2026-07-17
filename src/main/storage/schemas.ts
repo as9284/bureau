@@ -6,6 +6,7 @@ import {
   TERMINAL_CURSOR_STYLES,
   UI_SCALES,
   VIEWPORT_PRESETS,
+  sanitizeProjectTabOrder,
 } from '@shared/contracts/settings';
 import { SHELL_IDS } from '@shared/contracts/terminal';
 import type { TrackedProject } from '@shared/contracts/projects';
@@ -353,6 +354,9 @@ export function validateSettings(value: unknown): SettingsFileV1 {
       ),
       uiScale: normalizeUiScale(
         isRecord(incoming.appearance) ? incoming.appearance.uiScale : undefined
+      ),
+      projectTabOrder: sanitizeProjectTabOrder(
+        isRecord(incoming.appearance) ? incoming.appearance.projectTabOrder : undefined
       ),
     },
     gitBehavior: {

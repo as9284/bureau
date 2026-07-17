@@ -20,6 +20,8 @@ import { formatRelativeTime, formatUptime } from '../../lib/format';
 import type { ProcessRuntime, ProjectProcesses } from '@shared/contracts/processes';
 import type { ProcessDefinition, TrackedProject } from '@shared/contracts/projects';
 import type { GitSnapshot } from '@shared/contracts/git';
+import { ToolchainsCard } from './ToolchainsCard';
+import { PortsCard } from './PortsCard';
 
 function useSecondlyTick(active: boolean): void {
   const [, setTick] = useState(0);
@@ -148,6 +150,8 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
           stopProcess={stopProcess}
           openUrlInPreview={openUrlInPreview}
         />
+        <ToolchainsCard projectId={projectId} />
+        <PortsCard projectId={projectId} />
         <div className="overview-subgrid">
           <GitCard git={git} />
           <PreviewCard detectedUrl={detectedUrl} onOpen={openPreview} />
@@ -156,6 +160,22 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
       </div>
     </div>
   );
+}
+
+const OVERVIEW_PROCESS_LIMIT = 3;
+
+function definitionsForOverview(
+  definitions: ProcessDefinition[],
+  runtimes: ProcessRuntime[] | undefined
+): ProcessDefinition[] {
+  const statusFor = (id: string): ProcessRuntime['status'] | 'idle' =>
+    runtimes?.find((r) => r.processId === id)?.status ?? 'idle';
+  const active = definitions.filter((d) => {
+    const status = statusFor(d.id);
+    return status === 'running' || status === 'starting';
+  });
+  const rest = definitions.filter((d) => !active.includes(d));
+  return [...active, ...rest].slice(0, OVERVIEW_PROCESS_LIMIT);
 }
 
 function ProcessesCard({
@@ -176,8 +196,11 @@ function ProcessesCard({
   openUrlInPreview: (url: string) => void;
 }) {
   const definitions = processes?.definitions ?? [];
+  const runtimes = processes?.runtimes ?? [];
+  const visible = definitionsForOverview(definitions, runtimes);
+  const hiddenCount = Math.max(0, definitions.length - visible.length);
   const runtimeFor = (id: string): ProcessRuntime | undefined =>
-    processes?.runtimes.find((r) => r.processId === id);
+    runtimes.find((r) => r.processId === id);
 
   return (
     <section className="overview-card overview-card--processes">
@@ -192,7 +215,7 @@ function ProcessesCard({
         <p className="overview-card__empty">No runnable commands were detected for this project.</p>
       ) : (
         <ul className="overview-proclist">
-          {definitions.map((definition) => (
+          {visible.map((definition) => (
             <ProcessLine
               key={definition.id}
               projectId={projectId}
@@ -204,6 +227,12 @@ function ProcessesCard({
             />
           ))}
         </ul>
+      )}
+
+      {hiddenCount > 0 && (
+        <p className="overview-card__empty overview-proclist__more mono">
+          +{hiddenCount} more process{hiddenCount === 1 ? '' : 'es'}
+        </p>
       )}
 
       <div className="overview-card__foot">
@@ -334,7 +363,7 @@ function PreviewCard({
           </Button>
         </div>
       ) : (
-        <p className="overview-card__empty">
+        <p className="overview-preview__empty">
           No dev server detected yet. Start a process and its URL appears here.
         </p>
       )}

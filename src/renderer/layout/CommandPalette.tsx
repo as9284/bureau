@@ -290,18 +290,6 @@ export function CommandPalette() {
               run: () => setProjectTab('terminal' as const),
             },
             {
-              id: 'open-toolchains',
-              title: 'Open Toolchains',
-              hint: 'Toolchains',
-              run: () => setProjectTab('toolchains' as const),
-            },
-            {
-              id: 'open-ports',
-              title: 'Open Ports',
-              hint: 'Ports',
-              run: () => setProjectTab('ports' as const),
-            },
-            {
               id: 'open-android',
               title: 'Open Android controls',
               hint: 'Android',

@@ -184,11 +184,24 @@ export const PROJECT_TAB_IDS = [
   'terminal',
   'preview',
   'android',
-  'toolchains',
-  'ports',
   'git',
 ] as const;
 export type ProjectTabId = (typeof PROJECT_TAB_IDS)[number];
+
+/** Drop removed/unknown tab ids from a persisted order (e.g. after Toolchains/Ports demotion). */
+export function sanitizeProjectTabOrder(value: unknown): ProjectTabId[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const known = new Set<string>(PROJECT_TAB_IDS);
+  const seen = new Set<string>();
+  const ordered: ProjectTabId[] = [];
+  for (const id of value) {
+    if (typeof id === 'string' && known.has(id) && !seen.has(id)) {
+      seen.add(id);
+      ordered.push(id as ProjectTabId);
+    }
+  }
+  return ordered.length > 0 ? ordered : undefined;
+}
 
 export type AppearanceSettings = {
   theme: ThemePreference;

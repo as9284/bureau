@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { orderProjectTabs, PROJECT_TAB_LABELS } from '@renderer/lib/projectTabs';
-import { PROJECT_TAB_IDS } from '@shared/contracts/settings';
+import { PROJECT_TAB_IDS, sanitizeProjectTabOrder } from '@shared/contracts/settings';
 
 describe('orderProjectTabs', () => {
   it('returns the canonical order when nothing is saved', () => {
@@ -17,8 +17,6 @@ describe('orderProjectTabs', () => {
       'terminal',
       'preview',
       'android',
-      'toolchains',
-      'ports',
     ] as const;
     expect(orderProjectTabs([...saved])).toEqual([...saved]);
   });
@@ -32,8 +30,6 @@ describe('orderProjectTabs', () => {
       'terminal',
       'preview',
       'android',
-      'toolchains',
-      'ports',
     ]);
   });
 
@@ -46,8 +42,6 @@ describe('orderProjectTabs', () => {
       'terminal',
       'preview',
       'android',
-      'toolchains',
-      'ports',
     ]);
   });
 
@@ -55,5 +49,25 @@ describe('orderProjectTabs', () => {
     for (const id of PROJECT_TAB_IDS) {
       expect(PROJECT_TAB_LABELS[id]).toBeTruthy();
     }
+  });
+});
+
+describe('sanitizeProjectTabOrder', () => {
+  it('drops removed tab ids such as toolchains and ports', () => {
+    expect(
+      sanitizeProjectTabOrder([
+        'overview',
+        'toolchains',
+        'ports',
+        'git',
+        'files',
+      ])
+    ).toEqual(['overview', 'git', 'files']);
+  });
+
+  it('returns undefined for empty or non-array input', () => {
+    expect(sanitizeProjectTabOrder(undefined)).toBeUndefined();
+    expect(sanitizeProjectTabOrder([])).toBeUndefined();
+    expect(sanitizeProjectTabOrder('nope')).toBeUndefined();
   });
 });

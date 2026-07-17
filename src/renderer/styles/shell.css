@@ -589,6 +589,8 @@
   font-variant-numeric: tabular-nums;
 }
 
+.status-bar__ports,
+.status-bar__toolchains,
 .status-bar__git {
   gap: 8px;
 }
@@ -603,6 +605,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.status-bar__muted {
+  color: var(--color-text-muted);
+}
+
+.status-bar__attention {
+  color: var(--color-status-warning);
 }
 
 .status-bar__blocked {
