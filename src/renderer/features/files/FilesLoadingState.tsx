@@ -1,20 +1,10 @@
-import { TreeStructureIcon } from '@phosphor-icons/react/TreeStructure';
-import type { FilesLoadingPhase } from '@renderer/store/appStore';
-
-const PHASE_COPY: Record<Exclude<FilesLoadingPhase, 'idle'>, string> = {
-  starting: 'Reading the project snapshot',
-  watching: 'Preparing file change tracking',
-  restoring: 'Restoring open files and drafts',
-};
-
-const PHASES: Exclude<FilesLoadingPhase, 'idle'>[] = ['starting', 'watching', 'restoring'];
-
-export function FilesLoadingState({ phase }: { phase: FilesLoadingPhase }) {
-  const activePhase = phase === 'idle' ? 'starting' : phase;
-  const activeIndex = PHASES.indexOf(activePhase);
-
+/**
+ * Full-pane shimmer while the Files workspace boots — layout-shaped like the
+ * real sidebar + document, no centered status card (same idea as AndroidSkeleton).
+ */
+export function FilesLoadingState() {
   return (
-    <section className="files-loading" aria-label="Preparing Files workspace" aria-busy="true">
+    <section className="files-loading" aria-label="Loading Files workspace" aria-busy="true">
       <div className="files-loading__shimmer" aria-hidden="true">
         <div className="files-loading__shimmer-toolbar">
           <span className="files-loading__shimmer-block files-loading__shimmer-block--control" />
@@ -36,18 +26,6 @@ export function FilesLoadingState({ phase }: { phase: FilesLoadingPhase }) {
             <span className="files-loading__shimmer-block files-loading__shimmer-block--line files-loading__shimmer-block--line-short" />
           </div>
         </div>
-      </div>
-      <div className="files-loading__content" role="status" aria-live="polite">
-        <TreeStructureIcon className="files-loading__icon" size={24} aria-hidden />
-        <h2>Preparing Files workspace</h2>
-        <p>{PHASE_COPY[activePhase]}</p>
-        <ol className="files-loading__steps">
-          {PHASES.map((item, index) => (
-            <li key={item} className={index <= activeIndex ? 'is-complete' : undefined}>
-              {PHASE_COPY[item]}
-            </li>
-          ))}
-        </ol>
       </div>
     </section>
   );

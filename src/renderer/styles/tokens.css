@@ -64,6 +64,11 @@
   --font-family-ui:
     'Geist Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-mono: 'Geist Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  /* xterm only — prefer installed Nerd Fonts for Powerline/Oh My Posh glyphs, then fall back. */
+  --font-family-terminal:
+    'JetBrainsMono NF', 'JetBrainsMono Nerd Font', 'CaskaydiaCove NF', 'CaskaydiaCove Nerd Font',
+    'Cascadia Code NF', 'Cascadia Code Nerd Font', 'MesloLGS NF', 'MesloLGS Nerd Font',
+    'FiraCode NF', 'FiraCode Nerd Font', 'Hack NF', 'Hack Nerd Font', var(--font-family-mono);
 
   /* Font: size */
   --font-size-label: 11px;

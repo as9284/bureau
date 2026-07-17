@@ -712,7 +712,7 @@ export function FilesTab({ projectId }: { projectId: string }) {
   }, [previewFindOpen, previewFindQuery]);
 
   if (!project || project.status === 'idle' || project.status === 'loading') {
-    return <FilesLoadingState phase={project?.loadingPhase ?? 'starting'} />;
+    return <FilesLoadingState />;
   }
   if (project.status === 'error') {
     return <div className="files-tab"><div className="files-error" role="alert"><strong>Files could not be loaded.</strong><span>{project.error?.message}</span><Button onClick={() => void ensureFilesProject(projectId)}>Retry</Button></div></div>;

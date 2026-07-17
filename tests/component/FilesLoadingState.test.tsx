@@ -3,12 +3,13 @@ import { render, screen } from '@testing-library/react';
 import { FilesLoadingState } from '@renderer/features/files/FilesLoadingState';
 
 describe('FilesLoadingState', () => {
-  it('communicates the active initialization phase without rendering the Files workbench', () => {
-    render(<FilesLoadingState phase="restoring" />);
+  it('shows a full-pane shimmer without a centered status card', () => {
+    render(<FilesLoadingState />);
 
-    expect(screen.getByRole('region', { name: 'Preparing Files workspace' })).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('status')).toHaveTextContent('Restoring open files and drafts');
-    expect(screen.getByText('Reading the project snapshot')).toHaveClass('is-complete');
+    const region = screen.getByRole('region', { name: 'Loading Files workspace' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
     expect(document.querySelector('.files-loading__shimmer')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText(/Preparing Files workspace/i)).toBeNull();
   });
 });

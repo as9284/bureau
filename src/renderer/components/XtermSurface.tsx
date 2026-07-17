@@ -54,10 +54,10 @@ function themeFromTokens(): ITheme {
   };
 }
 
-function monoFontFamily(): string {
+function terminalFontFamily(): string {
   return (
-    getComputedStyle(document.documentElement).getPropertyValue('--font-family-mono').trim() ||
-    "'Geist Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace"
+    getComputedStyle(document.documentElement).getPropertyValue('--font-family-terminal').trim() ||
+    "'JetBrainsMono NF', 'CaskaydiaCove NF', 'Cascadia Code NF', 'MesloLGS NF', 'FiraCode NF', 'Hack NF', 'Geist Mono', monospace"
   );
 }
 
@@ -106,7 +106,7 @@ export function XtermSurface({
     if (!hostRef.current) return;
     const term = new Terminal({
       convertEol: true,
-      fontFamily: monoFontFamily(),
+      fontFamily: terminalFontFamily(),
       fontSize: settingsRef.current?.fontSize ?? DEFAULT_EMBEDDED_TERMINAL_SETTINGS.fontSize,
       scrollback: settingsRef.current?.scrollback ?? DEFAULT_EMBEDDED_TERMINAL_SETTINGS.scrollback,
       cursorStyle:

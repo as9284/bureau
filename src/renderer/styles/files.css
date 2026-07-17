@@ -1,23 +1,19 @@
 .files-loading {
-  position: relative;
-  display: grid;
+  display: flex;
   flex: 1;
   min-width: 0;
   min-height: 0;
-  place-items: center;
-  padding: var(--space-8);
   overflow: hidden;
   background: var(--color-surface-canvas);
 }
 
 .files-loading__shimmer {
-  position: absolute;
-  inset: var(--space-4);
   display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   grid-template-rows: var(--size-control) minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-control);
   background: var(--color-surface-sunken);
   pointer-events: none;
 }
@@ -81,25 +77,6 @@
 @keyframes files-loading-shimmer {
   to { background-position: -150% 0; }
 }
-
-.files-loading__content {
-  position: relative;
-  z-index: var(--z-raised);
-  width: min(100%, calc(var(--space-16) * 6));
-  padding: var(--space-6);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-control);
-  background: var(--color-surface-base);
-}
-
-.files-loading__icon { display: block; margin-bottom: var(--space-3); color: var(--color-accent-primary); }
-.files-loading h2 { margin: 0; color: var(--color-text-primary); font-size: var(--font-size-section-title); line-height: var(--line-height-section-title); }
-.files-loading p { margin: var(--space-1) 0 var(--space-4); color: var(--color-text-secondary); font-size: var(--font-size-supporting); line-height: var(--line-height-supporting); }
-.files-loading__steps { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.files-loading__steps li { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--font-size-label); line-height: var(--line-height-label); }
-.files-loading__steps li::before { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--color-border-strong); content: ''; }
-.files-loading__steps li.is-complete { color: var(--color-text-secondary); }
-.files-loading__steps li.is-complete::before { background: var(--color-accent-primary); }
 
 .files-tab {
   display: flex;
