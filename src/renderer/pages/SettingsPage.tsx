@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { useAppStore, type SettingsSection } from '../store/appStore';
 import { AccentColorPicker } from '../components/ColorPicker';
 import { Button } from '../components/Button';
@@ -183,6 +183,11 @@ const TERMINAL_LABELS: Record<TerminalPreset, string> = {
 export function SettingsPage() {
   const section = useAppStore((s) => s.settingsSection);
   const setSettingsSection = useAppStore((s) => s.setSettingsSection);
+  // Skip the first enter — WorkbenchShell's stage fade already covers Hub → Settings.
+  const skipEnter = useRef(true);
+  useEffect(() => {
+    skipEnter.current = false;
+  }, []);
 
   return (
     <div className="stage-inner stage-inner--settings">
@@ -201,14 +206,16 @@ export function SettingsPage() {
           </button>
         ))}
       </nav>
-      {section === 'general' && <GeneralSection />}
-      {section === 'appearance' && <AppearanceSection />}
-      {section === 'tools' && <ToolsSection />}
-      {section === 'processes' && <ProcessesSettingsSection />}
-      {section === 'toolchains' && <ToolchainsSettingsSection />}
-      {section === 'files' && <FilesSettingsSection />}
-      {section === 'git' && <GitSettingsSection />}
-      {section === 'android' && <AndroidSection />}
+      <div key={section} className={skipEnter.current ? undefined : 'page-enter'}>
+        {section === 'general' && <GeneralSection />}
+        {section === 'appearance' && <AppearanceSection />}
+        {section === 'tools' && <ToolsSection />}
+        {section === 'processes' && <ProcessesSettingsSection />}
+        {section === 'toolchains' && <ToolchainsSettingsSection />}
+        {section === 'files' && <FilesSettingsSection />}
+        {section === 'git' && <GitSettingsSection />}
+        {section === 'android' && <AndroidSection />}
+      </div>
     </div>
   );
 }

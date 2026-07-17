@@ -1,11 +1,11 @@
 :root {
-  /* Color: surface */
-  --color-surface-canvas: #181818;
-  --color-surface-sunken: #141414;
-  --color-surface-base: #1c1c1c;
-  --color-surface-raised: #222222;
-  --color-surface-overlay: #282828;
-  --color-surface-hover: #252525;
+  /* Color: surface — compressed graphite ladder (Cursor-like flat chrome). */
+  --color-surface-canvas: #141414;
+  --color-surface-sunken: #101010;
+  --color-surface-base: #181818;
+  --color-surface-raised: #1c1c1c;
+  --color-surface-overlay: #222222;
+  --color-surface-hover: #202020;
   /* Accent-derived so selection tints follow the accent color globally. */
   --color-surface-selected: color-mix(
     in srgb,
@@ -15,22 +15,22 @@
 
   /* Color: text */
   --color-text-primary: #ededed;
-  --color-text-secondary: #b4b4b4;
-  --color-text-muted: #858585;
-  --color-text-disabled: #686868;
+  --color-text-secondary: #a8a8a8;
+  --color-text-muted: #7a7a7a;
+  --color-text-disabled: #5c5c5c;
   --color-text-on-accent: #141414;
 
   /* Color: border */
-  --color-border-subtle: #292929;
-  --color-border-default: #363636;
-  --color-border-strong: #454545;
+  --color-border-subtle: #242424;
+  --color-border-default: #2e2e2e;
+  --color-border-strong: #3a3a3a;
 
   /* Color: accent — only --color-accent-primary is set directly (JS overrides it
      from the user's accent); every other accent token derives from it. */
   --color-accent-primary: #7c9cff;
-  --color-accent-hover: color-mix(in srgb, var(--color-accent-primary) 82%, #ffffff);
+  --color-accent-hover: color-mix(in srgb, var(--color-accent-primary) 88%, #ffffff);
   --color-accent-pressed: color-mix(in srgb, var(--color-accent-primary) 86%, #000000);
-  --color-accent-soft: color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
+  --color-accent-soft: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
 
   /* Color: focus */
   --color-focus: var(--color-accent-primary);
@@ -42,23 +42,23 @@
   --color-status-info: var(--color-accent-primary);
 
   /* Color: status soft */
-  --color-status-success-soft: rgba(109, 184, 122, 0.12);
-  --color-status-warning-soft: rgba(201, 162, 77, 0.12);
-  --color-status-danger-soft: rgba(212, 106, 106, 0.12);
+  --color-status-success-soft: rgba(109, 184, 122, 0.08);
+  --color-status-warning-soft: rgba(201, 162, 77, 0.08);
+  --color-status-danger-soft: rgba(212, 106, 106, 0.08);
   --color-status-info-soft: var(--color-accent-soft);
-  --color-focus-ring: color-mix(in srgb, var(--color-accent-primary) 20%, transparent);
+  --color-focus-ring: color-mix(in srgb, var(--color-accent-primary) 18%, transparent);
 
   /* Color: diff */
-  --color-diff-add-bg: rgba(109, 184, 122, 0.12);
+  --color-diff-add-bg: rgba(109, 184, 122, 0.08);
   --color-diff-add-text: #8fd49a;
-  --color-diff-del-bg: rgba(212, 106, 106, 0.12);
+  --color-diff-del-bg: rgba(212, 106, 106, 0.08);
   --color-diff-del-text: #e88a8a;
   --color-diff-gutter: var(--color-surface-sunken);
-  --color-diff-line-num: #686868;
+  --color-diff-line-num: #5c5c5c;
 
   /* Color: scrims */
-  --color-scrim-dialog: rgba(0, 0, 0, 0.6);
-  --color-scrim-disabled-region: rgba(20, 20, 20, 0.4);
+  --color-scrim-dialog: rgba(0, 0, 0, 0.55);
+  --color-scrim-disabled-region: rgba(16, 16, 16, 0.4);
 
   /* Font: family */
   --font-family-ui:
@@ -134,11 +134,11 @@
   --motion-duration-loading: 1400ms;
   --ease-state: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Elevation */
-  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-card-hover: 0 18px 40px rgba(0, 0, 0, 0.5);
+  /* Elevation — overlays only; resting cards stay flat (hairline border). */
+  --shadow-menu: 0 8px 20px rgba(0, 0, 0, 0.32);
+  --shadow-dialog: 0 12px 36px rgba(0, 0, 0, 0.4);
+  --shadow-card: none;
+  --shadow-card-hover: 0 1px 0 rgba(255, 255, 255, 0.03);
 
   /* Perspective distance for the hub's 3D project cards. */
   --card-perspective: 900px;

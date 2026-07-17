@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/appStore';
 import { ProjectOverview } from '../features/overview/ProjectOverview';
 import { ProcessesTab } from '../features/processes/ProcessesTab';
@@ -18,6 +18,11 @@ export function ProjectWorkspace() {
   const projectTab = useAppStore((s) => s.projectTab);
   const setProjectTab = useAppStore((s) => s.setProjectTab);
   const tabOrder = useAppStore((s) => s.settings?.appearance.projectTabOrder);
+  // Skip the first enter — WorkbenchShell's stage fade already covers Hub → Project.
+  const skipEnter = useRef(true);
+  useEffect(() => {
+    skipEnter.current = false;
+  }, []);
 
   const tabs = orderProjectTabs(tabOrder);
   const activeTab = KNOWN_TABS.has(projectTab) ? projectTab : 'overview';
@@ -46,13 +51,20 @@ export function ProjectWorkspace() {
       </div>
 
       <div className="workspace-body">
-        {activeTab === 'overview' && <ProjectOverview projectId={projectId} />}
-        {activeTab === 'files' && <FilesTab projectId={projectId} />}
-        {activeTab === 'processes' && <ProcessesTab projectId={projectId} />}
-        {activeTab === 'terminal' && <TerminalTab projectId={projectId} />}
-        {activeTab === 'preview' && <PreviewTab />}
-        {activeTab === 'android' && <AndroidPanel key={projectId} projectId={projectId} />}
-        {activeTab === 'git' && <GitTab projectId={projectId} />}
+        <div
+          key={`${projectId}:${activeTab}`}
+          className={['workspace-pane', skipEnter.current ? null : 'page-enter']
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {activeTab === 'overview' && <ProjectOverview projectId={projectId} />}
+          {activeTab === 'files' && <FilesTab projectId={projectId} />}
+          {activeTab === 'processes' && <ProcessesTab projectId={projectId} />}
+          {activeTab === 'terminal' && <TerminalTab projectId={projectId} />}
+          {activeTab === 'preview' && <PreviewTab />}
+          {activeTab === 'android' && <AndroidPanel key={projectId} projectId={projectId} />}
+          {activeTab === 'git' && <GitTab projectId={projectId} />}
+        </div>
       </div>
     </div>
   );

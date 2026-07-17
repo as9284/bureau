@@ -29,47 +29,49 @@ StarGit. These are the canonical values — **do not re-invent, reuse**.
 
 ### 2.1 Color — surfaces (dark / default)
 ```css
---color-surface-canvas:   #181818;  /* app background, titlebar, statusbar */
---color-surface-sunken:   #141414;  /* wells, gutters, scrollbar tracks */
---color-surface-base:     #1c1c1c;  /* panels, sidebar, main content */
---color-surface-raised:   #222222;  /* cards, popovers base */
---color-surface-overlay:  #282828;  /* menus, dialogs, toasts */
---color-surface-hover:    #252525;
---color-surface-selected: #2b2d35;  /* selected row (accent-tinted graphite) */
+--color-surface-canvas:   #141414;  /* app background, titlebar, rail, statusbar */
+--color-surface-sunken:   #101010;  /* wells, gutters, scrollbar tracks, terminal */
+--color-surface-base:     #181818;  /* main stage / content panels */
+--color-surface-raised:   #1c1c1c;  /* cards, popovers base */
+--color-surface-overlay:  #222222;  /* menus, dialogs, toasts */
+--color-surface-hover:    #202020;
+/* Selected rows: accent mixed into raised (live token), not a fixed hex. */
+--color-surface-selected: color-mix(in srgb, var(--color-accent-primary) 15%, var(--color-surface-raised));
 ```
 
 ### 2.2 Color — text
 ```css
 --color-text-primary:   #ededed;
---color-text-secondary: #b4b4b4;
---color-text-muted:     #858585;
---color-text-disabled:  #686868;
+--color-text-secondary: #a8a8a8;
+--color-text-muted:     #7a7a7a;
+--color-text-disabled:  #5c5c5c;
 --color-text-on-accent: #141414;
 ```
 
 ### 2.3 Color — borders
 ```css
---color-border-subtle:  #292929;  /* hairlines between regions */
---color-border-default: #363636;  /* control borders */
---color-border-strong:  #454545;  /* scrollbar thumb, emphasis */
+--color-border-subtle:  #242424;  /* hairlines between regions */
+--color-border-default: #2e2e2e;  /* control borders */
+--color-border-strong:  #3a3a3a;  /* scrollbar thumb, emphasis */
 ```
 
 ### 2.4 Color — accent (periwinkle) & focus
 ```css
 --color-accent-primary: #7c9cff;
---color-accent-hover:   #96afff;
---color-accent-pressed: #6385e0;
---color-accent-soft:    rgba(124, 156, 255, 0.12);
---color-focus:          #7c9cff;
---color-focus-ring:     rgba(124, 156, 255, 0.2);
+/* hover/pressed/soft/focus-ring derive via color-mix from primary (Settings may override primary). */
+--color-accent-hover:   color-mix(in srgb, var(--color-accent-primary) 88%, #ffffff);
+--color-accent-pressed: color-mix(in srgb, var(--color-accent-primary) 86%, #000000);
+--color-accent-soft:    color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
+--color-focus:          var(--color-accent-primary);
+--color-focus-ring:     color-mix(in srgb, var(--color-accent-primary) 18%, transparent);
 ```
 
 ### 2.5 Color — status (+ soft fills)
 ```css
---color-status-success: #6db87a;   --color-status-success-soft: rgba(109,184,122,0.12);
---color-status-warning: #c9a24d;   --color-status-warning-soft: rgba(201,162,77,0.12);
---color-status-danger:  #d46a6a;   --color-status-danger-soft:  rgba(212,106,106,0.12);
---color-status-info:    #7c9cff;   --color-status-info-soft:    rgba(124,156,255,0.12);
+--color-status-success: #6db87a;   --color-status-success-soft: rgba(109,184,122,0.08);
+--color-status-warning: #c9a24d;   --color-status-warning-soft: rgba(201,162,77,0.08);
+--color-status-danger:  #d46a6a;   --color-status-danger-soft:  rgba(212,106,106,0.08);
+--color-status-info:    var(--color-accent-primary);   --color-status-info-soft: var(--color-accent-soft);
 ```
 **Bureau semantic mapping for process/device state:**
 `running → success`, `starting → info/accent`, `warning/degraded → warning`, `crashed/error → danger`,
@@ -78,8 +80,8 @@ StarGit. These are the canonical values — **do not re-invent, reuse**.
 ### 2.6 Color — diff / log accents & scrims
 ```css
 --color-diff-add-text: #8fd49a;  --color-diff-del-text: #e88a8a;   /* also reused for +/- log lines */
---color-scrim-dialog:  rgba(0, 0, 0, 0.6);
---color-scrim-disabled-region: rgba(20, 20, 20, 0.4);
+--color-scrim-dialog:  rgba(0, 0, 0, 0.55);
+--color-scrim-disabled-region: rgba(16, 16, 16, 0.4);
 ```
 
 ### 2.7 Typography
@@ -122,8 +124,10 @@ uses `--font-family-mono` with `font-variant-numeric: tabular-nums`.
 --ease-exit:  cubic-bezier(0.4, 0, 1, 1);
 --ease-state: cubic-bezier(0.2, 0, 0, 1);
 
---shadow-menu:   0 8px 24px rgba(0,0,0,0.4);
---shadow-dialog: 0 16px 48px rgba(0,0,0,0.5);
+--shadow-menu:   0 8px 20px rgba(0,0,0,0.32);   /* overlays only */
+--shadow-dialog: 0 12px 36px rgba(0,0,0,0.4);
+--shadow-card:   none;                          /* resting cards stay flat */
+--shadow-card-hover: 0 1px 0 rgba(255,255,255,0.03);
 
 --z-base:0; --z-raised:10; --z-dropdown:100; --z-tooltip:200; --z-statusbar:300;
 --z-sidebar-resize:350; --z-command-palette:400; --z-dialog:500;
@@ -240,13 +244,15 @@ New components, all built from the tokens above.
   collapses at narrow widths; image zoom/lightbox, focus reading and export controls remain keyboard reachable.
 
 ### 6.1 ProjectCard (hub) — `--size-hub-row`+ tall
-- Grid: icon · name (body) + path (mono, muted) · stack badges · running-count pill · ports · last-opened
-  (mono, right). Hover `--color-surface-hover`; selected accent bar. Right-side quick actions (open editor,
-  StarGit, Monocle, reveal).
+- Grid: name (body) + path (mono, muted) · stack badges · git/status pills · idle/last-opened foot.
+  Flat graphite: hairline `--color-border-subtle`, `--color-surface-raised`, **no resting drop shadow**,
+  no hover scale. Hover uses `--color-surface-hover` + slightly stronger border only.
+  Quick actions (pin / remove) appear on hover/focus-within.
 
 ### 6.2 StackBadge
 - Small pill (`--radius-pill`, `--font-size-label`) per detected stack: Node / Flutter / Python / Static /
-  Git. Uses `--color-status-*-soft` backgrounds with the matching text color; language mark via Phosphor.
+  Git. Stack language tags use the **muted** tone (quiet graphite chrome). Status pills elsewhere
+  (Clean / N changes / Missing) keep `--color-status-*-soft` fills.
 
 ### 6.3 ProcessRow / ProcessCard
 - **State dot** (running/starting/warning/crashed/stopped → §2.5 mapping) + label + command preview (mono,
@@ -330,9 +336,11 @@ Ports `PlugsConnected`, Toolchains `Wrench`/`GitBranch`, Settings `GearSix`. Kee
 ## 10. Do / Don't (keeping it on-brand)
 
 **Do:** near-black graphite surfaces, hairline `--color-border-subtle` separators, one accent, mono for
-data, compact rows, subtle elevation only on overlays, functional 80–160ms motion.
+data, compact rows, subtle elevation **only on overlays** (menus/dialogs), functional 80–160ms motion,
+flat resting cards (no bloom or hover lift).
 
 **Don't:** introduce a second accent hue, use pure black `#000` or pure white surfaces, add drop shadows to
-inline/resting elements, use rounded-heavy cards, animate longer than ~200ms, or mix in a non-Geist font.
+inline/resting elements (including hub ProjectCards), use rounded-heavy cards, animate longer than ~200ms,
+or mix in a non-Geist font.
 
 ---

@@ -16,10 +16,10 @@ function themeFromTokens(): ITheme {
   const token = (name: string, fallback: string): string =>
     style.getPropertyValue(name).trim() || fallback;
 
-  const background = token('--color-surface-sunken', '#141414');
+  const background = token('--color-surface-sunken', '#101010');
   const foreground = token('--color-text-primary', '#ededed');
-  const muted = token('--color-text-muted', '#858585');
-  const secondary = token('--color-text-secondary', '#b4b4b4');
+  const muted = token('--color-text-muted', '#7a7a7a');
+  const secondary = token('--color-text-secondary', '#a8a8a8');
   const accent = token('--color-accent-primary', '#7c9cff');
   const success = token('--color-status-success', '#6db87a');
   const warning = token('--color-status-warning', '#c9a24d');
@@ -33,9 +33,9 @@ function themeFromTokens(): ITheme {
     foreground,
     cursor: accent,
     cursorAccent: background,
-    selectionBackground: token('--color-accent-soft', 'rgba(124,156,255,0.24)'),
+    selectionBackground: token('--color-accent-soft', 'rgba(124,156,255,0.1)'),
     // 16 ANSI colors mapped to graphite-friendly status hues.
-    black: token('--color-surface-overlay', '#282828'),
+    black: token('--color-surface-overlay', '#222222'),
     red: danger,
     green: success,
     yellow: warning,

@@ -87,9 +87,11 @@ export function WorkbenchShell() {
         <div className={['workspace', immersiveMode ? 'workspace--immersive' : ''].filter(Boolean).join(' ')}>
           {navigationChrome}
           <main className="stage">
-            {view === 'settings' && <SettingsPage />}
-            {view === 'project' && <ProjectWorkspace />}
-            {view === 'hub' && <HubOverview />}
+            <div key={view} className="stage-page page-enter">
+              {view === 'settings' && <SettingsPage />}
+              {view === 'project' && <ProjectWorkspace />}
+              {view === 'hub' && <HubOverview />}
+            </div>
           </main>
         </div>
         <StatusBar />

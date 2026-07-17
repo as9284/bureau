@@ -118,6 +118,9 @@ Before using a token, confirm it exists in `tokens.css`. Common families:
 - Type: `--font-family-{ui,mono}`; sizes `--font-size-{label(11px),supporting(12px),body(13px),section-title,repository-title,page-title}`
 - Also: `--space-1..16`, `--radius-*`, `--size-*`, `--motion-*`, `--shadow-*`, `--z-*`
 
+Resting chrome is flat graphite (hairline borders, no card bloom); elevation is for overlays only. One
+periwinkle accent for primary actions — keep filled primaries quiet, not glowing.
+
 **Tokens that do NOT exist — do not reference them** (real bugs found in the wild): there is no
 `--font-size-meta` (use `--font-size-label`) and no `--color-status-error` (use `--color-status-danger`).
 An undefined `var()` silently renders wrong. If unsure, grep `tokens.css`.

@@ -86,10 +86,10 @@ function readToken(name: string, fallback: string): string {
 function tokenHighlightStyle(): Extension {
   const keyword = readToken('--color-accent-primary', '#7c9cff');
   const string = readToken('--color-status-success', '#6db87a');
-  const comment = readToken('--color-text-muted', '#858585');
+  const comment = readToken('--color-text-muted', '#7a7a7a');
   const number = readToken('--color-status-warning', '#c9a24d');
   const typeName = readToken('--color-status-info', '#7c9cff');
-  const meta = readToken('--color-text-secondary', '#b4b4b4');
+  const meta = readToken('--color-text-secondary', '#a8a8a8');
   const invalid = readToken('--color-status-danger', '#d46a6a');
   const primary = readToken('--color-text-primary', '#ededed');
   return syntaxHighlighting(HighlightStyle.define([

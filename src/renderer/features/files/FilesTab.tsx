@@ -135,8 +135,8 @@ async function prepareExportHtml(renderedHtml: string): Promise<string> {
     body { margin: 0; padding: 40px; background: ${value('--color-surface-canvas', '#111')}; color: ${value('--color-text-primary', '#eee')}; font: ${value('--font-size-body', '13px')}/${value('--line-height-body', '1.6')} ${value('--font-family-ui', 'sans-serif')}; }
     .markdown-reader { max-width: 760px; margin: 0 auto; }
     pre, code { font-family: ${value('--font-family-mono', 'monospace')}; }
-    pre { overflow: auto; padding: 16px; background: ${value('--color-surface-sunken', '#0b0b0b')}; border: 1px solid ${value('--color-border-subtle', '#333')}; border-radius: ${value('--radius-panel', '6px')}; }
-    a { color: ${value('--color-accent-primary', '#8da2fb')}; }
+    pre { overflow: auto; padding: 16px; background: ${value('--color-surface-sunken', '#101010')}; border: 1px solid ${value('--color-border-subtle', '#242424')}; border-radius: ${value('--radius-panel', '6px')}; }
+    a { color: ${value('--color-accent-primary', '#7c9cff')}; }
     img, svg { max-width: 100%; height: auto; }
     blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid ${value('--color-border-strong', '#555')}; color: ${value('--color-text-secondary', '#bbb')}; }
     table { border-collapse: collapse; } th, td { padding: 6px 10px; border: 1px solid ${value('--color-border-default', '#444')}; }

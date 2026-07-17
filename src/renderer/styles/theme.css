@@ -36,14 +36,14 @@
   --color-status-danger: #c24141;
   --color-status-info: var(--color-accent-primary);
 
-  --color-status-success-soft: rgba(63, 143, 84, 0.12);
-  --color-status-warning-soft: rgba(180, 83, 9, 0.12);
-  --color-status-danger-soft: rgba(194, 65, 65, 0.12);
+  --color-status-success-soft: rgba(63, 143, 84, 0.08);
+  --color-status-warning-soft: rgba(180, 83, 9, 0.08);
+  --color-status-danger-soft: rgba(194, 65, 65, 0.08);
   --color-status-info-soft: var(--color-accent-soft);
 
-  --color-diff-add-bg: rgba(63, 143, 84, 0.12);
+  --color-diff-add-bg: rgba(63, 143, 84, 0.08);
   --color-diff-add-text: #2f6f40;
-  --color-diff-del-bg: rgba(194, 65, 65, 0.12);
+  --color-diff-del-bg: rgba(194, 65, 65, 0.08);
   --color-diff-del-text: #9f3030;
   --color-diff-gutter: var(--color-surface-sunken);
   --color-diff-line-num: #a1a1aa;
@@ -51,10 +51,10 @@
   --color-scrim-dialog: rgba(24, 24, 27, 0.45);
   --color-scrim-disabled-region: rgba(244, 244, 245, 0.55);
 
-  --shadow-menu: 0 8px 24px rgba(24, 24, 27, 0.12);
-  --shadow-dialog: 0 16px 48px rgba(24, 24, 27, 0.18);
-  --shadow-card: 0 1px 2px rgba(24, 24, 27, 0.06);
-  --shadow-card-hover: 0 18px 40px rgba(24, 24, 27, 0.16);
+  --shadow-menu: 0 6px 18px rgba(24, 24, 27, 0.1);
+  --shadow-dialog: 0 12px 36px rgba(24, 24, 27, 0.14);
+  --shadow-card: none;
+  --shadow-card-hover: 0 1px 0 rgba(24, 24, 27, 0.04);
 }
 
 [data-density='comfortable'] {

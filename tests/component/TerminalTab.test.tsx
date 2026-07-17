@@ -5,12 +5,8 @@ import { useAppStore } from '@renderer/store/appStore';
 import { TerminalTab } from '@renderer/features/terminal/TerminalTab';
 import type { TerminalSession } from '@shared/contracts/terminal';
 
-// xterm needs a real canvas and ResizeObserver, neither of which jsdom has — and the
-// terminal emulator is not ours to test. Stub the surface so these tests cover the tab's
-// own chrome: the session strip, the states, and what each control calls.
-vi.mock('@renderer/components/XtermSurface', () => ({
-  XtermSurface: () => <div data-testid="xterm-surface" />,
-}));
+// XtermSurface is stubbed globally in tests/component/setup.ts (jsdom has no canvas).
+// These tests cover the tab chrome: session strip, states, and what each control calls.
 
 const PROJECT_ID = '11111111-1111-1111-1111-111111111111';
 
