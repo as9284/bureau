@@ -78,7 +78,7 @@ export function useChangedFileContextMenuItems({
           onClick: () => unstageFile(projectId, revision, file.path),
         });
       }
-      if (file.unstaged || file.untracked) {
+      if (!file.unmerged) {
         items.push({
           id: 'discard',
           label: 'Discard changes',

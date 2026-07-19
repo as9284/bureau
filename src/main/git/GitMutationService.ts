@@ -15,6 +15,33 @@ import { isBureauError } from '../ipc/errors';
 const MUTATION_TIMEOUT_MS = 60_000;
 const PULL_PUSH_TIMEOUT_MS = 300_000;
 
+/**
+ * Delete an untracked path from the worktree and prune any parent directories the deletion leaves
+ * empty (matching `git clean -d`), so discarding a new file in a new folder removes the folder too.
+ * Guards against escaping the repository root before touching the filesystem.
+ */
+async function removeUntrackedPath(repoPath: string, relativePath: string): Promise<void> {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const repoRoot = path.resolve(repoPath);
+  const target = path.resolve(repoPath, relativePath);
+  if (!target.startsWith(repoRoot + path.sep) && target !== repoRoot) {
+    throw new Error('Refusing to discard path outside repository.');
+  }
+  await fs.rm(target, { force: true, recursive: true });
+  // Prune now-empty parent directories up to — but never including — the repo root. rmdir fails on
+  // a non-empty directory, which is exactly the stop condition, so any error ends the climb.
+  let dir = path.dirname(target);
+  while (dir !== repoRoot && dir.startsWith(repoRoot + path.sep)) {
+    try {
+      await fs.rmdir(dir);
+    } catch {
+      break;
+    }
+    dir = path.dirname(dir);
+  }
+}
+
 export type GitMutationService = {
   switchBranch(input: BranchSwitchRequest): Promise<MutationResult>;
   createBranch(input: BranchCreateRequest): Promise<MutationResult>;
@@ -227,10 +254,20 @@ export function createGitMutationService(params: {
 
     const snapshot = snapshotCache.get(input.projectId);
     const file = snapshot?.changedFiles.find((f) => f.path === input.path);
-    if (!file?.unstaged && !file?.untracked) {
+    if (!file) {
       return errorResult(
         'INVALID_REQUEST',
-        'Only unstaged or untracked changes can be discarded.',
+        'No such changed file to discard.',
+        'git.discardFile',
+        input.projectId
+      );
+    }
+    // A conflicted file has an ambiguous "discard" — the user must resolve it first (via the
+    // conflict bar), which is what the UI offers instead of a discard action.
+    if (file.unmerged) {
+      return errorResult(
+        'INVALID_REQUEST',
+        'Resolve the conflict before discarding this file.',
         'git.discardFile',
         input.projectId
       );
@@ -238,30 +275,54 @@ export function createGitMutationService(params: {
 
     return runWithRefresh(input.projectId, 'git.discardFile', async (executablePath, repoPath) => {
       if (file.untracked) {
-        const fs = await import('node:fs/promises');
-        const path = await import('node:path');
-        const target = path.resolve(repoPath, input.path);
-        if (
-          !target.startsWith(path.resolve(repoPath) + path.sep) &&
-          target !== path.resolve(repoPath)
-        ) {
-          throw new Error('Refusing to discard path outside repository.');
-        }
-        await fs.rm(target, { force: true });
+        await removeUntrackedPath(repoPath, file.path);
         return;
       }
 
+      // A brand-new file staged but never committed has no HEAD version to restore to, so it is
+      // removed from the index and worktree. (Renames/copies keep indexCode R/C, not A.)
+      const isAddedNew = file.indexCode === 'A' && file.kind !== 'renameOrCopy';
+      if (isAddedNew) {
+        const result = await runner.run(executablePath, {
+          args: [
+            '-C',
+            repoPath,
+            '--literal-pathspecs',
+            'rm',
+            '--force',
+            '--quiet',
+            '--pathspec-from-file=-',
+            '--pathspec-file-nul',
+          ],
+          stdin: Buffer.from(`${file.path}\0`),
+          timeoutMs: MUTATION_TIMEOUT_MS,
+        });
+        assertGitSuccess(result, 'git.discardFile', input.projectId);
+        return;
+      }
+
+      // Every other tracked change — modified, deleted, type-changed, staged, staged+modified, or
+      // renamed — is reverted to its HEAD state in both the index and the worktree. This is the
+      // single reliable "make this file look like HEAD" operation, so discard no longer leaves a
+      // staged remnant behind. For a rename we restore both the new and the original path, so the
+      // moved-away file reappears and the new one is removed.
+      const paths =
+        file.originalPath && file.originalPath !== file.path
+          ? [file.originalPath, file.path]
+          : [file.path];
       const result = await runner.run(executablePath, {
         args: [
           '-C',
           repoPath,
           '--literal-pathspecs',
           'restore',
+          '--source=HEAD',
+          '--staged',
           '--worktree',
           '--pathspec-from-file=-',
           '--pathspec-file-nul',
         ],
-        stdin: Buffer.from(`${input.path}\0`),
+        stdin: Buffer.from(paths.map((p) => `${p}\0`).join('')),
         timeoutMs: MUTATION_TIMEOUT_MS,
       });
       assertGitSuccess(result, 'git.discardFile', input.projectId);
@@ -304,15 +365,8 @@ export function createGitMutationService(params: {
       }
 
       if (untracked.length > 0) {
-        const fs = await import('node:fs/promises');
-        const path = await import('node:path');
-        const repoRoot = path.resolve(repoPath);
         for (const file of untracked) {
-          const target = path.resolve(repoPath, file.path);
-          if (!target.startsWith(repoRoot + path.sep) && target !== repoRoot) {
-            throw new Error('Refusing to discard path outside repository.');
-          }
-          await fs.rm(target, { force: true, recursive: true });
+          await removeUntrackedPath(repoPath, file.path);
         }
       }
     });

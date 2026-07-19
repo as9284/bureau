@@ -102,7 +102,7 @@ function ChangedFileRow({
               onCheckedChange={onToggleStage}
             />
           ) : null}
-          {!readOnly && revision && (file.unstaged || file.untracked) ? (
+          {!readOnly && revision && !file.unmerged ? (
             <Button variant="ghost" disabled={busy} onClick={onDiscard}>
               Discard
             </Button>
