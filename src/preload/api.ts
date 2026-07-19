@@ -149,6 +149,8 @@ export const bureauApi = Object.freeze({
   },
   processes: {
     list: (input: ProjectIdRequest) => invoke<ProjectProcesses>(IPC_CHANNELS.PROCESSES_LIST, input),
+    redetect: (input: ProjectIdRequest) =>
+      invoke<ProjectProcesses>(IPC_CHANNELS.PROCESSES_REDETECT, input),
     start: (input: ProcessTargetRequest) => invoke<OkResult>(IPC_CHANNELS.PROCESSES_START, input),
     stop: (input: ProcessTargetRequest) => invoke<OkResult>(IPC_CHANNELS.PROCESSES_STOP, input),
     restart: (input: ProcessTargetRequest) =>

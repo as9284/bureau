@@ -184,6 +184,11 @@ export function registerHandlers(
     return services.processes.list(input);
   });
 
+  register(IPC_CHANNELS.PROCESSES_REDETECT, 'processes.redetect', async (args: unknown) => {
+    const input = projectIdRequestSchema.parse(args);
+    return services.processes.redetect(input);
+  });
+
   register(IPC_CHANNELS.PROCESSES_START, 'processes.start', async (args: unknown) => {
     const input = processTargetRequestSchema.parse(args);
     return services.processes.start(input);

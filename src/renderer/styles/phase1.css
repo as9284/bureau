@@ -1292,21 +1292,6 @@
   gap: 8px;
 }
 
-.process-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 12px 0 16px;
-}
-
-.process-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: var(--font-size-label);
-  color: var(--color-text-muted);
-}
-
 .terminal-pane {
   box-sizing: border-box;
   height: 100%;

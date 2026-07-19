@@ -190,6 +190,8 @@ type AppState = {
   projectTab: ProjectTab;
 
   processesByProject: Record<string, ProjectProcesses>;
+  /** Projects with an in-flight process re-detection (drives the Refresh button spinner). */
+  refreshingProcesses: Record<string, boolean>;
   terminalByProject: Record<string, TerminalProjectState>;
   toolchainsByProject: Record<string, ProjectToolchains>;
   portsByProject: Record<string, ProjectPorts>;
@@ -246,6 +248,7 @@ type AppState = {
   setProjectTab(tab: ProjectTab): void;
 
   loadProcesses(projectId: string): Promise<void>;
+  redetectProcesses(projectId: string, options?: { announce?: boolean }): Promise<void>;
   saveProcessDefinition(projectId: string, definition: ProcessDefinition): Promise<void>;
   removeProcessDefinition(projectId: string, processId: string): Promise<void>;
   loadToolchains(projectId: string): Promise<void>;
@@ -433,6 +436,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   projectTab: 'overview',
 
   processesByProject: {},
+  refreshingProcesses: {},
   terminalByProject: {},
   toolchainsByProject: {},
   portsByProject: {},
@@ -824,6 +828,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
       // Non-fatal: the optimistic timestamp above already applied.
     }
     await get().loadProcesses(projectId);
+    // Pick up commands added to the repo since it was last opened (additive, never auto-runs them).
+    void get().redetectProcesses(projectId);
     void get().loadGit(projectId);
     void get().loadToolchains(projectId);
     void get().loadPorts(projectId);
@@ -1270,6 +1276,32 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set((s) => ({ processesByProject: { ...s.processesByProject, [projectId]: processes } }));
     } catch (err) {
       get().pushToast('error', toError(err, 'processes.list').message);
+    }
+  },
+
+  async redetectProcesses(projectId, options) {
+    if (get().refreshingProcesses[projectId]) return;
+    const before = get().processesByProject[projectId]?.definitions ?? [];
+    set((s) => ({ refreshingProcesses: { ...s.refreshingProcesses, [projectId]: true } }));
+    try {
+      const processes = await api().processes.redetect({ projectId });
+      set((s) => ({ processesByProject: { ...s.processesByProject, [projectId]: processes } }));
+      const beforeIds = new Set(before.map((p) => p.id));
+      const added = processes.definitions.filter((p) => !beforeIds.has(p.id)).length;
+      if (added > 0) {
+        get().pushToast('success', `Detected ${added} new process${added === 1 ? '' : 'es'}`);
+      } else if (options?.announce) {
+        get().pushToast('info', 'Processes are up to date');
+      }
+    } catch (err) {
+      if (options?.announce) {
+        get().pushToast('error', toError(err, 'processes.redetect').message);
+      }
+    } finally {
+      set((s) => {
+        const { [projectId]: _omit, ...rest } = s.refreshingProcesses;
+        return { refreshingProcesses: rest };
+      });
     }
   },
 

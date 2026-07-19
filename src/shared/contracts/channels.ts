@@ -58,6 +58,7 @@ export const IPC_CHANNELS = {
   FILES_SEARCH_EVENT: 'bureau:files:searchEvent',
 
   PROCESSES_LIST: 'bureau:processes:list',
+  PROCESSES_REDETECT: 'bureau:processes:redetect',
   PROCESSES_START: 'bureau:processes:start',
   PROCESSES_STOP: 'bureau:processes:stop',
   PROCESSES_RESTART: 'bureau:processes:restart',

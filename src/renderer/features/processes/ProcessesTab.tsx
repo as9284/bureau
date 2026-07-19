@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/appStore';
 import { ProcessRow } from './ProcessRow';
 import { ProcessFormDialog } from './ProcessFormDialog';
 import { Button } from '../../components/Button';
+import { RefreshIcon } from '../../components/icons';
 import type { ProcessDefinition } from '@shared/contracts/projects';
 
 export function ProcessesTab({ projectId }: { projectId: string }) {
@@ -10,6 +11,8 @@ export function ProcessesTab({ projectId }: { projectId: string }) {
   const project = useAppStore((s) => s.projects.find((p) => p.projectId === projectId));
   const stopAllProcesses = useAppStore((s) => s.stopAllProcesses);
   const saveProcessDefinition = useAppStore((s) => s.saveProcessDefinition);
+  const redetectProcesses = useAppStore((s) => s.redetectProcesses);
+  const refreshing = useAppStore((s) => Boolean(s.refreshingProcesses[projectId]));
   const [form, setForm] = useState<'add' | ProcessDefinition | null>(null);
 
   if (!definitions) {
@@ -21,6 +24,15 @@ export function ProcessesTab({ projectId }: { projectId: string }) {
       <div className="processes-tab__header">
         <span className="processes-tab__title">Processes</span>
         <div className="processes-tab__actions">
+          <Button
+            variant="ghost"
+            leadingIcon={<RefreshIcon />}
+            loading={refreshing}
+            onClick={() => void redetectProcesses(projectId, { announce: true })}
+            title="Re-detect commands from the project's manifests"
+          >
+            Refresh
+          </Button>
           <Button variant="ghost" onClick={() => setForm('add')}>
             Add process
           </Button>

@@ -98,4 +98,39 @@ describe('project + process journey (headless)', () => {
     await services.projects.remove({ projectId });
     expect(await services.projects.list()).toHaveLength(0);
   });
+
+  it('redetect merges newly-added scripts without clobbering existing definitions', async () => {
+    const { services } = boot;
+
+    const added = await services.projects.add({ path: projectDir });
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    const projectId = added.project!.projectId;
+
+    // A user edit to the detected script + a hand-added process that detection would never produce.
+    await services.processes.saveDefinition({
+      projectId,
+      definition: { ...serverDefinition, id: 'dev', label: 'My renamed dev', command: 'npm' },
+    });
+    await services.processes.saveDefinition({ projectId, definition: serverDefinition });
+
+    // A new script lands in the repo after the project was first opened.
+    await fs.writeFile(
+      path.join(projectDir, 'package.json'),
+      JSON.stringify({ name: 'demo', scripts: { dev: 'echo hi', build: 'echo build' } })
+    );
+
+    const merged = await services.processes.redetect({ projectId });
+    const ids = merged.definitions.map((d) => d.id);
+    // The new script is picked up…
+    expect(ids).toContain('build');
+    // …and nothing existing is lost or overwritten.
+    expect(ids).toEqual(expect.arrayContaining(['dev', 'srv', 'build']));
+    expect(merged.definitions.find((d) => d.id === 'dev')?.label).toBe('My renamed dev');
+    expect(merged.definitions.find((d) => d.id === 'srv')).toBeDefined();
+
+    // Idempotent: a second redetect adds nothing new.
+    const again = await services.processes.redetect({ projectId });
+    expect(again.definitions.map((d) => d.id).sort()).toEqual([...ids].sort());
+  });
 });

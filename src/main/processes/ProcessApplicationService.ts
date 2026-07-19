@@ -12,6 +12,7 @@ type Ok = OkResult;
 
 export type ProcessApplicationService = {
   list(input: { projectId: string }): Promise<ProjectProcesses>;
+  redetect(input: { projectId: string }): Promise<ProjectProcesses>;
   start(input: Target): Promise<Ok>;
   stop(input: Target): Promise<Ok>;
   restart(input: Target): Promise<Ok>;
@@ -72,6 +73,37 @@ export function createProcessApplicationService(
       }
     }
     return { definitions: config.processes, runtimes: supervisor.listRuntimes(projectId) };
+  }
+
+  // Re-run stack detection and merge in any newly-detected commands (e.g. scripts added to
+  // package.json since the project was first opened). Purely additive: matches by process id and
+  // only appends definitions that don't already exist, so user edits and manually-added processes
+  // are never clobbered or removed. Detected commands remain untrusted input — they are displayed,
+  // never auto-run.
+  async function redetect(input: { projectId: string }): Promise<ProjectProcesses> {
+    const { projectId } = input;
+    const root = projectRootOf(projectId);
+    const detection = await detectStack(root).catch(() => null);
+    if (detection && detection.suggestedProcesses.length > 0) {
+      const current = configStore.get(projectId);
+      const existingIds = new Set(current.processes.map((p) => p.id));
+      const additions = detection.suggestedProcesses.filter((p) => !existingIds.has(p.id));
+      if (additions.length > 0) {
+        await configStore
+          .set(projectId, {
+            ...current,
+            packageManager: current.packageManager ?? detection.packageManager,
+            processes: [...current.processes, ...additions],
+          })
+          .catch(() => undefined);
+      }
+      // Keep the catalogue's stack (sidebar/overview badges) in sync with what detection found.
+      const project = catalogue.get(projectId);
+      if (detection.stack.length > 0 && project && !sameStack(project.stack, detection.stack)) {
+        await catalogue.setStack(projectId, detection.stack).catch(() => undefined);
+      }
+    }
+    return processesFor(projectId);
   }
 
   async function resolveStartInput(target: Target): Promise<StartInput> {
@@ -161,6 +193,7 @@ export function createProcessApplicationService(
 
   return {
     list: (input) => processesFor(input.projectId),
+    redetect,
     start,
     stop,
     restart,

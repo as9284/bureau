@@ -175,6 +175,7 @@ export type BureauApiV1 = {
   };
   processes: {
     list(input: ProjectIdRequest): Promise<ProjectProcesses>;
+    redetect(input: ProjectIdRequest): Promise<ProjectProcesses>;
     start(input: ProcessTargetRequest): Promise<OkResult>;
     stop(input: ProcessTargetRequest): Promise<OkResult>;
     restart(input: ProcessTargetRequest): Promise<OkResult>;

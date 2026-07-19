@@ -97,42 +97,55 @@ export function ProcessFormDialog({
     <div className="overlay-root" onMouseDown={onCancel}>
       <div
         ref={dialogRef}
-        className="dialog process-form-dialog"
+        className="dialog"
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2>{title}</h2>
-        <div className="process-form">
-          <label className="process-form__field">
-            <span>Label</span>
+        <div className="dialog__header">
+          <h2>{title}</h2>
+        </div>
+        <div className="dialog__body">
+          <label className="dialog__field">
+            <span className="dialog__label">Label</span>
             <TextField value={label} onChange={(e) => setLabel(e.target.value)} />
           </label>
-          <label className="process-form__field">
-            <span>Command</span>
+          <label className="dialog__field">
+            <span className="dialog__label">Command</span>
             <TextField mono value={command} onChange={(e) => setCommand(e.target.value)} />
           </label>
-          <label className="process-form__field">
-            <span>Arguments</span>
+          <label className="dialog__field">
+            <span className="dialog__label">Arguments</span>
             <TextField mono value={argsText} onChange={(e) => setArgsText(e.target.value)} />
           </label>
-          <Dropdown label="Working directory" value={cwd} options={cwdOptions} onChange={setCwd} />
-          <Dropdown
-            label="Run mode"
-            value={runMode}
-            options={[
-              { value: 'log', label: 'Log console' },
-              { value: 'terminal', label: 'Interactive terminal' },
-            ]}
-            onChange={(value) => setRunMode(value as ProcessRunMode)}
-          />
-          <label className="process-form__field">
-            <span>URL pattern (optional)</span>
+          <div className="dialog__field">
+            <span className="dialog__label">Working directory</span>
+            <Dropdown
+              label="Working directory"
+              value={cwd}
+              options={cwdOptions}
+              onChange={setCwd}
+            />
+          </div>
+          <div className="dialog__field">
+            <span className="dialog__label">Run mode</span>
+            <Dropdown
+              label="Run mode"
+              value={runMode}
+              options={[
+                { value: 'log', label: 'Log console' },
+                { value: 'terminal', label: 'Interactive terminal' },
+              ]}
+              onChange={(value) => setRunMode(value as ProcessRunMode)}
+            />
+          </div>
+          <label className="dialog__field">
+            <span className="dialog__label">URL pattern (optional)</span>
             <TextField mono value={urlPattern} onChange={(e) => setUrlPattern(e.target.value)} />
           </label>
-          <label className="process-form__field">
-            <span>Environment (KEY=value per line)</span>
+          <label className="dialog__field">
+            <span className="dialog__label">Environment (KEY=value per line)</span>
             <textarea
               className="text-field mono process-form__env"
               rows={4}
@@ -141,18 +154,10 @@ export function ProcessFormDialog({
               placeholder="PORT=3000"
             />
           </label>
-          <Checkbox
-            checked={autoRestart}
-            onChange={setAutoRestart}
-            label="Auto-restart on crash"
-          />
-          <Checkbox
-            checked={runOnOpen}
-            onChange={setRunOnOpen}
-            label="Run when project opens"
-          />
+          <Checkbox checked={autoRestart} onChange={setAutoRestart} label="Auto-restart on crash" />
+          <Checkbox checked={runOnOpen} onChange={setRunOnOpen} label="Run when project opens" />
         </div>
-        <div className="dialog__actions">
+        <div className="dialog__footer">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
