@@ -25,7 +25,9 @@ import type {
 
 type Invoke = <T>(channel: string, arg?: unknown) => Promise<T>;
 
-export function createGitBridge(invoke: Invoke): Pick<BureauApiV1, 'git' | 'github' | 'operations'> {
+export function createGitBridge(
+  invoke: Invoke
+): Pick<BureauApiV1, 'git' | 'github' | 'gitea' | 'operations'> {
   return {
     operations: {
     list: () => invoke<OperationListResult>(IPC_CHANNELS.OPERATIONS_LIST),
@@ -38,6 +40,14 @@ export function createGitBridge(invoke: Invoke): Pick<BureauApiV1, 'git' | 'gith
     publish: (input: import('@shared/contracts/github').GitHubPublishRequest) =>
       invoke(IPC_CHANNELS.GITHUB_PUBLISH, input),
     openUrl: (input: { url: string }) => invoke(IPC_CHANNELS.GITHUB_OPEN_URL, input),
+    },
+    gitea: {
+    getStatus: () => invoke(IPC_CHANNELS.GITEA_GET_STATUS),
+    connect: (input: import('@shared/contracts/gitea').GiteaConnectRequest) =>
+      invoke(IPC_CHANNELS.GITEA_CONNECT, input),
+    disconnect: () => invoke(IPC_CHANNELS.GITEA_DISCONNECT),
+    publish: (input: import('@shared/contracts/gitea').GiteaPublishRequest) =>
+      invoke(IPC_CHANNELS.GITEA_PUBLISH, input),
     },
     git: {
     listBranchDetails: (input: { projectId: string }) =>

@@ -121,14 +121,22 @@ export const githubOpenUrlRequestSchema = z
       .string()
       .url()
       .max(2048)
+      // The host allowlist itself lives in the handler, because the permitted set
+      // includes the operator-configured Gitea instance, which `shared` cannot see.
+      // Plain HTTP is admitted only so a LAN Gitea can be opened; the handler
+      // still requires HTTPS for github.com.
       .refine((value) => {
         try {
           const parsed = new URL(value);
-          return parsed.protocol === 'https:' && parsed.hostname === 'github.com';
+          return (
+            (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+            !parsed.username &&
+            !parsed.password
+          );
         } catch {
           return false;
         }
-      }, 'URL must be an HTTPS github.com URL'),
+      }, 'URL must be an HTTP(S) URL without credentials'),
   })
   .strict();
 

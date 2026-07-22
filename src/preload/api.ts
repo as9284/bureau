@@ -222,6 +222,7 @@ export const bureauApi = Object.freeze({
   },
   operations: gitBridge.operations,
   github: gitBridge.github,
+  gitea: gitBridge.gitea,
   git: gitBridge.git,
   settings: {
     get: () => invoke<PublicSettings>(IPC_CHANNELS.SETTINGS_GET),

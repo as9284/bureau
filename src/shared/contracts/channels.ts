@@ -195,6 +195,11 @@ export const IPC_CHANNELS = {
   GITHUB_PUBLISH: 'bureau:github:publish',
   GITHUB_OPEN_URL: 'bureau:github:openUrl',
 
+  GITEA_GET_STATUS: 'bureau:gitea:getStatus',
+  GITEA_CONNECT: 'bureau:gitea:connect',
+  GITEA_DISCONNECT: 'bureau:gitea:disconnect',
+  GITEA_PUBLISH: 'bureau:gitea:publish',
+
   ANDROID_GET_OVERVIEW: 'bureau:android:getOverview',
   ANDROID_CHOOSE_SDK: 'bureau:android:chooseSdk',
   ANDROID_CHOOSE_SCRCPY: 'bureau:android:chooseScrcpy',

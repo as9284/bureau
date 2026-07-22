@@ -683,3 +683,9 @@ export {
   cloneRequestSchema,
   initRepositoryRequestSchema,
 } from './gitRequests';
+
+export {
+  giteaHostUrlSchema,
+  giteaConnectRequestSchema,
+  giteaPublishRequestSchema,
+} from './giteaRequests';

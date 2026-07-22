@@ -37,6 +37,7 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
   const branchDetails = useGitStore((s) => s.branchDetails);
   const operation = useGitStore((s) => s.operationByRepo[projectId]);
   const setGitHubPublishRepoId = useGitStore((s) => s.setGitHubPublishRepoId);
+  const setGiteaPublishRepoId = useGitStore((s) => s.setGiteaPublishRepoId);
   const announce = useAppStore((s) => s.announce);
   const lastCounts = useRef<{ projectId: string; ahead: number; behind: number } | undefined>(
     undefined
@@ -177,13 +178,22 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
             </Button>
           </>
         ) : snapshot.branch.kind === 'named' ? (
-          <Button
-            variant="primary"
-            disabled={readOnly || Boolean(operation)}
-            onClick={() => setGitHubPublishRepoId(projectId)}
-          >
-            Publish to GitHub
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              disabled={readOnly || Boolean(operation)}
+              onClick={() => setGiteaPublishRepoId(projectId)}
+            >
+              Publish to Gitea
+            </Button>
+            <Button
+              variant="primary"
+              disabled={readOnly || Boolean(operation)}
+              onClick={() => setGitHubPublishRepoId(projectId)}
+            >
+              Publish to GitHub
+            </Button>
+          </>
         ) : null}
       </div>
       <BranchActionConfirmation

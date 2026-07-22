@@ -54,7 +54,10 @@ import {
   initRepositoryRequestSchema,
   githubPublishRequestSchema,
   githubOpenUrlRequestSchema,
+  giteaConnectRequestSchema,
+  giteaPublishRequestSchema,
 } from '@shared/validation/requests';
+import { isUnderGiteaHost } from '../gitea/giteaApi';
 import type { AppServices } from './serviceContracts';
 
 type RegisterFn = <T, R>(
@@ -74,8 +77,32 @@ export function registerGitHandlers(services: AppServices, register: RegisterFn)
   );
   register(IPC_CHANNELS.GITHUB_OPEN_URL, 'github.openUrl', async (args: unknown) => {
     const input = githubOpenUrlRequestSchema.parse(args);
+    // Deny by default: only github.com and the operator's own connected Gitea
+    // instance may be handed to the OS browser from the renderer.
+    const parsed = new URL(input.url);
+    const hostname = parsed.hostname.toLowerCase();
+    const giteaHost = services.gitea.connectedHostUrl();
+    const allowed =
+      (parsed.protocol === 'https:' && (hostname === 'github.com' || hostname === 'www.github.com')) ||
+      (Boolean(giteaHost) && isUnderGiteaHost(input.url, giteaHost as string));
+    if (!allowed) {
+      throw new Error('This URL is not on an allowed host.');
+    }
     await shell.openExternal(input.url);
   });
+
+  register(IPC_CHANNELS.GITEA_GET_STATUS, 'gitea.getStatus', async () =>
+    services.gitea.getStatus()
+  );
+  register(IPC_CHANNELS.GITEA_CONNECT, 'gitea.connect', async (args: unknown) =>
+    services.gitea.connect(giteaConnectRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.GITEA_DISCONNECT, 'gitea.disconnect', async () =>
+    services.gitea.disconnect()
+  );
+  register(IPC_CHANNELS.GITEA_PUBLISH, 'gitea.publish', async (args: unknown) =>
+    services.gitea.publish(giteaPublishRequestSchema.parse(args))
+  );
 
   register(IPC_CHANNELS.OPERATIONS_LIST, 'operations.list', async () => services.operations.list());
   register(IPC_CHANNELS.OPERATIONS_CANCEL, 'operations.cancel', async (args: unknown) =>

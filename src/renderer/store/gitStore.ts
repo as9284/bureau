@@ -26,6 +26,7 @@ import type { OperationStateDetails } from '@shared/contracts/recovery';
 import type { BlameLine, SubmoduleEntry } from '@shared/contracts/advanced';
 import type { TagDetail } from '@shared/contracts/history';
 import type { GitHubPublishRequest, GitHubPublishResult } from '@shared/contracts/github';
+import type { GiteaPublishRequest, GiteaPublishResult } from '@shared/contracts/gitea';
 
 const branchLoadRequest = createLatestRequestWins();
 const historyLoadRequest = createLatestRequestWins();
@@ -146,6 +147,7 @@ type AppStore = {
   initBusy: boolean;
   initError?: BureauError;
   githubPublishRepoId?: string;
+  giteaPublishRepoId?: string;
   submodules: SubmoduleEntry[];
   submodulesLoading: boolean;
   submodulesError?: BureauError;
@@ -186,6 +188,7 @@ type AppStore = {
   setCloneDialogOpen: (open: boolean) => void;
   setInitDialogOpen: (open: boolean) => void;
   setGitHubPublishRepoId: (projectId?: string) => void;
+  setGiteaPublishRepoId: (projectId?: string) => void;
   setHistoryFilters: (projectId: string, filters: HistoryFilters) => void;
   setCommitAmend: (projectId: string, amend: boolean) => void;
   setCommitSignOff: (projectId: string, signOff: boolean) => void;
@@ -361,6 +364,7 @@ type AppStore = {
   cloneRepository: (input: CloneRequest) => Promise<void>;
   initRepository: (input: InitRepositoryRequest) => Promise<void>;
   publishToGitHub: (input: GitHubPublishRequest) => Promise<GitHubPublishResult>;
+  publishToGitea: (input: GiteaPublishRequest) => Promise<GiteaPublishResult>;
 
   loadSubmodules: (projectId: string) => Promise<void>;
   submoduleInit: (projectId: string, revision: string, path: string) => Promise<void>;
@@ -515,6 +519,7 @@ export const useGitStore = create<AppStore>((set, get) => ({
   initBusy: false,
   initError: undefined,
   githubPublishRepoId: undefined,
+  giteaPublishRepoId: undefined,
   submodules: [],
   submodulesLoading: false,
   submodulesError: undefined,
@@ -616,6 +621,7 @@ export const useGitStore = create<AppStore>((set, get) => ({
   setCloneDialogOpen: (open) => set({ cloneDialogOpen: open, cloneError: undefined }),
   setInitDialogOpen: (open) => set({ initDialogOpen: open, initError: undefined }),
   setGitHubPublishRepoId: (projectId) => set({ githubPublishRepoId: projectId }),
+  setGiteaPublishRepoId: (projectId) => set({ giteaPublishRepoId: projectId }),
 
   setHistoryFilters: (projectId, filters) => {
     set({ historyFilters: filters });
@@ -1874,6 +1880,57 @@ export const useGitStore = create<AppStore>((set, get) => ({
       return result;
     } catch (err) {
       const error = toError(err, 'github.publish');
+      set((s) => ({
+        operationByRepo: {
+          ...s.operationByRepo,
+          [input.projectId]: { name, error },
+        },
+      }));
+      return { ok: false, error };
+    }
+  },
+
+  publishToGitea: async (input) => {
+    const name = 'Publish to Gitea';
+    set((s) => ({
+      operationByRepo: { ...s.operationByRepo, [input.projectId]: { name } },
+    }));
+    try {
+      const result = await api().gitea.publish(input);
+      if (result.ok) {
+        set((s) => {
+          const nextOperations = { ...s.operationByRepo };
+          delete nextOperations[input.projectId];
+          return {
+            repos: {
+              ...s.repos,
+              [input.projectId]: {
+                ...s.repos[input.projectId],
+                snapshot: result.snapshot,
+                error: undefined,
+              },
+            },
+            operationByRepo: nextOperations,
+            announcements: [...s.announcements, 'Repository published to Gitea'],
+          };
+        });
+        toast(
+          'success',
+          result.created
+            ? 'Repository created and branch published to Gitea'
+            : 'Branch published to Gitea'
+        );
+      } else {
+        set((s) => ({
+          operationByRepo: {
+            ...s.operationByRepo,
+            [input.projectId]: { name, error: result.error },
+          },
+        }));
+      }
+      return result;
+    } catch (err) {
+      const error = toError(err, 'gitea.publish');
       set((s) => ({
         operationByRepo: {
           ...s.operationByRepo,

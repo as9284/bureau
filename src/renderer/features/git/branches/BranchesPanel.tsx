@@ -118,6 +118,7 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
   const checkoutTracking = useGitStore((s) => s.checkoutTracking);
   const publishBranch = useGitStore((s) => s.publishBranch);
   const setGitHubPublishRepoId = useGitStore((s) => s.setGitHubPublishRepoId);
+  const setGiteaPublishRepoId = useGitStore((s) => s.setGiteaPublishRepoId);
   const renameBranch = useGitStore((s) => s.renameBranch);
   const setUpstream = useGitStore((s) => s.setUpstream);
   const operation = useGitStore((s) => s.operationByRepo[projectId]);
@@ -135,6 +136,9 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
   const [upstreamTarget, setUpstreamTarget] = useState<BranchDetail | null>(null);
   const [upstreamValue, setUpstreamValue] = useState('');
   const [publishTarget, setPublishTarget] = useState<BranchDetail | null>(null);
+  // Publishing the current branch can create the repository on a forge, so it asks
+  // which one first. Other branches only ever push to a remote that already exists.
+  const [forgeChooserOpen, setForgeChooserOpen] = useState(false);
   const [publishRemoteName, setPublishRemoteName] = useState('origin');
   const [publishRemoteUrl, setPublishRemoteUrl] = useState('');
   const [search, setSearch] = useState('');
@@ -146,6 +150,7 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
     b.shortName.toLowerCase().includes(search.toLowerCase()) ||
     b.ref.toLowerCase().includes(search.toLowerCase());
 
+  const currentBranchName = snapshot?.branch.kind === 'named' ? snapshot.branch.name : undefined;
   const localBranches = branchDetails.filter((b) => b.kind === 'local' && filterBranch(b));
   const remoteBranches = branchDetails.filter((b) => b.kind === 'remote' && filterBranch(b));
 
@@ -262,7 +267,7 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
                       onUnsetUpstream={() => revision && setUpstream(projectId, revision, null)}
                       onPublish={() => {
                         if (branch.current) {
-                          setGitHubPublishRepoId(projectId);
+                          setForgeChooserOpen(true);
                           return;
                         }
                         setPublishTarget(branch);
@@ -311,6 +316,63 @@ export function BranchesPanel({ projectId, snapshot, readOnly }: Props): ReactEl
           </div>
         )}
       </div>
+
+      <Dialog
+        open={forgeChooserOpen}
+        title="Publish branch"
+        description={
+          <>
+            Publish <span className="mono">{currentBranchName ?? 'this branch'}</span> and set its
+            upstream.
+          </>
+        }
+        onClose={() => setForgeChooserOpen(false)}
+        actions={
+          <Button variant="secondary" onClick={() => setForgeChooserOpen(false)}>
+            Cancel
+          </Button>
+        }
+      >
+        <div className="branches-panel__forge-options">
+          <button
+            type="button"
+            className="branches-panel__forge-option"
+            onClick={() => {
+              setForgeChooserOpen(false);
+              setGitHubPublishRepoId(projectId);
+            }}
+          >
+            <strong>GitHub</strong>
+            <small>Create or connect a repository on github.com via the GitHub CLI.</small>
+          </button>
+          <button
+            type="button"
+            className="branches-panel__forge-option"
+            onClick={() => {
+              setForgeChooserOpen(false);
+              setGiteaPublishRepoId(projectId);
+            }}
+          >
+            <strong>Gitea</strong>
+            <small>Create or connect a repository on your self-hosted Gitea instance.</small>
+          </button>
+          <button
+            type="button"
+            className="branches-panel__forge-option"
+            onClick={() => {
+              const branch = branchDetails.find((candidate) => candidate.current);
+              if (!branch) return;
+              setForgeChooserOpen(false);
+              setPublishTarget(branch);
+              setPublishRemoteName(branch.remoteName ?? 'origin');
+              setPublishRemoteUrl('');
+            }}
+          >
+            <strong>An existing remote</strong>
+            <small>Push to a remote you already have, or add one by URL.</small>
+          </button>
+        </div>
+      </Dialog>
 
       <Dialog
         open={Boolean(publishTarget)}

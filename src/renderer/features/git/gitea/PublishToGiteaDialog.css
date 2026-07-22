@@ -1,0 +1,217 @@
+.gitea-publish__checking,
+.gitea-publish__setup {
+  padding: var(--space-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-supporting);
+}
+
+.gitea-publish__setup strong {
+  color: var(--color-text-primary);
+}
+
+.gitea-publish__setup p {
+  margin: var(--space-2) 0 0;
+  max-width: 48ch;
+  color: var(--color-text-muted);
+}
+
+.gitea-publish__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.gitea-publish__destination {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-supporting);
+  color: var(--color-text-muted);
+}
+
+.gitea-publish__destination strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gitea-publish__branch {
+  grid-column: 2;
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gitea-publish__field {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.gitea-publish__field small {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.gitea-publish__visibility {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gitea-publish__visibility legend {
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.gitea-publish__visibility label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-base);
+  cursor: pointer;
+}
+
+.gitea-publish__visibility label:hover {
+  border-color: var(--color-border-default);
+  background: var(--color-surface-hover);
+}
+
+.gitea-publish__visibility label.is-selected {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-soft);
+}
+
+.gitea-publish__visibility input {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 2px 0 0;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-base);
+  cursor: pointer;
+}
+
+.gitea-publish__visibility input:checked {
+  border-color: var(--color-accent-primary);
+  background: radial-gradient(
+    circle at center,
+    var(--color-accent-primary) 0 4px,
+    transparent 5px
+  );
+}
+
+.gitea-publish__visibility span {
+  display: grid;
+  gap: 2px;
+}
+
+.gitea-publish__visibility strong {
+  font-size: var(--font-size-supporting);
+  color: var(--color-text-primary);
+}
+
+.gitea-publish__visibility small {
+  color: var(--color-text-muted);
+}
+
+.gitea-publish__notice,
+.gitea-publish__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-status-warning-soft);
+  color: var(--color-status-warning);
+  font-size: var(--font-size-supporting);
+}
+
+.gitea-publish__hint {
+  margin: calc(var(--space-2) * -1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+}
+
+.gitea-publish__notice--error,
+.gitea-publish__error {
+  background: var(--color-status-danger-soft);
+  color: var(--color-status-danger);
+}
+
+.gitea-publish__error {
+  margin-top: var(--space-3);
+}
+
+.gitea-publish__success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-status-success);
+  border-radius: var(--radius-control);
+  background: var(--color-status-success-soft);
+  color: var(--color-status-success);
+}
+
+.gitea-publish__success svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+.gitea-publish__success code {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .gitea-publish__visibility {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Connect step — only Gitea needs one, because the instance is self-hosted. */
+.gitea-publish__connect {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+.gitea-publish__connect p {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-supporting);
+}
+
+.gitea-publish__host {
+  grid-column: 2;
+  overflow: hidden;
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -529,6 +529,10 @@
    against the window's right edge on wide monitors. */
 .stage-inner--settings {
   max-width: 960px;
+  /* Settings panels size against this column, not the viewport — uiScale applies
+     CSS zoom and the project rail insets the stage, so width media queries here
+     break at the wrong moment. */
+  container: settings-stage / inline-size;
 }
 
 .page-title {
@@ -949,6 +953,62 @@
   gap: var(--space-2);
 }
 
+/* ---------- Titled groups inside a long section ---------- */
+
+/*
+ * Git carries ~30 rows. Grouping them keeps the section scannable without
+ * turning each group into a card — resting chrome stays flat graphite.
+ */
+.settings-group + .settings-group {
+  margin-top: var(--space-6);
+}
+
+.settings-group__title {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.settings-group__desc {
+  margin: var(--space-1) 0 0;
+  max-width: 60ch;
+  font-size: var(--font-size-supporting);
+  color: var(--color-text-secondary);
+}
+
+/* The final hairline would double up with the gap before the next group. */
+.settings-group > .settings-row:last-child {
+  border-bottom: 0;
+}
+
+/*
+ * The confirmation toggles are many and individually short, so they pair up once
+ * the stage is wide enough. Measured against the settings stage rather than the
+ * viewport: uiScale applies CSS zoom and the project rail insets the stage, so a
+ * width media query would break at the wrong moment.
+ */
+.settings-confirmations {
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: var(--space-6);
+}
+
+@container settings-stage (min-width: 760px) {
+  .settings-confirmations {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.settings-confirmations .settings-row {
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.settings-confirmations .settings-row__desc {
+  max-width: 40ch;
+}
+
 /* Vertical variant: a full-width control (e.g. the tab reorder list) below the label. */
 .settings-row--stacked {
   flex-direction: column;
@@ -1275,8 +1335,17 @@
   color: var(--color-text-primary);
 }
 
+.settings-row__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-status-danger-soft);
+  color: var(--color-status-danger);
+  font-size: var(--font-size-supporting);
+}
+
 .settings-path {
-  margin: -4px 0 8px;
+  margin: var(--space-2) 0 0;
   padding: 6px 8px;
   border-radius: var(--radius-control);
   background: var(--color-surface-sunken);

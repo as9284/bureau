@@ -1,4 +1,4 @@
-import { app, clipboard, shell } from 'electron';
+import { app, clipboard, safeStorage, shell } from 'electron';
 import { createSettingsStoreFromPath, createSettingsStore } from '../settings/SettingsStore';
 import { createSettingsApplicationService } from '../settings/SettingsApplicationService';
 import type { ExecutablePickerAdapter } from '../settings/SettingsApplicationService';
@@ -60,6 +60,12 @@ import { createGitExtendedMutationService } from '../git/GitExtendedMutationServ
 import { createGitLifecycleService } from '../git/GitLifecycleService';
 import { createGitAdvancedService } from '../git/GitAdvancedService';
 import { createGitHubPublishingService } from '../github/GitHubPublishingService';
+import { createGiteaPublishingService } from '../gitea/GiteaPublishingService';
+import {
+  createGiteaCredentialStore,
+  createGiteaCredentialStoreSource,
+  type SecretCipher,
+} from '../gitea/GiteaCredentialStore';
 import { createRepositoryValidator } from '../repositories/RepositoryValidator';
 import { createOperationNotifier } from '../system/OperationNotifier';
 import { createFilesPersistence } from '../files/FilePersistence';
@@ -106,13 +112,24 @@ export async function createAppServices(
 ): Promise<AppBootstrap> {
   const dataPath = userDataPath ?? app.getPath('userData');
 
+  // The Gitea personal access token is the only secret Bureau stores. It goes
+  // through the OS keyring; when that is unavailable the store refuses to
+  // persist rather than falling back to plaintext on disk.
+  const safeStorageCipher: SecretCipher = {
+    available: () => Boolean(safeStorage?.isEncryptionAvailable?.()),
+    encrypt: (plain) => safeStorage.encryptString(plain).toString('base64'),
+    decrypt: (cipher) => safeStorage.decryptString(Buffer.from(cipher, 'base64')),
+  };
+
   const settingsStoreSource = createSettingsStoreFromPath(`${dataPath}/settings.v1.json`);
   const projectStoreSource = createProjectCatalogueStore(`${dataPath}/projects.v1.json`);
   const projectConfigSource = createProjectConfigStoreSource(`${dataPath}/projectConfigs.v1.json`);
+  const giteaCredentialSource = createGiteaCredentialStoreSource(`${dataPath}/gitea.v1.json`);
 
   await settingsStoreSource.load();
   await projectStoreSource.load();
   await projectConfigSource.load();
+  await giteaCredentialSource.load();
 
   const settingsStore = createSettingsStore(settingsStoreSource);
   const catalogue = createProjectCatalogue(projectStoreSource);
@@ -246,6 +263,15 @@ export async function createAppServices(
     runner: gitRunner,
     statusService: gitStatusService,
     coordinator: gitCoordinator,
+  });
+  const gitea = createGiteaPublishingService({
+    catalogue,
+    snapshotCache,
+    resolver: gitResolver,
+    runner: gitRunner,
+    statusService: gitStatusService,
+    coordinator: gitCoordinator,
+    credentials: createGiteaCredentialStore(giteaCredentialSource, safeStorageCipher),
   });
 
   async function runProjectLaunch(
@@ -421,6 +447,7 @@ export async function createAppServices(
     ports,
     tasks,
     github,
+    gitea,
     system: {
       async chooseDirectory(input) {
         const path = await dialogAdapter.showOpenDirectoryDialog({

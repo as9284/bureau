@@ -8,6 +8,8 @@ import { IconButton } from '../components/IconButton';
 import { TextArea } from '../components/TextArea';
 import { TextField } from '../components/TextField';
 import { ArrowDownIcon, ArrowUpIcon, GripIcon } from '../components/icons';
+import { GiteaConnectFields } from '../features/git/gitea/GiteaConnectFields';
+import { useGiteaConnection } from '../features/git/gitea/useGiteaConnection';
 import { reorderByDrag } from '../lib/projectOrder';
 import { orderProjectTabs, PROJECT_TAB_LABELS } from '../lib/projectTabs';
 import type {
@@ -101,7 +103,8 @@ const CONFIRMATION_ROWS: Array<{
   {
     key: 'rebaseBranch',
     label: 'Rebase branch',
-    description: 'Ask before replaying the current branch onto another, which rewrites its history.',
+    description:
+      'Ask before replaying the current branch onto another, which rewrites its history.',
   },
   {
     key: 'resetBranch',
@@ -405,167 +408,260 @@ function GitSettingsSection() {
   return (
     <section className="settings-section">
       <h2>Git</h2>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Git executable</div>
-          <div className="settings-row__desc">
-            Leave empty to use PATH / platform defaults (min 2.25).
-          </div>
-          <div className="settings-path mono">{settings.git.executablePath ?? 'Auto-detect'}</div>
-        </div>
-        <div className="settings-row__actions">
-          <Button onClick={() => void chooseGit()}>Choose…</Button>
-          {settings.git.executablePath ? (
-            <Button variant="ghost" onClick={() => void clearGit()}>
-              Clear
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Pull strategy</div>
-          <div className="settings-row__desc">How Bureau runs git pull from the Sync bar.</div>
-        </div>
-        <Dropdown
-          className="settings-dropdown"
-          label="Pull strategy"
-          value={settings.gitBehavior.pullStrategy}
-          options={[
-            { value: 'ff-only', label: 'Fast-forward only' },
-            { value: 'merge', label: 'Merge' },
-            { value: 'rebase', label: 'Rebase' },
-          ]}
-          onChange={(pullStrategy) =>
-            void updateSettings({
-              gitBehavior: { pullStrategy: pullStrategy as 'ff-only' | 'merge' | 'rebase' },
-            })
-          }
-        />
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">History page size</div>
-          <div className="settings-row__desc">Initial commits loaded in the History panel.</div>
-        </div>
-        <Dropdown
-          className="settings-dropdown"
-          label="History page size"
-          value={String(settings.history.commitLimit)}
-          options={['20', '30', '50', '100'].map((n) => ({ value: n, label: n }))}
-          onChange={(value) => void updateSettings({ history: { commitLimit: Number(value) } })}
-        />
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Auto-refresh</div>
-          <div className="settings-row__desc">
-            How often the Git tab refreshes status (never fetches).
-          </div>
-        </div>
-        <Dropdown
-          className="settings-dropdown"
-          label="Refresh interval"
-          value={String(settings.general.refreshIntervalMs)}
-          options={[
-            { value: '0', label: 'Off' },
-            { value: '5000', label: '5 seconds' },
-            { value: '15000', label: '15 seconds' },
-            { value: '30000', label: '30 seconds' },
-            { value: '60000', label: '60 seconds' },
-          ]}
-          onChange={(value) =>
-            void updateSettings({
-              general: {
-                refreshIntervalMs: Number(value) as 0 | 5000 | 15000 | 30000 | 60000,
-              },
-            })
-          }
-        />
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Refresh on focus</div>
-          <div className="settings-row__desc">
-            Also refresh the Git tab whenever Bureau regains focus (never fetches).
-          </div>
-        </div>
-        <Checkbox
-          checked={settings.general.refreshOnFocus}
-          onCheckedChange={(refreshOnFocus) => void updateSettings({ general: { refreshOnFocus } })}
-          label="Refresh on window focus"
-        />
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Default sign-off</div>
-          <div className="settings-row__desc">Pre-check --signoff on new commits.</div>
-        </div>
-        <Dropdown
-          className="settings-dropdown"
-          label="Default sign-off"
-          value={settings.commit.defaultSignOff ? 'on' : 'off'}
-          options={[
-            { value: 'off', label: 'Off' },
-            { value: 'on', label: 'On' },
-          ]}
-          onChange={(value) => void updateSettings({ commit: { defaultSignOff: value === 'on' } })}
-        />
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Commit signing</div>
-          <div className="settings-row__desc">Pass -S when Git config enables signing.</div>
-        </div>
-        <Dropdown
-          className="settings-dropdown"
-          label="Commit signing"
-          value={settings.commit.signingPreference}
-          options={[
-            { value: 'off', label: 'Off' },
-            { value: 'config', label: 'Respect Git config' },
-          ]}
-          onChange={(signingPreference) =>
-            void updateSettings({
-              commit: { signingPreference: signingPreference as 'off' | 'config' },
-            })
-          }
-        />
-      </div>
-      <div className="settings-row">
-        <div>
-          <div className="settings-row__label">Commit message template</div>
-          <div className="settings-row__desc">
-            Prefills the commit message when starting a new commit in the Git tab.
-          </div>
-        </div>
-        <TextArea
-          label="Commit message template"
-          value={settings.commit.commitTemplate ?? ''}
-          rows={4}
-          onChange={(e) =>
-            void updateSettings({
-              commit: { commitTemplate: e.target.value || undefined },
-            })
-          }
-        />
-      </div>
-      {CONFIRMATION_ROWS.map((row) => (
-        <div className="settings-row" key={row.key}>
+
+      <div className="settings-group">
+        <h3 className="settings-group__title">Connections</h3>
+        <p className="settings-group__desc">
+          Which Git binary Bureau runs, and the forge account it publishes to.
+        </p>
+        <div className="settings-row">
           <div>
-            <div className="settings-row__label">{row.label}</div>
-            <div className="settings-row__desc">{row.description}</div>
+            <div className="settings-row__label">Git executable</div>
+            <div className="settings-row__desc">
+              Leave empty to use PATH / platform defaults (min 2.25).
+            </div>
+            <div className="settings-path mono">{settings.git.executablePath ?? 'Auto-detect'}</div>
           </div>
-          <Checkbox
-            checked={settings.confirmations[row.key]}
-            onCheckedChange={(checked) =>
-              void updateSettings({ confirmations: { [row.key]: checked } })
+          <div className="settings-row__actions">
+            <Button onClick={() => void chooseGit()}>Choose…</Button>
+            {settings.git.executablePath ? (
+              <Button variant="ghost" onClick={() => void clearGit()}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <GiteaConnectionRow />
+      </div>
+
+      <div className="settings-group">
+        <h3 className="settings-group__title">Sync &amp; history</h3>
+        <p className="settings-group__desc">
+          How the Git tab pulls, when it re-reads status, and how much history it loads. Refreshing
+          only re-reads local state — it never fetches.
+        </p>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Pull strategy</div>
+            <div className="settings-row__desc">How Bureau runs git pull from the Sync bar.</div>
+          </div>
+          <Dropdown
+            className="settings-dropdown"
+            label="Pull strategy"
+            value={settings.gitBehavior.pullStrategy}
+            options={[
+              { value: 'ff-only', label: 'Fast-forward only' },
+              { value: 'merge', label: 'Merge' },
+              { value: 'rebase', label: 'Rebase' },
+            ]}
+            onChange={(pullStrategy) =>
+              void updateSettings({
+                gitBehavior: { pullStrategy: pullStrategy as 'ff-only' | 'merge' | 'rebase' },
+              })
             }
-            label="Ask first"
           />
         </div>
-      ))}
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">History page size</div>
+            <div className="settings-row__desc">Initial commits loaded in the History panel.</div>
+          </div>
+          <Dropdown
+            className="settings-dropdown"
+            label="History page size"
+            value={String(settings.history.commitLimit)}
+            options={['20', '30', '50', '100'].map((n) => ({ value: n, label: n }))}
+            onChange={(value) => void updateSettings({ history: { commitLimit: Number(value) } })}
+          />
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Auto-refresh</div>
+            <div className="settings-row__desc">
+              How often the Git tab refreshes status (never fetches).
+            </div>
+          </div>
+          <Dropdown
+            className="settings-dropdown"
+            label="Refresh interval"
+            value={String(settings.general.refreshIntervalMs)}
+            options={[
+              { value: '0', label: 'Off' },
+              { value: '5000', label: '5 seconds' },
+              { value: '15000', label: '15 seconds' },
+              { value: '30000', label: '30 seconds' },
+              { value: '60000', label: '60 seconds' },
+            ]}
+            onChange={(value) =>
+              void updateSettings({
+                general: {
+                  refreshIntervalMs: Number(value) as 0 | 5000 | 15000 | 30000 | 60000,
+                },
+              })
+            }
+          />
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Refresh on focus</div>
+            <div className="settings-row__desc">
+              Also refresh the Git tab whenever Bureau regains focus (never fetches).
+            </div>
+          </div>
+          <Checkbox
+            checked={settings.general.refreshOnFocus}
+            onCheckedChange={(refreshOnFocus) =>
+              void updateSettings({ general: { refreshOnFocus } })
+            }
+            label="Refresh on window focus"
+          />
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3 className="settings-group__title">Commits</h3>
+        <p className="settings-group__desc">
+          Defaults applied when you start a new commit in the Git tab.
+        </p>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Default sign-off</div>
+            <div className="settings-row__desc">Pre-check --signoff on new commits.</div>
+          </div>
+          <Dropdown
+            className="settings-dropdown"
+            label="Default sign-off"
+            value={settings.commit.defaultSignOff ? 'on' : 'off'}
+            options={[
+              { value: 'off', label: 'Off' },
+              { value: 'on', label: 'On' },
+            ]}
+            onChange={(value) =>
+              void updateSettings({ commit: { defaultSignOff: value === 'on' } })
+            }
+          />
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Commit signing</div>
+            <div className="settings-row__desc">Pass -S when Git config enables signing.</div>
+          </div>
+          <Dropdown
+            className="settings-dropdown"
+            label="Commit signing"
+            value={settings.commit.signingPreference}
+            options={[
+              { value: 'off', label: 'Off' },
+              { value: 'config', label: 'Respect Git config' },
+            ]}
+            onChange={(signingPreference) =>
+              void updateSettings({
+                commit: { signingPreference: signingPreference as 'off' | 'config' },
+              })
+            }
+          />
+        </div>
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Commit message template</div>
+            <div className="settings-row__desc">
+              Prefills the commit message when starting a new commit in the Git tab.
+            </div>
+          </div>
+          <TextArea
+            label="Commit message template"
+            value={settings.commit.commitTemplate ?? ''}
+            rows={4}
+            onChange={(e) =>
+              void updateSettings({
+                commit: { commitTemplate: e.target.value || undefined },
+              })
+            }
+          />
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3 className="settings-group__title">Confirmations</h3>
+        <p className="settings-group__desc">
+          Destructive Git actions that stop to ask first. Unchecking one lets it run immediately.
+        </p>
+        <div className="settings-confirmations">
+          {CONFIRMATION_ROWS.map((row) => (
+            <div className="settings-row" key={row.key}>
+              <div>
+                <div className="settings-row__label">{row.label}</div>
+                <div className="settings-row__desc">{row.description}</div>
+              </div>
+              <Checkbox
+                checked={settings.confirmations[row.key]}
+                onCheckedChange={(checked) =>
+                  void updateSettings({ confirmations: { [row.key]: checked } })
+                }
+                label="Ask first"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
+  );
+}
+
+/**
+ * The single stored Gitea connection. GitHub has no equivalent row because the
+ * `gh` CLI owns that login; Gitea's token is Bureau's own to hold and release.
+ */
+function GiteaConnectionRow() {
+  const connection = useGiteaConnection(true);
+  const { status, connected, busy, error } = connection;
+
+  return (
+    <div className="settings-row settings-row--stacked">
+      <div>
+        <div className="settings-row__label">Gitea account</div>
+        <div className="settings-row__desc">
+          Used to create repositories and publish branches to a self-hosted Gitea instance.
+        </div>
+        {!status ? (
+          <div className="settings-path" role="status">
+            Checking connection…
+          </div>
+        ) : connected ? (
+          <div className="settings-path mono">
+            {status.account}@{status.hostUrl}
+            {status.version ? ` · Gitea ${status.version}` : ''}
+          </div>
+        ) : status.configured ? (
+          <div className="settings-path mono">{status.hostUrl} · reconnect required</div>
+        ) : (
+          <div className="settings-path">Not connected</div>
+        )}
+      </div>
+      {status && !connected ? (
+        <GiteaConnectFields connection={connection} showExplainer={false} />
+      ) : null}
+      {error ? (
+        <p className="settings-row__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="settings-row__actions">
+        {connected ? (
+          <Button variant="ghost" disabled={busy} onClick={() => void connection.disconnect()}>
+            Disconnect
+          </Button>
+        ) : (
+          <Button
+            disabled={!connection.canConnect}
+            loading={busy}
+            onClick={() => void connection.connect()}
+          >
+            Connect
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1001,8 +1097,8 @@ function AppearanceSection() {
         <div>
           <div className="settings-row__label">Reduce motion</div>
           <div className="settings-row__desc">
-            Cut animations and transitions throughout the app. Bureau already follows your
-            system’s reduce-motion setting; this turns it on regardless.
+            Cut animations and transitions throughout the app. Bureau already follows your system’s
+            reduce-motion setting; this turns it on regardless.
           </div>
         </div>
         <Checkbox

@@ -22,6 +22,7 @@ import { CloneDialog } from '../features/git/lifecycle/CloneDialog';
 import { InitDialog } from '../features/git/lifecycle/InitDialog';
 import { GitConfirmDialog } from '../features/git/GitConfirmDialog';
 import { PublishToGitHubDialog } from '../features/git/github/PublishToGitHubDialog';
+import { PublishToGiteaDialog } from '../features/git/gitea/PublishToGiteaDialog';
 import { OperationsDrawer } from '../features/git/operations/OperationsDrawer';
 import { buildEditMenuItems } from '../lib/contextMenu';
 
@@ -101,6 +102,7 @@ export function WorkbenchShell() {
         <InitDialog />
         <GitConfirmDialog />
         <PublishToGitHubDialog />
+        <PublishToGiteaDialog />
         <OperationsDrawer />
         <ToastStack />
         <UpdateNotifier />

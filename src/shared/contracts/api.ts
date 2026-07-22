@@ -122,6 +122,12 @@ import type {
   WorktreeLockRequest,
 } from './advanced';
 import type { GitHubCliStatus, GitHubPublishRequest, GitHubPublishResult } from './github';
+import type {
+  GiteaConnectRequest,
+  GiteaPublishRequest,
+  GiteaPublishResult,
+  GiteaStatus,
+} from './gitea';
 import type { FilesApi } from './files';
 import type { AppUpdateState } from './updates';
 import type {
@@ -236,6 +242,12 @@ export type BureauApiV1 = {
     signIn(): Promise<GitHubCliStatus>;
     publish(input: GitHubPublishRequest): Promise<GitHubPublishResult>;
     openUrl(input: { url: string }): Promise<void>;
+  };
+  gitea: {
+    getStatus(): Promise<GiteaStatus>;
+    connect(input: GiteaConnectRequest): Promise<GiteaStatus>;
+    disconnect(): Promise<GiteaStatus>;
+    publish(input: GiteaPublishRequest): Promise<GiteaPublishResult>;
   };
   git: {
     refresh(input: { projectId: string }): Promise<RepositorySnapshot>;

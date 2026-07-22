@@ -135,3 +135,40 @@
   display: grid;
   gap: var(--space-3);
 }
+
+/* Forge chooser — publishing the current branch can create the repository. */
+.branches-panel__forge-options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.branches-panel__forge-option {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+.branches-panel__forge-option:hover {
+  border-color: var(--color-border-default);
+  background: var(--color-surface-hover);
+}
+
+.branches-panel__forge-option:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.branches-panel__forge-option strong {
+  font-size: var(--font-size-supporting);
+  color: var(--color-text-primary);
+}
+
+.branches-panel__forge-option small {
+  font-size: var(--font-size-label);
+  color: var(--color-text-muted);
+}
