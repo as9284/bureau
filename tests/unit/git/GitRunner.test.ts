@@ -35,7 +35,11 @@ describe('GitRunner', () => {
       args: ['--version'],
       stdoutLimitBytes: 1,
     });
-    expect(result.exitCode).not.toBe(0);
+    // `git --version` prints and exits at once, so the SIGTERM often lands after the
+    // process is already gone and the exit code stays 0. `killed` is what every
+    // consumer reads (`assertGitSuccess` checks it before the exit code) and it is
+    // set before the kill is attempted, so that is the deterministic assertion.
+    expect(result.killed).toBe('stdout_limit');
   });
 
   it('passes stdin when provided', async () => {

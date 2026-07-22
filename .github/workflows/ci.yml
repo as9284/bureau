@@ -19,3 +19,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:unit
       - run: npm run test:security
+      # The release workflow verifies these too; running them here as well stops a
+      # component or integration break from surfacing only when a tag is pushed.
+      - run: npm run test:integration
+      - run: npm run test:component

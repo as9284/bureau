@@ -98,8 +98,13 @@ describe('PublishToGiteaDialog', () => {
       'Gitea repository name'
     )) as HTMLInputElement;
     expect(repositoryName.value).toBe('My-Project');
-    expect((screen.getByLabelText('Gitea owner or organisation') as HTMLInputElement).value).toBe(
-      'ana'
+    // The owner lands one commit after the form appears — it is seeded by its own
+    // effect keyed on the resolved account, so this has to be polled rather than
+    // read straight after the repository field shows up.
+    await waitFor(() =>
+      expect((screen.getByLabelText('Gitea owner or organisation') as HTMLInputElement).value).toBe(
+        'ana'
+      )
     );
   });
 
