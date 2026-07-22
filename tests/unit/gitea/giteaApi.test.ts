@@ -1,4 +1,6 @@
+import dns from 'node:dns';
 import http from 'node:http';
+import net from 'node:net';
 import type { AddressInfo } from 'node:net';
 import { describe, it, expect, afterEach } from 'vitest';
 import {
@@ -14,7 +16,8 @@ type Received = { method?: string; url?: string; headers: http.IncomingHttpHeade
 let server: http.Server | undefined;
 
 async function startServer(
-  handler: (req: http.IncomingMessage, res: http.ServerResponse, received: Received) => void
+  handler: (req: http.IncomingMessage, res: http.ServerResponse, received: Received) => void,
+  bindHost = '127.0.0.1'
 ): Promise<{ hostUrl: string; received: Received }> {
   const received: Received = { headers: {}, body: '' };
   server = http.createServer((req, res) => {
@@ -28,9 +31,10 @@ async function startServer(
       handler(req, res, received);
     });
   });
-  await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => server?.listen(0, bindHost, resolve));
   const { port } = server.address() as AddressInfo;
-  return { hostUrl: `http://127.0.0.1:${port}`, received };
+  const authority = net.isIPv6(bindHost) ? `[${bindHost}]` : bindHost;
+  return { hostUrl: `http://${authority}:${port}`, received };
 }
 
 afterEach(async () => {
@@ -102,6 +106,30 @@ describe('giteaRequest', () => {
     expect(result).toEqual({ ok: true, status: 200, body: { login: 'ana' } });
     expect(received.url).toBe('/api/v1/user');
     expect(received.headers.authorization).toBe('token tok');
+  });
+
+  it('reaches an instance addressed by hostname — the pinned lookup must answer `all: true`', async () => {
+    // Every other case here uses an IP literal, which skips the custom lookup
+    // altogether. Node's default `autoSelectFamily` asks for `all: true` and
+    // expects an array of records; a bare address fails as
+    // `ERR_INVALID_IP_ADDRESS: Invalid IP address: undefined`.
+    const [record] = await dns.promises.lookup('localhost', { all: true, verbatim: true });
+    const { hostUrl } = await startServer(
+      (_req, res) => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ login: 'ana' }));
+      },
+      // Bind whichever family the pinned lookup will select for `localhost`.
+      record.address
+    );
+
+    const result = await giteaRequest({
+      hostUrl: hostUrl.replace(record.family === 6 ? `[${record.address}]` : record.address, 'localhost'),
+      token: 'tok',
+      method: 'GET',
+      path: '/user',
+    });
+    expect(result).toEqual({ ok: true, status: 200, body: { login: 'ana' } });
   });
 
   it('sends a JSON body on POST', async () => {

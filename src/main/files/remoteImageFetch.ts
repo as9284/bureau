@@ -63,8 +63,13 @@ export function fetchPinned(
 ): Promise<FetchPinnedResult> {
   const transport = endpoint.url.protocol === 'https:' ? https : http;
   const agent = new transport.Agent({
-    lookup(_hostname, _options, callback) {
-      callback(null, endpoint.address, endpoint.family);
+    // Node enables `autoSelectFamily` by default, which calls a custom lookup
+    // with `all: true` and expects an array of records. Answering with a bare
+    // address makes it read `addresses[0].address` as `undefined` and fail with
+    // `ERR_INVALID_IP_ADDRESS`.
+    lookup(_hostname, options, callback) {
+      if (options.all) callback(null, [{ address: endpoint.address, family: endpoint.family }]);
+      else callback(null, endpoint.address, endpoint.family);
     },
   });
 

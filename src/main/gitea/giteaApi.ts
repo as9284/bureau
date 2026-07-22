@@ -100,8 +100,13 @@ export async function giteaRequest(request: GiteaRequest): Promise<GiteaHttpResu
   const payload = request.body === undefined ? undefined : Buffer.from(JSON.stringify(request.body));
   const transport = url.protocol === 'https:' ? https : http;
   const agent = new transport.Agent({
-    lookup(_hostname, _options, callback) {
-      callback(null, address, family);
+    // Node enables `autoSelectFamily` by default, which calls a custom lookup
+    // with `all: true` and expects an array of records. Answering with a bare
+    // address makes it read `addresses[0].address` as `undefined` and fail with
+    // `ERR_INVALID_IP_ADDRESS`.
+    lookup(_hostname, options, callback) {
+      if (options.all) callback(null, [{ address, family }]);
+      else callback(null, address, family);
     },
   });
 
