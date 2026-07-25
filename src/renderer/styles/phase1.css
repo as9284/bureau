@@ -391,22 +391,30 @@
   padding: 0 12px;
   border-bottom: 1px solid var(--color-border-subtle);
   flex: 0 0 auto;
+  background: var(--color-surface-canvas);
 }
 
 .workspace-tab {
   padding: 0 12px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-disabled);
   font-size: var(--font-size-supporting);
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  margin-bottom: -1px;
+  background: transparent;
 }
 
 .workspace-tab:hover {
   color: var(--color-text-primary);
+  background: var(--color-surface-hover);
 }
 
 .workspace-tab.active {
   color: var(--color-text-primary);
-  border-bottom-color: var(--color-accent-primary);
+  background: var(--color-surface-base);
+  border-color: var(--color-border-subtle);
+  border-bottom-color: var(--color-surface-base);
 }
 
 .workspace-body {

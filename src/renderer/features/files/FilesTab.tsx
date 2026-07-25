@@ -135,7 +135,7 @@ async function prepareExportHtml(renderedHtml: string): Promise<string> {
     body { margin: 0; padding: 40px; background: ${value('--color-surface-canvas', '#111')}; color: ${value('--color-text-primary', '#eee')}; font: ${value('--font-size-body', '13px')}/${value('--line-height-body', '1.6')} ${value('--font-family-ui', 'sans-serif')}; }
     .markdown-reader { max-width: 760px; margin: 0 auto; }
     pre, code { font-family: ${value('--font-family-mono', 'monospace')}; }
-    pre { overflow: auto; padding: 16px; background: ${value('--color-surface-sunken', '#101010')}; border: 1px solid ${value('--color-border-subtle', '#242424')}; border-radius: ${value('--radius-panel', '6px')}; }
+    pre { overflow: auto; padding: 16px; background: ${value('--color-surface-sunken', '#141414')}; border: 1px solid ${value('--color-border-subtle', 'rgba(240,240,240,0.075)')}; border-radius: ${value('--radius-control', '8px')}; }
     a { color: ${value('--color-accent-primary', '#7c9cff')}; }
     img, svg { max-width: 100%; height: auto; }
     blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid ${value('--color-border-strong', '#555')}; color: ${value('--color-text-secondary', '#bbb')}; }
@@ -544,13 +544,40 @@ export function FilesTab({ projectId }: { projectId: string }) {
   const [dropTarget, setDropTarget] = useState<{ path: string; place: 'before' | 'after' } | null>(null);
   const quickInputRef = useRef<HTMLInputElement>(null);
   const quickRequestRef = useRef(0);
+  const cursorPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingCursorRef = useRef<{ path: string; line: number; column: number } | null>(null);
+
+  const flushFileCursor = useCallback(() => {
+    if (cursorPersistTimerRef.current) {
+      clearTimeout(cursorPersistTimerRef.current);
+      cursorPersistTimerRef.current = null;
+    }
+    const pending = pendingCursorRef.current;
+    pendingCursorRef.current = null;
+    if (pending) setFileCursor(projectId, pending.path, pending.line, pending.column);
+  }, [projectId, setFileCursor]);
+
+  const scheduleFileCursor = useCallback(
+    (relativePath: string, line: number, column: number) => {
+      pendingCursorRef.current = { path: relativePath, line, column };
+      if (cursorPersistTimerRef.current) clearTimeout(cursorPersistTimerRef.current);
+      cursorPersistTimerRef.current = setTimeout(() => {
+        cursorPersistTimerRef.current = null;
+        const pending = pendingCursorRef.current;
+        pendingCursorRef.current = null;
+        if (pending) setFileCursor(projectId, pending.path, pending.line, pending.column);
+      }, 150);
+    },
+    [projectId, setFileCursor]
+  );
 
   useEffect(() => {
     void ensureFilesProject(projectId);
     return () => {
       void cancelProjectSearch(projectId);
+      flushFileCursor();
     };
-  }, [cancelProjectSearch, ensureFilesProject, projectId]);
+  }, [cancelProjectSearch, ensureFilesProject, flushFileCursor, projectId]);
 
   useEffect(() => {
     if (project?.status !== 'ready' || !projectRecord) return;
@@ -600,6 +627,9 @@ export function FilesTab({ projectId }: { projectId: string }) {
   const activeMode = activePath ? project?.modeByPath[activePath] ?? 'edit' : 'edit';
   const isMarkdown = activeBuffer?.kind === 'text' && activeBuffer.document.languageId === 'markdown';
   const isSvg = activeBuffer?.kind === 'text' && /\.svg$/i.test(activePath ?? '');
+
+  useEffect(() => () => flushFileCursor(), [activePath, flushFileCursor]);
+
   const outline = useMemo(() => isMarkdown && activeBuffer?.kind === 'text' ? markdownOutline(activeBuffer.content) : [], [activeBuffer, isMarkdown]);
   const stats = useMemo(() => isMarkdown && activeBuffer?.kind === 'text' ? markdownStats(activeBuffer.content) : null, [activeBuffer, isMarkdown]);
   const metadata = useMemo(() => isMarkdown && activeBuffer?.kind === 'text' ? markdownFrontMatter(activeBuffer.content) : {}, [activeBuffer, isMarkdown]);
@@ -1053,7 +1083,7 @@ export function FilesTab({ projectId }: { projectId: string }) {
             {activeBuffer.kind === 'text' && activeBuffer.missing ? <div className="files-banner is-danger" role="alert"><strong>File deleted on disk</strong><span>The unsaved buffer is retained. Save a copy or discard it.</span></div> : null}
             <div className={['files-document', activeMode === 'split' ? 'files-document--split' : ''].join(' ')}>
               {activeBuffer.kind === 'image' ? <ImageViewer projectId={projectId} relativePath={activePath} objectUrl={activeBuffer.objectUrl} size={activeBuffer.document.size} /> : <>
-                {(activeMode === 'edit' || activeMode === 'split' || (!isMarkdown && !isSvg)) ? <div className="files-document__editor"><CodeEditor value={activeBuffer.content} languageId={activeBuffer.document.languageId} readOnly={activeBuffer.document.readOnly} wordWrap={isMarkdown || filesSettings?.wordWrap} fontSize={filesSettings?.editorFontSize} lineNumbers={filesSettings?.lineNumbers} onChange={(value) => updateFileBuffer(projectId, activePath, value)} onCursor={(line, column) => { setCursor({ line, column }); setFileCursor(projectId, activePath, line, column); }} /></div> : null}
+                {(activeMode === 'edit' || activeMode === 'split' || (!isMarkdown && !isSvg)) ? <div className="files-document__editor"><CodeEditor value={activeBuffer.content} languageId={activeBuffer.document.languageId} readOnly={activeBuffer.document.readOnly} wordWrap={isMarkdown || filesSettings?.wordWrap} fontSize={filesSettings?.editorFontSize} lineNumbers={filesSettings?.lineNumbers} onChange={(value) => updateFileBuffer(projectId, activePath, value)} onCursor={(line, column) => { setCursor({ line, column }); scheduleFileCursor(activePath, line, column); }} /></div> : null}
                 {(activeMode === 'preview' || activeMode === 'split') && (isMarkdown || isSvg) ? <div className="files-document__preview">{isMarkdown ? <MarkdownReader projectId={projectId} relativePath={activePath} source={activeBuffer.content} allowRawHtml={filesSettings?.allowRawHtml} remoteImages={filesSettings?.remoteImages} onRenderedHtml={setRenderedHtml} onProgress={updateReadingProgress} /> : <SvgBlobPreview markup={activeBuffer.content} title={basename(activePath)} />}</div> : null}
               </>}
             </div>

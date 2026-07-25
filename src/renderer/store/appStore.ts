@@ -27,9 +27,14 @@ import type {
   ThemePreference,
   ViewportPreset as SharedViewportPreset,
 } from '@shared/contracts/settings';
+import { ONBOARDING_TOUR_ID, shouldShowOnboarding } from '@shared/contracts/settings';
 import type { BureauError } from '@shared/contracts/errors';
 import { moveTabRelative, type TabDropPlace } from '@shared/files/tabOrder';
 import { isPathDeleted, pathsAffectedByDelete } from '@shared/files/deletedPaths';
+import {
+  directoriesToReloadAfterEvent,
+  pruneDirectoryCacheAfterDelete,
+} from '@shared/files/watcherEvents';
 import type { ProjectToolchains, SwitchableRuntimeKind } from '@shared/contracts/toolchains';
 import type {
   DetectedShell,
@@ -385,12 +390,6 @@ function createAndroidWorkspaceState(): AndroidWorkspaceState {
   };
 }
 
-function parentFilePath(relativePath: string): string {
-  const parts = relativePath.split('/');
-  parts.pop();
-  return parts.join('/');
-}
-
 function persistFilesWorkspace(projectId: string, project: FilesProjectState): void {
   // Coalesce the frequent workspace writes — open/close/toggle/reorder, and the
   // burst during session restore — into a single fsync'd save. Previously each
@@ -489,9 +488,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
         status: 'ready',
         view: 'hub',
         previewViewport: settings.preview.defaultViewport,
-        // Show onboarding on first run and once for existing users after the
-        // update that adds it (their settings backfill completedVersion = null).
-        onboardingOpen: settings.onboarding?.completedVersion == null,
+        // Open until this build's tour id is stamped — covers first run and a
+        // one-time re-show for users who finished an older (or app-version) stamp.
+        onboardingOpen: shouldShowOnboarding(settings.onboarding?.completedVersion),
       });
 
       // Capabilities need ~20 probe spawns (runtimes, editors, terminals, package
@@ -608,6 +607,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
     function handleFileEvents(events: FileSystemEvent[]): void {
       const cleanReloads: Array<{ projectId: string; relativePath: string }> = [];
+      const directoryReloads: Array<{ projectId: string; relativePath: string }> = [];
       set((s) => {
         const filesByProject = { ...s.filesByProject };
         for (const event of events) {
@@ -620,9 +620,25 @@ export const useAppStore = create<AppState>()((set, get) => ({
             };
             continue;
           }
-          const parent = parentFilePath(event.relativePath);
-          const directoryCache = { ...project.directoryCache };
-          delete directoryCache[parent];
+          // Never blank a parent listing here. Deleting directoryCache[parent] on every
+          // change made the explorer vanish after saves (root files wipe cache['']).
+          // Keep the stale listing until loadFileDirectory replaces it.
+          const cachedOrExpanded = new Set([
+            ...Object.keys(project.directoryCache),
+            ...project.expandedPaths,
+            '',
+          ]);
+          for (const relativePath of directoriesToReloadAfterEvent(event, cachedOrExpanded)) {
+            directoryReloads.push({ projectId: event.projectId, relativePath });
+          }
+          let directoryCache = project.directoryCache;
+          if (event.type === 'deleted') {
+            directoryCache = pruneDirectoryCacheAfterDelete(
+              project.directoryCache,
+              event.relativePath,
+              event.isDirectory
+            );
+          }
           const buffer = project.buffers[event.relativePath];
           let buffers = project.buffers;
           let tabs = project.tabs;
@@ -672,6 +688,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
         return { filesByProject };
       });
       for (const item of cleanReloads) void get().reloadFileFromDisk(item.projectId, item.relativePath);
+      const seenDirectories = new Set<string>();
+      for (const item of directoryReloads) {
+        const key = `${item.projectId}\0${item.relativePath}`;
+        if (seenDirectories.has(key)) continue;
+        seenDirectories.add(key);
+        void get().loadFileDirectory(item.projectId, item.relativePath);
+      }
     }
 
     function handleSearchBatch(batch: SearchBatch): void {
@@ -1737,10 +1760,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   completeOnboarding() {
     set({ onboardingOpen: false });
-    // Stamp the running version so onboarding never re-shows (Skip and Finish
-    // both call this). updateSettings persists the flag.
-    const completedVersion = get().capabilities?.appVersion ?? '0.0.0';
-    void get().updateSettings({ onboarding: { completedVersion } });
+    // Stamp the current tour id so this wizard does not re-show until the id is bumped.
+    void get().updateSettings({ onboarding: { completedVersion: ONBOARDING_TOUR_ID } });
   },
 
   openContextMenu(menu) {

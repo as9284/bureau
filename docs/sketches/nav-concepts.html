@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bureau — Nav concept sketches</title>
+<style>
+  :root {
+    --color-surface-canvas: #141414;
+    --color-surface-sunken: #101010;
+    --color-surface-base: #181818;
+    --color-surface-raised: #1c1c1c;
+    --color-surface-overlay: #222222;
+    --color-surface-hover: #202020;
+    --color-surface-selected: color-mix(in srgb, #7c9cff 15%, #1c1c1c);
+    --color-text-primary: #ededed;
+    --color-text-secondary: #a8a8a8;
+    --color-text-muted: #7a7a7a;
+    --color-border-subtle: #242424;
+    --color-border-default: #2e2e2e;
+    --color-border-strong: #3a3a3a;
+    --color-accent-primary: #7c9cff;
+    --color-accent-soft: color-mix(in srgb, #7c9cff 10%, transparent);
+    --color-status-success: #6db87a;
+    --font-ui: 'Geist Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'Geist Mono', 'SFMono-Regular', Consolas, monospace;
+    --radius-control: 6px;
+    --radius-overlay: 8px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #0c0c0c;
+    color: var(--color-text-primary);
+    font: 13px/1.45 var(--font-ui);
+  }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+  }
+
+  .page-header h1 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .page-header p {
+    margin: 0 0 20px;
+    color: var(--color-text-secondary);
+    max-width: 62ch;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .tab {
+    appearance: none;
+    border: 1px solid var(--color-border-default);
+    background: var(--color-surface-base);
+    color: var(--color-text-secondary);
+    padding: 7px 12px;
+    border-radius: var(--radius-control);
+    font: inherit;
+    cursor: pointer;
+  }
+  .tab:hover { background: var(--color-surface-hover); color: var(--color-text-primary); }
+  .tab[aria-selected="true"] {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 45%, var(--color-border-default));
+    background: var(--color-surface-selected);
+    color: var(--color-text-primary);
+  }
+  .tab .n {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-right: 6px;
+  }
+
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+    margin-bottom: 14px;
+  }
+  .meta h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .meta p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    max-width: 70ch;
+  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-subtle);
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+  .chip.good { color: var(--color-status-success); border-color: color-mix(in srgb, var(--color-status-success) 35%, transparent); }
+
+  .stage-wrap {
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-overlay);
+    overflow: hidden;
+    background: var(--color-surface-canvas);
+  }
+
+  /* Shared window chrome */
+  .win {
+    display: grid;
+    grid-template-rows: 36px 1fr 24px;
+    height: min(620px, 72vh);
+    min-height: 480px;
+    background: var(--color-surface-canvas);
+    position: relative;
+  }
+  .titlebar {
+    display: grid;
+    grid-template-columns: 140px 1fr 140px;
+    align-items: center;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-canvas);
+    gap: 8px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    font-size: 12px;
+  }
+  .mark {
+    width: 14px; height: 14px;
+    border: 1.5px solid var(--color-accent-primary);
+    border-radius: 3px;
+    position: relative;
+  }
+  .mark::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: var(--color-accent-primary);
+    opacity: 0.85;
+    border-radius: 1px;
+  }
+  .cmd {
+    justify-self: center;
+    width: min(360px, 42vw);
+    height: 26px;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-base);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .cmd kbd {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-subtle);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .win-controls {
+    justify-self: end;
+    display: flex;
+    gap: 8px;
+  }
+  .win-controls i {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--color-border-strong);
+    display: block;
+  }
+
+  .body { display: flex; min-height: 0; position: relative; }
+  .main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface-base);
+  }
+  .tabstrip {
+    height: 36px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-canvas);
+  }
+  .ptab {
+    height: 30px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+  }
+  .ptab.on {
+    color: var(--color-text-primary);
+    background: var(--color-surface-base);
+    border-color: var(--color-border-subtle);
+  }
+  .content {
+    flex: 1;
+    padding: 20px;
+    color: var(--color-text-secondary);
+    position: relative;
+  }
+  .content h3 {
+    margin: 0 0 8px;
+    color: var(--color-text-primary);
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .ghost-card {
+    margin-top: 16px;
+    height: 120px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-control);
+  }
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 10px;
+    border-top: 1px solid var(--color-border-subtle);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--color-status-success);
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--color-text-muted); }
+  .accent { color: var(--color-accent-primary); }
+
+  /* Project row shared */
+  .prow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-control);
+    cursor: default;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+  }
+  .prow:hover { background: var(--color-surface-hover); }
+  .prow.on {
+    background: var(--color-surface-selected);
+    color: var(--color-text-primary);
+    font-weight: 500;
+  }
+  .av {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--color-surface-overlay);
+    border: 1px solid var(--color-border-default);
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    flex: 0 0 auto;
+    position: relative;
+  }
+  .av.ring::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 1.5px solid var(--color-status-success);
+    border-radius: 7px;
+    opacity: 0.9;
+  }
+
+  .hint {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    pointer-events: none;
+  }
+
+  /* ===== 0 Current rail (reference) ===== */
+  .rail {
+    width: 144px;
+    flex: 0 0 144px;
+    border-right: 1px solid var(--color-border-subtle);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface-canvas);
+  }
+  .rail-h, .rail-f {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .rail-f { border-bottom: none; border-top: 1px solid var(--color-border-subtle); margin-top: auto; }
+  .rail-body { padding: 6px; overflow: auto; flex: 1; }
+  .rail-search {
+    margin: 6px 6px 4px;
+    height: 26px;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-base);
+    color: var(--color-text-muted);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+  }
+
+  /* ===== 1 Project lane ===== */
+  .lane {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-canvas);
+    overflow: auto;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px 0 6px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-default);
+    background: var(--color-surface-base);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .pill.on {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 40%, var(--color-border-default));
+    background: var(--color-surface-selected);
+    color: var(--color-text-primary);
+  }
+  .pill .av { width: 18px; height: 18px; font-size: 10px; }
+  .pill.end {
+    margin-left: auto;
+    border-style: dashed;
+  }
+
+  /* ===== 2 Titlebar switcher ===== */
+  .switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-border-default);
+    background: var(--color-surface-base);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    cursor: pointer;
+    position: relative;
+  }
+  .switcher:hover, .switcher.open { background: var(--color-surface-hover); }
+  .switcher .chev { color: var(--color-text-muted); font-size: 10px; }
+  .pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 240px;
+    background: var(--color-surface-overlay);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-overlay);
+    padding: 6px;
+    z-index: 5;
+    display: none;
+  }
+  .switcher.open .pop { display: block; }
+  .pop .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    padding: 4px 8px 2px;
+  }
+
+  /* ===== 3 Mission dock ===== */
+  .dock-zone {
+    position: absolute;
+    left: 0; right: 0; bottom: 28px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .dock {
+    pointer-events: auto;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--color-surface-overlay) 92%, transparent);
+    border: 1px solid var(--color-border-default);
+    border-radius: 14px;
+    transform: translateY(72px);
+    opacity: 0;
+    transition: transform 140ms ease, opacity 140ms ease;
+  }
+  .win.show-dock .dock { transform: translateY(0); opacity: 1; }
+  .dock-hit {
+    position: absolute;
+    left: 20%; right: 20%;
+    bottom: 24px;
+    height: 18px;
+    z-index: 3;
+  }
+  .dock .av { width: 36px; height: 36px; font-size: 13px; transition: transform 120ms ease; }
+  .dock .av:hover { transform: translateY(-6px) scale(1.06); }
+  .dock .sep {
+    width: 1px;
+    align-self: stretch;
+    background: var(--color-border-default);
+    margin: 4px 2px;
+  }
+
+  /* ===== 4 Magnetic peek ===== */
+  .edge {
+    position: absolute;
+    left: 0; top: 36px; bottom: 24px;
+    width: 8px;
+    z-index: 3;
+    cursor: pointer;
+  }
+  .edge:hover, .win.peek-open .edge {
+    background: color-mix(in srgb, var(--color-accent-primary) 35%, transparent);
+  }
+  .peek {
+    position: absolute;
+    left: 0; top: 36px; bottom: 24px;
+    width: 280px;
+    background: var(--color-surface-overlay);
+    border-right: 1px solid var(--color-border-default);
+    transform: translateX(-100%);
+    transition: transform 160ms ease;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+  }
+  .win.peek-open .peek { transform: translateX(0); }
+  .peek-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-raised);
+    margin-bottom: 6px;
+  }
+  .card-row.on {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 40%, var(--color-border-default));
+    background: var(--color-surface-selected);
+  }
+  .card-row .meta-line { font-size: 11px; color: var(--color-text-muted); }
+
+  /* ===== 5 Floating capsule ===== */
+  .capsule {
+    position: absolute;
+    left: 16px;
+    bottom: 40px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px 0 6px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-default);
+    background: var(--color-surface-overlay);
+    cursor: pointer;
+    color: var(--color-text-primary);
+    font-size: 12px;
+  }
+  .capsule:hover, .capsule.open {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 40%, var(--color-border-default));
+  }
+  .capsule .count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-status-success);
+  }
+  .cap-pop {
+    position: absolute;
+    left: 16px;
+    bottom: 84px;
+    width: 260px;
+    background: var(--color-surface-overlay);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-overlay);
+    padding: 6px;
+    z-index: 5;
+    display: none;
+  }
+  .win.cap-open .cap-pop { display: block; }
+
+  /* ===== 6 Icon spine ===== */
+  .spine {
+    width: 48px;
+    flex: 0 0 48px;
+    border-right: 1px solid var(--color-border-subtle);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 6px;
+    background: var(--color-surface-canvas);
+  }
+  .spine .av { width: 28px; height: 28px; }
+  .spine .av.on {
+    outline: 1px solid color-mix(in srgb, var(--color-accent-primary) 55%, transparent);
+    background: var(--color-surface-selected);
+  }
+  .spine-gap { flex: 1; }
+  .spine .tip {
+    position: relative;
+  }
+  .spine .tip:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: var(--color-surface-overlay);
+    border: 1px solid var(--color-border-default);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--color-text-primary);
+    z-index: 6;
+  }
+
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  .footnote {
+    margin-top: 14px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <h1>Bureau nav concepts</h1>
+      <p>
+        Live shell sketches against Bureau’s graphite tokens. Click a concept to compare.
+        Interactive bits are noted under each frame — hover edges, open switchers, reveal the dock.
+      </p>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="Nav concepts">
+      <button class="tab" role="tab" aria-selected="true" data-panel="c0"><span class="n">0</span>Current rail</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="c1"><span class="n">1</span>Project lane</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="c2"><span class="n">2</span>Titlebar switcher</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="c3"><span class="n">3</span>Mission dock</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="c4"><span class="n">4</span>Magnetic peek</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="c5"><span class="n">5</span>Activity capsule</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="c6"><span class="n">6</span>Icon spine</button>
+    </div>
+
+    <!-- 0 -->
+    <section class="panel on" id="c0">
+      <div class="meta">
+        <div>
+          <h2>Current — Project rail (baseline)</h2>
+          <p>Fixed 144px left column: hub, search, pinned/recent rows, settings. Immersive mode can hide it today.</p>
+        </div>
+        <div class="chips">
+          <span class="chip">144px width</span>
+          <span class="chip">status quo</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win">
+          <div class="titlebar">
+            <div class="brand"><span class="mark"></span> Bureau</div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <nav class="rail" aria-label="Projects">
+              <div class="rail-h"><span class="accent">Projects</span><span class="muted">+</span></div>
+              <div class="rail-search">Search…</div>
+              <div class="rail-body">
+                <div class="prow on"><span class="av ring">B</span> bureau</div>
+                <div class="prow"><span class="av">S</span> stargit</div>
+                <div class="prow"><span class="av">M</span> monocle</div>
+                <div class="prow"><span class="av">A</span> api-service</div>
+              </div>
+              <div class="rail-f"><span>Settings</span></div>
+            </nav>
+            <div class="main">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Mission control for this project. Three processes running.</p>
+                <div class="ghost-card"></div>
+              </div>
+            </div>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">node 22 · ⎇ main</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1 -->
+    <section class="panel" id="c1">
+      <div class="meta">
+        <div>
+          <h2>1 — Project lane</h2>
+          <p>Horizontal pill strip under the titlebar. Full-bleed workspace; projects scroll like a second tab row.</p>
+        </div>
+        <div class="chips">
+          <span class="chip good">~34px height</span>
+          <span class="chip">familiar</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win">
+          <div class="titlebar">
+            <div class="brand"><span class="mark"></span> Bureau</div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body" style="flex-direction:column">
+            <div class="lane">
+              <span class="pill"><span class="av" style="width:18px;height:18px;font-size:10px">⌂</span> Hub</span>
+              <span class="pill on"><span class="av ring">B</span> bureau</span>
+              <span class="pill"><span class="av">S</span> stargit</span>
+              <span class="pill"><span class="av">M</span> monocle</span>
+              <span class="pill"><span class="av">A</span> api-service</span>
+              <span class="pill end">Settings</span>
+            </div>
+            <div class="main" style="flex:1">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Same stage width as immersive — no left tax. Hierarchy risk: lane vs workspace tabs.</p>
+                <div class="ghost-card"></div>
+                <div class="hint">Note the dual horizontal strips</div>
+              </div>
+            </div>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">node 22 · ⎇ main</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="panel" id="c2">
+      <div class="meta">
+        <div>
+          <h2>2 — Titlebar switcher + command-first</h2>
+          <p>Zero persistent project chrome. Current project lives in the titlebar; hub is the rich library; ⌘K does the rest.</p>
+        </div>
+        <div class="chips">
+          <span class="chip good">0px nav</span>
+          <span class="chip">densest</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win" id="win2">
+          <div class="titlebar" style="grid-template-columns: auto 1fr auto">
+            <div class="brand">
+              <span class="mark"></span>
+              <button class="switcher" id="switcherBtn" type="button" aria-expanded="false">
+                <span class="av" style="width:18px;height:18px;font-size:10px">B</span>
+                bureau
+                <span class="chev">▾</span>
+                <div class="pop" role="menu">
+                  <div class="label">Pinned</div>
+                  <div class="prow on"><span class="av ring">B</span> bureau</div>
+                  <div class="prow"><span class="av">S</span> stargit</div>
+                  <div class="label">Recent</div>
+                  <div class="prow"><span class="av">M</span> monocle</div>
+                  <div class="prow"><span class="av">A</span> api-service</div>
+                  <div class="prow" style="margin-top:4px;border-top:1px solid var(--color-border-subtle)"><span class="muted">Open hub…</span></div>
+                </div>
+              </button>
+            </div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <div class="main">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Click the titlebar project control to open the switcher.</p>
+                <div class="ghost-card"></div>
+                <div class="hint">Click “bureau ▾” in the titlebar</div>
+              </div>
+            </div>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">Settings · node 22</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="panel" id="c3">
+      <div class="meta">
+        <div>
+          <h2>3 — Mission dock</h2>
+          <p>Auto-hiding monogram dock. Hover the bottom edge (or press the demo button) to summon projects.</p>
+        </div>
+        <div class="chips">
+          <span class="chip good">0 when hidden</span>
+          <span class="chip">playful</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win" id="win3">
+          <div class="titlebar">
+            <div class="brand"><span class="mark"></span> Bureau</div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <div class="main">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Hover near the status bar center, or toggle the dock.</p>
+                <div class="ghost-card"></div>
+                <button type="button" id="dockToggle" style="margin-top:14px;appearance:none;border:1px solid var(--color-border-default);background:var(--color-surface-raised);color:var(--color-text-primary);padding:7px 12px;border-radius:6px;font:inherit;cursor:pointer">Toggle dock</button>
+                <div class="hint">Green ring = processes running</div>
+              </div>
+            </div>
+            <div class="dock-hit" id="dockHit"></div>
+            <div class="dock-zone">
+              <div class="dock" aria-label="Project dock">
+                <span class="av" title="Hub">⌂</span>
+                <span class="sep"></span>
+                <span class="av ring" title="bureau">B</span>
+                <span class="av" title="stargit">S</span>
+                <span class="av" title="monocle">M</span>
+                <span class="av" title="api-service">A</span>
+                <span class="sep"></span>
+                <span class="av" title="Settings">⚙</span>
+              </div>
+            </div>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">node 22 · ⎇ main</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="panel" id="c4">
+      <div class="meta">
+        <div>
+          <h2>4 — Always-immersive magnetic peek</h2>
+          <p>Default is full-bleed. Hover the left edge (or the Bureau mark) for a richer peek sheet — cards, not a skinny rail.</p>
+        </div>
+        <div class="chips">
+          <span class="chip good">0 until summoned</span>
+          <span class="chip">recommended hybrid base</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win" id="win4">
+          <div class="titlebar">
+            <div class="brand" id="peekBrand" style="cursor:pointer"><span class="mark"></span> Bureau</div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <div class="edge" id="peekEdge" title="Reveal projects"></div>
+            <aside class="peek" id="peekSheet">
+              <div class="peek-title">Projects <span class="muted">+</span></div>
+              <div class="rail-search" style="margin:0 0 8px">Search…</div>
+              <div class="card-row on">
+                <span class="av ring">B</span>
+                <div>
+                  <div>bureau</div>
+                  <div class="meta-line">3 running · :3000</div>
+                </div>
+              </div>
+              <div class="card-row">
+                <span class="av">S</span>
+                <div>
+                  <div>stargit</div>
+                  <div class="meta-line">idle</div>
+                </div>
+              </div>
+              <div class="card-row">
+                <span class="av">M</span>
+                <div>
+                  <div>monocle</div>
+                  <div class="meta-line">idle</div>
+                </div>
+              </div>
+              <div style="margin-top:auto;padding:8px;color:var(--color-text-secondary);font-size:12px">Settings</div>
+            </aside>
+            <div class="main">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Hover the slim left edge, or click the Bureau wordmark.</p>
+                <div class="ghost-card"></div>
+                <div class="hint">Edge glow on hover · sheet slides in</div>
+              </div>
+            </div>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">node 22 · ⎇ main</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="panel" id="c5">
+      <div class="meta">
+        <div>
+          <h2>5 — Floating activity capsule</h2>
+          <p>A corner capsule for “where am I + what’s running.” Expands into a switcher popover.</p>
+        </div>
+        <div class="chips">
+          <span class="chip good">~36px float</span>
+          <span class="chip">most experimental</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win" id="win5">
+          <div class="titlebar">
+            <div class="brand"><span class="mark"></span> Bureau</div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <div class="main">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Click the capsule. Preview/WebContentsView z-index is the hard production risk here.</p>
+                <div class="ghost-card"></div>
+              </div>
+            </div>
+            <div class="cap-pop" id="capPop">
+              <div class="prow on"><span class="av ring">B</span> bureau</div>
+              <div class="prow"><span class="av">S</span> stargit</div>
+              <div class="prow"><span class="av">M</span> monocle</div>
+              <div class="prow"><span class="av">A</span> api-service</div>
+              <div class="prow" style="border-top:1px solid var(--color-border-subtle);margin-top:4px"><span class="muted">Hub · Settings · Add…</span></div>
+            </div>
+            <button class="capsule" id="capsuleBtn" type="button">
+              <span class="av ring">B</span>
+              bureau
+              <span class="count">3</span>
+            </button>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">node 22 · ⎇ main</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="panel" id="c6">
+      <div class="meta">
+        <div>
+          <h2>6 — Icon spine</h2>
+          <p>Ultra-thin 48px monogram column. Names appear on hover; search stays in the palette/hub.</p>
+        </div>
+        <div class="chips">
+          <span class="chip good">48px width</span>
+          <span class="chip">least experimental</span>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="win">
+          <div class="titlebar">
+            <div class="brand"><span class="mark"></span> Bureau</div>
+            <div class="cmd">Search commands… <kbd>⌘K</kbd></div>
+            <div class="win-controls"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <nav class="spine" aria-label="Projects">
+              <span class="av tip" data-tip="Hub">⌂</span>
+              <span class="av on tip ring" data-tip="bureau">B</span>
+              <span class="av tip" data-tip="stargit">S</span>
+              <span class="av tip" data-tip="monocle">M</span>
+              <span class="av tip" data-tip="api-service">A</span>
+              <div class="spine-gap"></div>
+              <span class="av tip" data-tip="Settings">⚙</span>
+            </nav>
+            <div class="main">
+              <div class="tabstrip">
+                <div class="ptab on">Overview</div>
+                <div class="ptab">Files</div>
+                <div class="ptab">Processes</div>
+                <div class="ptab">Terminal</div>
+                <div class="ptab">Preview</div>
+                <div class="ptab">Android</div>
+                <div class="ptab">Git</div>
+              </div>
+              <div class="content">
+                <h3>bureau</h3>
+                <p>Hover icons for names. Still a sidebar — just thinner.</p>
+                <div class="ghost-card"></div>
+                <div class="hint">Hover the monograms</div>
+              </div>
+            </div>
+          </div>
+          <div class="statusbar"><span><span class="dot"></span>3 running</span><span>:3000 :5173</span><span style="margin-left:auto">node 22 · ⎇ main</span></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footnote">
+      Sketch only — not wired into the app. Files/Git contextual sidebars are unchanged in all concepts.
+      Recommended production hybrid from the plan: <strong>4 + titlebar current-project control from 2</strong>.
+    </p>
+  </div>
+
+<script>
+  const tabs = [...document.querySelectorAll('.tab')];
+  const panels = [...document.querySelectorAll('.panel')];
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+      panels.forEach((p) => p.classList.toggle('on', p.id === tab.dataset.panel));
+    });
+  });
+
+  // 2 — switcher
+  const switcher = document.getElementById('switcherBtn');
+  switcher?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    switcher.classList.toggle('open');
+    switcher.setAttribute('aria-expanded', String(switcher.classList.contains('open')));
+  });
+
+  // 3 — dock
+  const win3 = document.getElementById('win3');
+  const showDock = () => win3?.classList.add('show-dock');
+  const hideDock = () => win3?.classList.remove('show-dock');
+  document.getElementById('dockHit')?.addEventListener('mouseenter', showDock);
+  document.querySelector('#win3 .dock')?.addEventListener('mouseleave', hideDock);
+  document.getElementById('dockToggle')?.addEventListener('click', () => win3?.classList.toggle('show-dock'));
+
+  // 4 — peek
+  const win4 = document.getElementById('win4');
+  const openPeek = () => win4?.classList.add('peek-open');
+  const closePeek = () => win4?.classList.remove('peek-open');
+  document.getElementById('peekEdge')?.addEventListener('mouseenter', openPeek);
+  document.getElementById('peekSheet')?.addEventListener('mouseleave', closePeek);
+  document.getElementById('peekBrand')?.addEventListener('click', () => win4?.classList.toggle('peek-open'));
+
+  // 5 — capsule
+  const win5 = document.getElementById('win5');
+  document.getElementById('capsuleBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    win5?.classList.toggle('cap-open');
+  });
+
+  document.addEventListener('click', () => {
+    switcher?.classList.remove('open');
+    win5?.classList.remove('cap-open');
+  });
+</script>
+</body>
+</html>

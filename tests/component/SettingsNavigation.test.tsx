@@ -21,7 +21,6 @@ const SETTINGS: PublicSettings = {
     theme: 'dark',
     density: 'compact',
     accentColor: '#7c9cff',
-    immersiveMode: false,
     reduceMotion: false,
     uiScale: 1,
   },

@@ -21,7 +21,6 @@ function settings(sdkPath?: string): SettingsStore {
       theme: 'dark',
       density: 'compact',
       accentColor: '#7c9cff',
-      immersiveMode: false,
     },
     tools: { showOpenInEditor: true, showOpenInTerminal: true, showOpenInExplorer: true },
     layout: { paneWidths: { files: 340, commit: 280 } },

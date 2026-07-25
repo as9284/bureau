@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { RepositorySnapshot } from '@shared/contracts/gitSnapshot';
+import { hasConfiguredRemote } from '@shared/git/hasConfiguredRemote';
 import { useGitStore } from '@renderer/store/gitStore';
 import { useAppStore } from '@renderer/store/appStore';
 import { Button } from '@renderer/components/Button';
 import { Select } from '@renderer/components/Select';
 import { ArrowDownIcon, ArrowUpIcon, RefreshIcon } from '@renderer/components/icons';
 import { BranchActionConfirmation } from '@renderer/features/git/BranchActionConfirmation';
+import { PublishBranchDialog } from '@renderer/features/git/branches/PublishBranchDialog';
 import './SyncBar.css';
 
 type Props = {
@@ -38,6 +40,9 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
   const operation = useGitStore((s) => s.operationByRepo[projectId]);
   const setGitHubPublishRepoId = useGitStore((s) => s.setGitHubPublishRepoId);
   const setGiteaPublishRepoId = useGitStore((s) => s.setGiteaPublishRepoId);
+  const remotes = useGitStore((s) => s.remotes);
+  const loadRemotes = useGitStore((s) => s.loadRemotes);
+  const publishBranch = useGitStore((s) => s.publishBranch);
   const announce = useAppStore((s) => s.announce);
   const lastCounts = useRef<{ projectId: string; ahead: number; behind: number } | undefined>(
     undefined
@@ -46,14 +51,19 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
   const [pushBranch, setPushBranch] = useState('');
   const [pushConfirming, setPushConfirming] = useState(false);
   const [pushConfirmError, setPushConfirmError] = useState<string>();
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishRemoteName, setPublishRemoteName] = useState('origin');
+  const [publishRemoteUrl, setPublishRemoteUrl] = useState('');
 
   useEffect(() => {
     listBranches(projectId).catch(() => undefined);
-  }, [projectId, listBranches]);
+    void loadRemotes(projectId);
+  }, [projectId, listBranches, loadRemotes]);
 
   const currentBranch = snapshot.branch.kind === 'named' ? snapshot.branch.name : '';
   const canSync =
     !readOnly && snapshot.branch.kind === 'named' && snapshot.upstream.kind === 'tracking';
+  const repoHasRemote = hasConfiguredRemote({ remotes, branchDetails });
 
   const ahead = snapshot.upstream.kind === 'tracking' ? snapshot.upstream.ahead : 0;
   const behind = snapshot.upstream.kind === 'tracking' ? snapshot.upstream.behind : 0;
@@ -178,24 +188,59 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
             </Button>
           </>
         ) : snapshot.branch.kind === 'named' ? (
-          <>
-            <Button
-              variant="secondary"
-              disabled={readOnly || Boolean(operation)}
-              onClick={() => setGiteaPublishRepoId(projectId)}
-            >
-              Publish to Gitea
-            </Button>
+          repoHasRemote ? (
             <Button
               variant="primary"
               disabled={readOnly || Boolean(operation)}
-              onClick={() => setGitHubPublishRepoId(projectId)}
+              onClick={() => {
+                setPublishRemoteName(remotes[0]?.name ?? 'origin');
+                setPublishRemoteUrl('');
+                setPublishOpen(true);
+              }}
             >
-              Publish to GitHub
+              Publish branch
             </Button>
-          </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                disabled={readOnly || Boolean(operation)}
+                onClick={() => setGiteaPublishRepoId(projectId)}
+              >
+                Create on Gitea
+              </Button>
+              <Button
+                variant="primary"
+                disabled={readOnly || Boolean(operation)}
+                onClick={() => setGitHubPublishRepoId(projectId)}
+              >
+                Create on GitHub
+              </Button>
+            </>
+          )
         ) : null}
       </div>
+      <PublishBranchDialog
+        open={publishOpen}
+        branchName={currentBranch || null}
+        remoteName={publishRemoteName}
+        remoteUrl={publishRemoteUrl}
+        busy={Boolean(operation)}
+        onRemoteNameChange={setPublishRemoteName}
+        onRemoteUrlChange={setPublishRemoteUrl}
+        onClose={() => setPublishOpen(false)}
+        onConfirm={() => {
+          if (!currentBranch || !publishRemoteName.trim()) return;
+          publishBranch(
+            projectId,
+            snapshot.revision,
+            currentBranch,
+            publishRemoteName.trim(),
+            publishRemoteUrl.trim() || undefined
+          );
+          setPublishOpen(false);
+        }}
+      />
       <BranchActionConfirmation
         open={pushConfirmOpen}
         title="Push branch?"

@@ -12,7 +12,7 @@ describe('validateSettings', () => {
     const settings = validateSettings({});
     expect(settings.appearance.theme).toBe('dark');
     expect(settings.appearance.density).toBe('compact');
-    expect(settings.appearance.immersiveMode).toBe(false);
+    expect(settings.appearance).not.toHaveProperty('immersiveMode');
     expect(settings.layout.paneWidths).toMatchObject({ files: 340, commit: 280 });
     expect(settings.android).toMatchObject({
       reactNativeMetroPort: 8081,
@@ -90,7 +90,7 @@ describe('validateSettings', () => {
     expect(validateSettings({ appearance: { uiScale: 'big' } }).appearance.uiScale).toBe(1);
   });
 
-  it('silently removes retired immersive tuning fields from v1 settings', () => {
+  it('silently removes retired immersive rail fields from v1 settings', () => {
     const settings = validateSettings({
       appearance: {
         immersiveMode: true,
@@ -103,10 +103,10 @@ describe('validateSettings', () => {
       theme: 'dark',
       density: 'compact',
       accentColor: '#7c9cff',
-      immersiveMode: true,
       reduceMotion: false,
       uiScale: 1,
     });
+    expect(settings.appearance).not.toHaveProperty('immersiveMode');
   });
 
   it('silently removes the retired workspace sidebar width from v1 settings', () => {
@@ -119,7 +119,7 @@ describe('validateSettings', () => {
 
   it('backfills onboarding.completedVersion=null for existing settings files', () => {
     // A pre-onboarding settings file has no `onboarding` section; the lenient
-    // merge must supply the default so onboarding shows once for existing users.
+    // merge must supply the default so the wizard can decide whether to open.
     const settings = validateSettings({ appearance: { theme: 'light' } });
     expect(settings.onboarding).toEqual({ completedVersion: null });
   });

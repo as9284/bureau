@@ -207,8 +207,6 @@ export type AppearanceSettings = {
   theme: ThemePreference;
   density: DensityPreference;
   accentColor: string;
-  /** Auto-hide the project rail; reveal it from the workspace edge. */
-  immersiveMode: boolean;
   /**
    * Force-reduce animations even when the OS does not ask for it. The app always
    * honours `prefers-reduced-motion: reduce`; this only adds an app-level override.
@@ -264,7 +262,7 @@ export type WindowBounds = {
   maximized?: boolean;
 };
 
-/** First-run onboarding state. `completedVersion` is null until the tour is finished. */
+/** First-run / re-run setup wizard state. `completedVersion` stores the last finished tour id. */
 export type OnboardingSettings = {
   completedVersion: string | null;
 };
@@ -323,6 +321,18 @@ export type SettingsPatch = {
 
 export const DEFAULT_ACCENT_COLOR = '#7c9cff';
 
+/**
+ * Stamp written when the interactive setup wizard finishes. Bump this string to
+ * show the wizard once more for every user (including those who completed an
+ * older tour or stamped an app version).
+ */
+export const ONBOARDING_TOUR_ID = 'interactive-setup-v1';
+
+/** Whether the setup wizard should open for this settings stamp. */
+export function shouldShowOnboarding(completedVersion: string | null | undefined): boolean {
+  return completedVersion !== ONBOARDING_TOUR_ID;
+}
+
 export const DEFAULT_ONBOARDING_SETTINGS: OnboardingSettings = {
   completedVersion: null,
 };
@@ -373,7 +383,6 @@ export const DEFAULT_APPEARANCE_SETTINGS: AppearanceSettings = {
   theme: 'dark',
   density: 'compact',
   accentColor: DEFAULT_ACCENT_COLOR,
-  immersiveMode: false,
   reduceMotion: false,
   uiScale: 1,
 };

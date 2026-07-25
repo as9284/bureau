@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BranchDetail } from '@shared/contracts/branches';
 import type { RepositorySnapshot } from '@shared/contracts/gitSnapshot';
 import { ContextMenuProvider } from '@renderer/components/GitContextMenu';
@@ -25,8 +25,8 @@ function snapshot(): RepositorySnapshot {
   };
 }
 
-/** Unpublished + current: the row that can create a repository on a forge. */
-const branches: BranchDetail[] = [
+/** Unpublished locals; no remotes configured yet. */
+const unpublishedBranches: BranchDetail[] = [
   {
     ref: 'refs/heads/main',
     shortName: 'main',
@@ -45,13 +45,37 @@ const branches: BranchDetail[] = [
   },
 ];
 
-function mountPanel() {
+/** Current branch unpublished, but origin already exists (new branch in existing repo). */
+const existingRemoteBranches: BranchDetail[] = [
+  {
+    ref: 'refs/heads/feature',
+    shortName: 'feature',
+    kind: 'local',
+    current: true,
+    headOid: '0123456789abcdef',
+    published: false,
+  },
+  {
+    ref: 'refs/remotes/origin/main',
+    shortName: 'origin/main',
+    kind: 'remote',
+    current: false,
+    headOid: '0123456789abcdef',
+    published: true,
+    remoteName: 'origin',
+  },
+];
+
+function mountPanel(branchDetails: BranchDetail[], remotes: { name: string; fetchUrl: string; pushUrl: string }[] = []) {
   useGitStore.setState({
-    branchDetails: branches,
+    branchDetails,
     branchesLoading: false,
     branchesError: undefined,
+    remotes,
+    remotesLoading: false,
     githubPublishRepoId: undefined,
     giteaPublishRepoId: undefined,
+    loadRemotes: vi.fn().mockResolvedValue(undefined),
   });
   return render(
     <ContextMenuProvider>
@@ -69,45 +93,61 @@ afterEach(() => {
   useGitStore.setState({ githubPublishRepoId: undefined, giteaPublishRepoId: undefined });
 });
 
-describe('publishing the current branch', () => {
-  it('asks which forge instead of assuming GitHub', async () => {
-    mountPanel();
+describe('publishing when the repo has no remote yet', () => {
+  it('asks whether to create a repository instead of assuming GitHub', async () => {
+    mountPanel(unpublishedBranches);
     await userEvent.setup().click(publishButtons()[0]);
 
-    expect(screen.getByRole('button', { name: /GitHub/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Gitea/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /existing remote/i })).toBeTruthy();
-    // Nothing is opened until a forge is picked.
+    expect(screen.getByRole('dialog', { name: /Publish this repository/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Create on GitHub/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Create on Gitea/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Push to an existing remote/i })).toBeTruthy();
     expect(useGitStore.getState().githubPublishRepoId).toBeUndefined();
     expect(useGitStore.getState().giteaPublishRepoId).toBeUndefined();
   });
 
-  it('opens the Gitea publish dialog when Gitea is chosen', async () => {
-    mountPanel();
+  it('opens the Gitea create-repo dialog when Gitea is chosen', async () => {
+    mountPanel(unpublishedBranches);
     const user = userEvent.setup();
     await user.click(publishButtons()[0]);
-    await user.click(screen.getByRole('button', { name: /Gitea/ }));
+    await user.click(screen.getByRole('button', { name: /Create on Gitea/ }));
 
     expect(useGitStore.getState().giteaPublishRepoId).toBe(PROJECT_ID);
     expect(useGitStore.getState().githubPublishRepoId).toBeUndefined();
   });
 
-  it('still opens the GitHub publish dialog when GitHub is chosen', async () => {
-    mountPanel();
+  it('opens the GitHub create-repo dialog when GitHub is chosen', async () => {
+    mountPanel(unpublishedBranches);
     const user = userEvent.setup();
     await user.click(publishButtons()[0]);
-    await user.click(screen.getByRole('button', { name: /GitHub/ }));
+    await user.click(screen.getByRole('button', { name: /Create on GitHub/ }));
 
     expect(useGitStore.getState().githubPublishRepoId).toBe(PROJECT_ID);
     expect(useGitStore.getState().giteaPublishRepoId).toBeUndefined();
   });
 
   it('falls through to the remote form for a branch that is not current', async () => {
-    mountPanel();
+    mountPanel(unpublishedBranches);
     await userEvent.setup().click(publishButtons()[1]);
 
-    // No forge choice — a non-current branch only ever pushes to an existing remote.
-    expect(screen.queryByRole('button', { name: /Gitea/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Create on Gitea/ })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Publish branch' })).toBeTruthy();
     expect(screen.getByLabelText('Remote name')).toBeTruthy();
+  });
+});
+
+describe('publishing a new branch when a remote already exists', () => {
+  it('opens the publish-branch dialog instead of create-repository chooser', async () => {
+    mountPanel(existingRemoteBranches, [
+      { name: 'origin', fetchUrl: 'https://github.com/acme/app.git', pushUrl: 'https://github.com/acme/app.git' },
+    ]);
+    await userEvent.setup().click(publishButtons()[0]);
+
+    expect(screen.queryByRole('dialog', { name: /Publish this repository/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Create on GitHub/ })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Publish branch' })).toBeTruthy();
+    expect(
+      screen.getByText(/does not create a new GitHub or Gitea repository/i)
+    ).toBeTruthy();
   });
 });

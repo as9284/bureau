@@ -67,7 +67,7 @@ describe('PublishToGiteaDialog', () => {
 
     await screen.findByLabelText('Gitea instance URL');
     expect(screen.getByLabelText('Gitea personal access token')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Publish repository' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create repository' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Connect' }).hasAttribute('disabled')).toBe(true);
   });
 
@@ -88,7 +88,7 @@ describe('PublishToGiteaDialog', () => {
       token: 'tok123',
     });
     await screen.findByLabelText('Gitea repository name');
-    expect(screen.getByRole('button', { name: 'Publish repository' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create repository' })).toBeTruthy();
   });
 
   it('seeds the repository name from the project and the owner from the account', async () => {

@@ -1057,23 +1057,6 @@ function AppearanceSection() {
 
       <div className="settings-row">
         <div>
-          <div className="settings-row__label">Immersive mode</div>
-          <div className="settings-row__desc">
-            Auto-hide the project rail so the workspace uses the full width. Reveal it from the left
-            workspace edge. Toggle with Ctrl+B.
-          </div>
-        </div>
-        <Checkbox
-          checked={settings.appearance.immersiveMode}
-          onCheckedChange={(immersiveMode) =>
-            void updateSettings({ appearance: { immersiveMode } })
-          }
-          label="Enable immersive mode"
-        />
-      </div>
-
-      <div className="settings-row">
-        <div>
           <div className="settings-row__label">Interface scale</div>
           <div className="settings-row__desc">
             Scales the whole interface. Does not affect the previewed page, which has its own zoom.

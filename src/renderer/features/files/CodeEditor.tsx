@@ -85,13 +85,13 @@ function readToken(name: string, fallback: string): string {
 
 function tokenHighlightStyle(): Extension {
   const keyword = readToken('--color-accent-primary', '#7c9cff');
-  const string = readToken('--color-status-success', '#6db87a');
-  const comment = readToken('--color-text-muted', '#7a7a7a');
-  const number = readToken('--color-status-warning', '#c9a24d');
+  const string = readToken('--color-status-success', '#3fa266');
+  const comment = readToken('--color-text-muted', '#f0f0f099');
+  const number = readToken('--color-status-warning', '#f1b467');
   const typeName = readToken('--color-status-info', '#7c9cff');
-  const meta = readToken('--color-text-secondary', '#a8a8a8');
-  const invalid = readToken('--color-status-danger', '#d46a6a');
-  const primary = readToken('--color-text-primary', '#ededed');
+  const meta = readToken('--color-text-secondary', '#f0f0f0bd');
+  const invalid = readToken('--color-status-danger', '#e34671');
+  const primary = readToken('--color-text-primary', '#f0f0f0');
   return syntaxHighlighting(HighlightStyle.define([
     { tag: tags.keyword, color: keyword },
     { tag: [tags.string, tags.special(tags.string), tags.regexp], color: string },

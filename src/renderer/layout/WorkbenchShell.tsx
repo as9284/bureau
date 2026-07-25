@@ -1,7 +1,5 @@
 import type { MouseEvent } from 'react';
 import { useAppStore, type ContextMenuItem } from '../store/appStore';
-import { ProjectRail } from './ProjectRail';
-import { ImmersiveNavigationHost } from './ImmersiveNavigationHost';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
 import { CommandPalette } from './CommandPalette';
@@ -28,8 +26,6 @@ import { buildEditMenuItems } from '../lib/contextMenu';
 
 export function WorkbenchShell() {
   const view = useAppStore((s) => s.view);
-  const projectTab = useAppStore((s) => s.projectTab);
-  const immersiveMode = useAppStore((s) => s.settings?.appearance.immersiveMode ?? false);
   const openContextMenu = useAppStore((s) => s.openContextMenu);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
   const backToHub = useAppStore((s) => s.backToHub);
@@ -73,20 +69,11 @@ export function WorkbenchShell() {
     openContextMenu({ x: event.clientX, y: event.clientY, items });
   };
 
-  const navigationChrome = immersiveMode ? (
-    <ImmersiveNavigationHost edgeRevealDisabled={view === 'project' && projectTab === 'files'}>
-      <ProjectRail />
-    </ImmersiveNavigationHost>
-  ) : (
-    <ProjectRail />
-  );
-
   return (
     <GitContextMenuProvider>
       <div className="app-shell" onContextMenu={onContextMenu}>
         <TitleBar />
-        <div className={['workspace', immersiveMode ? 'workspace--immersive' : ''].filter(Boolean).join(' ')}>
-          {navigationChrome}
+        <div className="workspace">
           <main className="stage">
             <div key={view} className="stage-page page-enter">
               {view === 'settings' && <SettingsPage />}

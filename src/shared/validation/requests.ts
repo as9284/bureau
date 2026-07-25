@@ -101,7 +101,6 @@ export const settingsPatchSchema = z
         theme: z.enum(['dark', 'light', 'system']).optional(),
         density: z.enum(['compact', 'comfortable']).optional(),
         accentColor: accentColorSchema.optional(),
-        immersiveMode: z.boolean().optional(),
         reduceMotion: z.boolean().optional(),
         uiScale: z
           .union([z.literal(0.9), z.literal(1), z.literal(1.1), z.literal(1.25), z.literal(1.5)])

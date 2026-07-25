@@ -149,7 +149,7 @@ export function PublishToGitHubDialog(): ReactElement {
         Cancel
       </Button>
       <Button variant="primary" loading={loading} disabled={!canPublish} onClick={publish}>
-        Publish repository
+        Create repository
       </Button>
     </>
   );
@@ -157,11 +157,11 @@ export function PublishToGitHubDialog(): ReactElement {
   return (
     <Dialog
       open={Boolean(projectId)}
-      title={publishedUrl ? 'Published to GitHub' : 'Publish to GitHub'}
+      title={publishedUrl ? 'Published to GitHub' : 'Create GitHub repository'}
       description={
         publishedUrl
           ? 'The repository is ready on GitHub and this branch now tracks origin.'
-          : 'Create or connect the GitHub repository, configure origin, and publish the current branch in one step.'
+          : 'Create a new GitHub repository for this project, configure origin, and publish the current branch. Use Publish branch instead when the remote already exists.'
       }
       onClose={close}
       actions={actions}

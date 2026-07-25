@@ -136,10 +136,23 @@
   gap: var(--space-3);
 }
 
-/* Forge chooser — publishing the current branch can create the repository. */
+/* Forge chooser — only when the repo has no remote yet (create hosting vs attach URL). */
 .branches-panel__forge-options {
   display: grid;
   gap: var(--space-2);
+}
+
+.branches-panel__forge-section-label {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.branches-panel__forge-section-label:first-child {
+  margin-top: 0;
 }
 
 .branches-panel__forge-option {

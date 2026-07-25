@@ -98,7 +98,6 @@ export const settingsFileSchema = z.object({
     theme: z.enum(['dark', 'light', 'system']),
     density: z.enum(['compact', 'comfortable']),
     accentColor: accentColorSchema,
-    immersiveMode: z.boolean(),
     reduceMotion: z.boolean(),
     uiScale: z.union([
       z.literal(0.9),
@@ -343,10 +342,6 @@ export function validateSettings(value: unknown): SettingsFileV1 {
       ...(isRecord(incoming.appearance) ? incoming.appearance : {}),
       accentColor: normalizeAccent(
         isRecord(incoming.appearance) ? incoming.appearance.accentColor : undefined
-      ),
-      immersiveMode: normalizeBoolean(
-        isRecord(incoming.appearance) ? incoming.appearance.immersiveMode : undefined,
-        defaults.appearance.immersiveMode
       ),
       reduceMotion: normalizeBoolean(
         isRecord(incoming.appearance) ? incoming.appearance.reduceMotion : undefined,

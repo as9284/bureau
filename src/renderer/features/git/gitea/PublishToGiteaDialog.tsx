@@ -114,7 +114,7 @@ export function PublishToGiteaDialog(): ReactElement {
         Disconnect
       </Button>
       <Button variant="primary" loading={loading} disabled={!canPublish} onClick={publish}>
-        Publish repository
+        Create repository
       </Button>
     </>
   );
@@ -122,11 +122,11 @@ export function PublishToGiteaDialog(): ReactElement {
   return (
     <Dialog
       open={Boolean(projectId)}
-      title={publishedUrl ? 'Published to Gitea' : 'Publish to Gitea'}
+      title={publishedUrl ? 'Published to Gitea' : 'Create Gitea repository'}
       description={
         publishedUrl
           ? 'The repository is ready on Gitea and this branch now tracks origin.'
-          : 'Create or connect the Gitea repository, configure origin, and publish the current branch in one step.'
+          : 'Create a new Gitea repository for this project, configure origin, and publish the current branch. Use Publish branch instead when the remote already exists.'
       }
       onClose={close}
       actions={actions}

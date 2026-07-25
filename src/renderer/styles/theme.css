@@ -14,6 +14,7 @@
   --color-surface-raised: #ffffff;
   --color-surface-overlay: #ffffff;
   --color-surface-hover: #ececee;
+  --color-surface-wash: rgba(24, 24, 27, 0.04);
   /* Inherits the accent-derived color-mix from :root, recomputed against the light raised surface. */
   --color-surface-selected: color-mix(
     in srgb,

@@ -21,8 +21,6 @@ export function CommandPalette() {
   const closePalette = useAppStore((s) => s.closePalette);
   const setSection = useAppStore((s) => s.setSection);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
-  const updateSettings = useAppStore((s) => s.updateSettings);
-  const immersiveMode = useAppStore((s) => s.settings?.appearance.immersiveMode ?? false);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
   const backToHub = useAppStore((s) => s.backToHub);
   const selectProject = useAppStore((s) => s.selectProject);
@@ -271,14 +269,6 @@ export function CommandPalette() {
         hint: 'Appearance',
         run: () => void toggleTheme(),
       },
-      {
-        id: 'toggle-immersive',
-        title: immersiveMode ? 'Disable immersive mode' : 'Enable immersive mode',
-        hint: 'Appearance · Ctrl+B',
-        run: () => {
-          void updateSettings({ appearance: { immersiveMode: !immersiveMode } });
-        },
-      },
       ...fileCommands,
       ...gitCommands,
       ...(selectedProjectId
@@ -336,8 +326,6 @@ export function CommandPalette() {
   }, [
     setSection,
     toggleTheme,
-    updateSettings,
-    immersiveMode,
     openAddDialog,
     backToHub,
     selectProject,

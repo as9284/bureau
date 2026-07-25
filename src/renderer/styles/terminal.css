@@ -64,6 +64,12 @@
   flex: 1;
 }
 
+.terminal-tab__body > .empty-state,
+.terminal-tab > .empty-state {
+  flex: 1;
+  min-height: 0;
+}
+
 .terminal-chip {
   display: flex;
   align-items: center;

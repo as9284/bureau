@@ -1,34 +1,28 @@
 import logoUrl from '../../../assets/icons/icon-64.png';
 import { CloseIcon, MinusIcon, SquareIcon } from '../components/icons';
-import { requestImmersiveNavigationReveal } from '../lib/immersiveNavigation';
 import { useAppStore } from '../store/appStore';
+import { ProjectSwitcher } from './ProjectSwitcher';
 
 export function TitleBar() {
   const openPalette = useAppStore((s) => s.openPalette);
-  const immersiveMode = useAppStore((s) => s.settings?.appearance.immersiveMode ?? false);
+  const backToHub = useAppStore((s) => s.backToHub);
   const bureau = window.bureau;
-  const brand = (
-    <>
-      <img className="title-brand__mark" src={logoUrl} alt="" width={18} height={18} />
-      <span className="title-brand__name">Bureau</span>
-    </>
-  );
 
   return (
     <header className="title-bar">
-      {immersiveMode ? (
+      <div className="title-bar__leading">
         <button
-          className="title-brand title-brand--navigation"
           type="button"
-          aria-label="Show navigation"
-          title="Show navigation"
-          onClick={requestImmersiveNavigationReveal}
+          className="title-brand"
+          aria-label="Go to Projects hub"
+          title="Projects hub"
+          onClick={() => backToHub()}
         >
-          {brand}
+          <img className="title-brand__mark" src={logoUrl} alt="" width={18} height={18} />
+          <span className="title-brand__name">Bureau</span>
         </button>
-      ) : (
-        <div className="title-brand">{brand}</div>
-      )}
+        <ProjectSwitcher />
+      </div>
 
       <button className="command-bar" type="button" onClick={openPalette}>
         <span className="command-bar__label">Search or run a command…</span>

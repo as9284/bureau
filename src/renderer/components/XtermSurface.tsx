@@ -10,23 +10,18 @@ import { useAppStore } from '../store/appStore';
  * needs concrete color strings, not CSS `var()`, so we resolve the custom properties
  * off `documentElement` at mount — this keeps the terminal on-palette and following the
  * active light/dark theme instead of hard-coded off-token colors.
+ *
+ * The 16 ANSI colors follow Cursor Dark Anysphere `terminal.ansi*`; cursor/selection
+ * stay on Bureau's accent tokens.
  */
 function themeFromTokens(): ITheme {
   const style = getComputedStyle(document.documentElement);
   const token = (name: string, fallback: string): string =>
     style.getPropertyValue(name).trim() || fallback;
 
-  const background = token('--color-surface-sunken', '#101010');
-  const foreground = token('--color-text-primary', '#ededed');
-  const muted = token('--color-text-muted', '#7a7a7a');
-  const secondary = token('--color-text-secondary', '#a8a8a8');
+  const background = token('--color-surface-sunken', '#141414');
+  const foreground = token('--color-text-primary', '#f0f0f0');
   const accent = token('--color-accent-primary', '#7c9cff');
-  const success = token('--color-status-success', '#6db87a');
-  const warning = token('--color-status-warning', '#c9a24d');
-  const danger = token('--color-status-danger', '#d46a6a');
-  const addText = token('--color-diff-add-text', '#8fd49a');
-  const delText = token('--color-diff-del-text', '#e88a8a');
-  const accentHover = token('--color-accent-hover', '#96afff');
 
   return {
     background,
@@ -34,30 +29,29 @@ function themeFromTokens(): ITheme {
     cursor: accent,
     cursorAccent: background,
     selectionBackground: token('--color-accent-soft', 'rgba(124,156,255,0.1)'),
-    // 16 ANSI colors mapped to graphite-friendly status hues.
-    black: token('--color-surface-overlay', '#222222'),
-    red: danger,
-    green: success,
-    yellow: warning,
-    blue: accent,
-    magenta: accentHover,
-    cyan: token('--color-status-info', accent),
-    white: secondary,
-    brightBlack: muted,
-    brightRed: delText,
-    brightGreen: addText,
-    brightYellow: warning,
-    brightBlue: accentHover,
-    brightMagenta: accentHover,
-    brightCyan: token('--color-status-info', accent),
-    brightWhite: foreground,
+    black: '#242424',
+    red: '#fc6b83',
+    green: '#3fa266',
+    yellow: '#d2943e',
+    blue: '#81a1c1',
+    magenta: '#b48ead',
+    cyan: '#88c0d0',
+    white: '#f0f0f0',
+    brightBlack: '#f0f0f099',
+    brightRed: '#fc6b83',
+    brightGreen: '#70b489',
+    brightYellow: '#f1b467',
+    brightBlue: '#87a6c4',
+    brightMagenta: '#b48ead',
+    brightCyan: '#88c0d0',
+    brightWhite: '#ffffff',
   };
 }
 
 function terminalFontFamily(): string {
   return (
     getComputedStyle(document.documentElement).getPropertyValue('--font-family-terminal').trim() ||
-    "'JetBrainsMono NF', 'CaskaydiaCove NF', 'Cascadia Code NF', 'MesloLGS NF', 'FiraCode NF', 'Hack NF', 'Geist Mono', monospace"
+    "'JetBrainsMono NF', 'CaskaydiaCove NF', 'Cascadia Code NF', 'MesloLGS NF', 'FiraCode NF', 'Hack NF', 'JetBrains Mono', monospace"
   );
 }
 
