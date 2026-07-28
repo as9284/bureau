@@ -36,6 +36,42 @@ function snapshot(overrides: Partial<RepositorySnapshot> = {}): RepositorySnapsh
 }
 
 describe('CommitPanel', () => {
+  it('exposes the full latest subject via title so long messages can ellipsize in CSS', () => {
+    const longSubject =
+      'Carry tested fixes onto Staging and fix the date picker crash, v4.7.3 Brings the app side of the pre-live retest checklist onto Staging, adds the van location field, and fixes a date picker crash reported from production.';
+    useGitStore.setState({
+      repos: {},
+      commitDrafts: {},
+      operationByRepo: {},
+      commitOptionsByRepo: {},
+      branches: [],
+    });
+    Object.defineProperty(window, 'bureau', {
+      configurable: true,
+      value: { git: { listBranchDetails: vi.fn().mockResolvedValue([]) } },
+    });
+
+    render(
+      <CommitPanel
+        projectId={PROJECT_ID}
+        snapshot={snapshot({
+          latestCommit: {
+            oid: '6778897abcdef0123456789',
+            abbreviatedOid: '6778897',
+            subject: longSubject,
+            authorName: 'Bureau',
+            committedAt: '2026-07-15T00:00:00.000Z',
+          },
+        })}
+        readOnly={false}
+      />
+    );
+
+    const subject = screen.getByText(longSubject);
+    expect(subject).toHaveClass('commit-panel__subject');
+    expect(subject).toHaveAttribute('title', longSubject);
+  });
+
   it('clears the commit form and the active diff after a successful commit', async () => {
     const committedSnapshot = snapshot({ dirty: false, changedFileCount: 0, changedFiles: [] });
     const commit = vi.fn().mockResolvedValue({ ok: true, snapshot: committedSnapshot });

@@ -161,8 +161,12 @@ export function CommitPanel({ projectId, snapshot, readOnly }: Props): ReactElem
       {snapshot?.latestCommit ? (
         <div className="commit-panel__latest">
           <span className="commit-panel__label">Latest</span>
-          <code>{snapshot.latestCommit.abbreviatedOid}</code>
-          <span>{snapshot.latestCommit.subject}</span>
+          <code title={snapshot.latestCommit.abbreviatedOid}>
+            {snapshot.latestCommit.abbreviatedOid}
+          </code>
+          <span className="commit-panel__subject" title={snapshot.latestCommit.subject}>
+            {snapshot.latestCommit.subject}
+          </span>
         </div>
       ) : null}
 

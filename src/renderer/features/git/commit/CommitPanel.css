@@ -14,8 +14,10 @@
 /* The message box grows to fill the panel so committing has a generous writing area, which also
    pushes the options, actions, and the Latest reference down toward the bottom. */
 .commit-panel .sg-text-area {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  /* Contain the input's min-height so a crushed flex item cannot paint over the checkboxes. */
+  overflow: hidden;
 }
 
 .commit-panel .sg-text-area__input {
@@ -23,6 +25,13 @@
   min-height: 140px;
   /* Override the primitive's shared 160px cap — only the commit box is meant to expand. */
   max-height: none;
+}
+
+.commit-panel__header,
+.commit-panel__options,
+.commit-panel__actions,
+.commit-panel__latest {
+  flex-shrink: 0;
 }
 
 .commit-panel__header {
@@ -67,12 +76,26 @@
   color: var(--color-text-muted);
   display: grid;
   gap: var(--space-1);
+  min-width: 0;
 }
 
 .commit-panel__latest code {
   font-family: var(--font-family-mono);
   font-variant-numeric: tabular-nums;
   color: var(--color-accent-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Match History/Stash subject rows — a multi-kilobyte %s must not push the pane apart. */
+.commit-panel__subject {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .commit-panel__label {
