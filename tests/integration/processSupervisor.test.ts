@@ -89,7 +89,10 @@ describe('ProcessSupervisor (real spawn)', () => {
 
     const snapshot = supervisor.getLog('p1', 'server');
     expect(snapshot.lines.some((l) => l.text.includes('ready http://localhost:4321'))).toBe(true);
-  });
+    // A real spawn plus a tree-kill runs ~4s here, and `waitFor` is allowed 15s of its own, so
+    // Vitest's 5s default is the tighter bound of the two — the test would fail the poll it is
+    // supposed to be waiting on.
+  }, 30_000);
 
   it('marks a nonzero exit as crashed', async () => {
     const supervisor = createProcessSupervisor();

@@ -8,6 +8,13 @@ import type { ApiScriptHolder } from '@shared/contracts/apiWorkbench';
  * in Bureau where third-party code executes, so its boundary is asserted directly rather than
  * inferred from the features built on top of it.
  */
+/**
+ * A test that provokes a limit must outlast the sandbox's own patience: the guest deadline is 2s
+ * and the host terminates a wedged worker at 5s, so Vitest's 5s default is not a budget these can
+ * pass under. Only the tests that deliberately run into a limit get it.
+ */
+const LIMIT_TEST_TIMEOUT_MS = 20_000;
+
 describe('API script sandbox', () => {
   const sandbox = createScriptSandbox();
   const holder: ApiScriptHolder = { kind: 'request', id: 'r1', name: 'Test request' };
@@ -133,18 +140,23 @@ describe('API script sandbox', () => {
     expect(result.outcome.errorCode).toBe('API_SCRIPT_LIMIT_EXCEEDED');
     // The post-response deadline is 2s; the host's hard deadline is 5s.
     expect(Date.now() - startedAt).toBeLessThan(5_000);
-  });
+  }, LIMIT_TEST_TIMEOUT_MS);
 
   it('stops a runaway allocation at the heap limit', async () => {
+    // One chunk already exceeds the 32 MiB post-response heap, so the ceiling is reached on the
+    // first allocation. A loop that climbs to the ceiling in small steps instead makes QuickJS
+    // full-GC on every failed allocation, which on a slow runner outlasts the deadline (or wedges
+    // inside wasm past the host's hard deadline) and turns this into a race rather than a check of
+    // the limit itself.
     const result = await run(`
       const held = [];
-      while (true) held.push(new Array(100000).fill('x'));
+      while (true) held.push('x'.repeat(40000000));
     `);
     expect(result.outcome.ok).toBe(false);
     expect(result.outcome.errorCode).toBe('API_SCRIPT_LIMIT_EXCEEDED');
     // Distinguishes the heap ceiling from the deadline, which reports the same code.
     expect(result.outcome.errorMessage).toContain('memory');
-  });
+  }, LIMIT_TEST_TIMEOUT_MS);
 
   it('caps a console flood and reports how much it dropped', async () => {
     const result = await run(`for (let i = 0; i < 5000; i += 1) console.log('line ' + i);`);
@@ -197,7 +209,7 @@ describe('API script sandbox', () => {
     await run('while (true) {}');
     const after = await run(`bureau.test('still alive', () => bureau.expect(1).toBe(1));`);
     expect(after.outcome.tests[0].passed).toBe(true);
-  });
+  }, LIMIT_TEST_TIMEOUT_MS);
 
   it('cancels a queued script when the signal aborts', async () => {
     const controller = new AbortController();
