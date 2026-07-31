@@ -6,23 +6,12 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import path from 'node:path';
+import { isPackagedMainRuntime } from './packaging';
 
 const iconBase = path.resolve(__dirname, 'assets/icon');
 const iconIco = path.resolve(__dirname, 'assets/icon.ico');
 const iconPng = path.resolve(__dirname, 'assets/icon.png');
 const updateUrl = process.env.BUREAU_UPDATE_URL?.trim();
-
-const isPackagedMainRuntime = (filePath: string): boolean =>
-  filePath.startsWith('/.vite') ||
-  filePath === '/node_modules' ||
-  filePath.startsWith('/node_modules/node-pty') ||
-  filePath.startsWith('/node_modules/node-addon-api') ||
-  // The API script sandbox worker loads QuickJS by absolute path at runtime, so these must ship.
-  // The `singlefile` variant embeds its Wasm in the JS, so there is no separate asset to copy.
-  filePath === '/node_modules/@jitl' ||
-  filePath.startsWith('/node_modules/@jitl/quickjs-singlefile-cjs-release-sync') ||
-  filePath.startsWith('/node_modules/@jitl/quickjs-ffi-types') ||
-  filePath.startsWith('/node_modules/quickjs-emscripten-core');
 
 const config: ForgeConfig = {
   packagerConfig: {

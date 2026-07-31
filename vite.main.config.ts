@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import path from 'node:path';
 import { forgeRestartOnRebuild } from './vite.hot-restart';
+import { MAIN_EXTERNAL_MODULES } from './packaging';
 
 // https://vitejs.dev/config
 export default defineConfig({
@@ -18,7 +19,7 @@ export default defineConfig({
       fileName: () => 'main.js',
     },
     rollupOptions: {
-      external: ['electron', 'node:*', 'node-pty', 'ws'],
+      external: ['electron', 'node:*', ...MAIN_EXTERNAL_MODULES],
     },
     sourcemap: true,
     minify: false,
