@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@renderer/store/appStore';
 import { SettingsPage } from '@renderer/pages/SettingsPage';
 import type { PublicSettings } from '@shared/contracts/settings';
-import { DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
+import {
+  DEFAULT_API_SETTINGS,
+  DEFAULT_CONFIRMATION_SETTINGS,
+} from '@shared/contracts/settings';
 import type { AppCapabilities } from '@shared/contracts/capabilities';
 
 const SETTINGS: PublicSettings = {
@@ -43,6 +46,7 @@ const SETTINGS: PublicSettings = {
   history: { commitLimit: 30 },
   confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
+  api: { ...DEFAULT_API_SETTINGS },
   onboarding: { completedVersion: '1.0.0' },
 };
 
@@ -75,7 +79,7 @@ beforeEach(() => {
     status: 'ready',
     settings: SETTINGS,
     capabilities: CAPABILITIES,
-    activeSection: 'settings',
+    primaryWorkspace: 'projects',
     view: 'settings',
     settingsSection: 'general',
   });
@@ -121,6 +125,14 @@ describe('settings navigation', () => {
     await userEvent.setup().click(trigger);
     expect(screen.getByRole('dialog', { name: 'Custom accent color' })).toBeInTheDocument();
     expect(screen.getByLabelText('Hex color')).toBeInTheDocument();
+  });
+
+  it('renders the API settings section', () => {
+    useAppStore.setState({ settingsSection: 'api' });
+    render(<SettingsPage />);
+    expect(screen.getByRole('heading', { name: 'API' })).toBeInTheDocument();
+    expect(screen.getByText('Request timeout')).toBeInTheDocument();
+    expect(screen.getByText(/Imported scripts/)).toBeInTheDocument();
   });
 
   it('offers a guarded restart when an update has downloaded', async () => {

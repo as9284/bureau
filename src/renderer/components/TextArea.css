@@ -11,21 +11,35 @@
   color: var(--color-text-secondary);
 }
 
+.sg-text-area__field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .sg-text-area__input {
+  width: 100%;
   min-height: 88px;
-  max-height: 160px;
+  max-height: 480px;
+  box-sizing: border-box;
   padding: var(--space-3);
+  padding-bottom: calc(var(--space-3) + 10px);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-control);
   background-color: var(--color-surface-base);
   color: var(--color-text-primary);
   font-size: var(--font-size-body);
   line-height: var(--line-height-body);
-  resize: vertical;
+  resize: none;
   transition:
     background-color var(--motion-duration-press) ease-out,
     border-color var(--motion-duration-press) ease-out,
     box-shadow var(--motion-duration-press) ease-out;
+}
+
+.sg-text-area__field:not(:has(.sg-text-area__resize)) .sg-text-area__input {
+  padding-bottom: var(--space-3);
 }
 
 .sg-text-area__input:hover:not(:disabled) {
@@ -44,6 +58,47 @@
   cursor: not-allowed;
 }
 
+.sg-text-area__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 10px;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.sg-text-area__resize::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 28px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity var(--motion-duration-state) ease;
+}
+
+.sg-text-area__resize:hover::after,
+.sg-text-area__resize:focus-visible::after,
+.sg-text-area__field.is-resizing > .sg-text-area__resize::after {
+  background: var(--color-accent-primary);
+  opacity: 1;
+}
+
+.sg-text-area__resize:focus-visible {
+  outline: none;
+}
+
+.sg-text-area__resize[aria-disabled='true'] {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .sg-text-area__helper,
 .sg-text-area__error {
   margin: 0;
@@ -57,4 +112,10 @@
 
 .sg-text-area__error {
   color: var(--color-status-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-text-area__resize::after {
+    transition: none;
+  }
 }

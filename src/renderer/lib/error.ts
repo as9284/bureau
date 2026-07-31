@@ -23,6 +23,15 @@ const HEADINGS: Partial<Record<BureauErrorCode, string>> = {
   CONFIG_INCOMPATIBLE: 'Project config is from a newer Bureau',
   EXECUTABLE_NOT_FOUND: 'Executable not found',
   COMMAND_FAILED: 'Something went wrong',
+  API_WORKSPACE_NOT_FOUND: 'API workspace not found',
+  API_SECRET_STORAGE_UNAVAILABLE: 'Secret storage unavailable',
+  API_IMPORT_INVALID: 'Import could not be read',
+  API_SCRIPT_FAILED: 'Script failed',
+  API_SCRIPT_LIMIT_EXCEEDED: 'Script exceeded its limits',
+  API_SCRIPT_DISABLED: 'Scripts are disabled',
+  API_RUN_ACTIVE: 'A run is already in progress',
+  API_RUN_NOT_FOUND: 'Run report not found',
+  API_RUN_EMPTY: 'Nothing to run',
 };
 
 export function errorHeading(error: BureauError): string {

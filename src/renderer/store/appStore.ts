@@ -61,9 +61,10 @@ import type {
 } from '@shared/contracts/files';
 import { applyAppearance } from '../lib/appearance';
 import { errorHeading, toError } from '../lib/error';
+import { useApiStore } from './apiStore';
 
-export type AppView = 'hub' | 'project' | 'settings';
-export type ActiveSection = 'projects' | 'settings';
+export type AppView = 'hub' | 'project' | 'api' | 'settings';
+export type PrimaryWorkspace = 'projects' | 'api';
 export type SettingsSection =
   | 'general'
   | 'appearance'
@@ -72,7 +73,8 @@ export type SettingsSection =
   | 'android'
   | 'toolchains'
   | 'files'
-  | 'git';
+  | 'git'
+  | 'api';
 export type ProjectTab = ProjectTabId;
 export type ViewportPreset = SharedViewportPreset;
 
@@ -189,7 +191,11 @@ type AppState = {
   projectQuery: string;
 
   view: AppView;
-  activeSection: ActiveSection;
+  primaryWorkspace: PrimaryWorkspace;
+  /** Last Projects destination restored when switching back from API / Settings. */
+  projectsReturnView: 'hub' | 'project';
+  /** Destination restored when leaving Settings (never `settings`). */
+  settingsReturnView: Exclude<AppView, 'settings'>;
   settingsSection: SettingsSection;
   selectedProjectId: string | null;
   projectTab: ProjectTab;
@@ -226,7 +232,7 @@ type AppState = {
   globalError: BureauError | null;
   toasts: Toast[];
   shutdown: ShutdownState | null;
-  closePrompt: { processes: ShutdownProcess[]; dirtyFiles?: number } | null;
+  closePrompt: { processes: ShutdownProcess[]; dirtyFiles?: number; dirtyApiRequests?: number } | null;
   pendingProjectRemoval: string | null;
 
   addDialogOpen: boolean;
@@ -239,7 +245,9 @@ type AppState = {
   setProjectPinned(projectId: string, pinned: boolean): Promise<void>;
   reorderPinnedProjects(orderedIds: string[]): Promise<void>;
   setView(view: AppView): void;
-  setSection(section: ActiveSection): void;
+  setPrimaryWorkspace(workspace: PrimaryWorkspace): void;
+  openSettings(section?: SettingsSection): void;
+  closeSettings(): void;
   setSettingsSection(section: SettingsSection): void;
 
   openAddDialog(): Promise<void>;
@@ -429,7 +437,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   projectQuery: '',
 
   view: 'hub',
-  activeSection: 'projects',
+  primaryWorkspace: 'projects',
+  projectsReturnView: 'hub',
+  settingsReturnView: 'hub',
   settingsSection: 'general',
   selectedProjectId: null,
   projectTab: 'overview',
@@ -773,20 +783,84 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   setView(view) {
-    set({ view, activeSection: view === 'settings' ? 'settings' : 'projects' });
+    if (view === 'settings') {
+      get().openSettings();
+      return;
+    }
+    if (view === 'api') {
+      get().setPrimaryWorkspace('api');
+      return;
+    }
+    if (view === 'hub') {
+      set({
+        view: 'hub',
+        primaryWorkspace: 'projects',
+        projectsReturnView: 'hub',
+        selectedProjectId: null,
+      });
+      return;
+    }
+    // 'project' — only meaningful when a project is already selected
+    set((s) => ({
+      view: s.selectedProjectId ? 'project' : 'hub',
+      primaryWorkspace: 'projects',
+      projectsReturnView: s.selectedProjectId ? 'project' : 'hub',
+    }));
   },
 
-  setSection(section) {
-    if (section === 'settings') {
-      set({ activeSection: 'settings', view: 'settings' });
-    } else {
-      // Clicking "Projects" always returns to the projects home (hub).
-      set({ activeSection: 'projects', view: 'hub', selectedProjectId: null });
+  setPrimaryWorkspace(workspace) {
+    if (workspace === 'api') {
+      set({
+        primaryWorkspace: 'api',
+        view: 'api',
+      });
+      return;
     }
+    // Restore Projects destination without clearing the selected project when returning to a project.
+    set((s) => {
+      const nextView =
+        s.projectsReturnView === 'project' && s.selectedProjectId ? 'project' : 'hub';
+      return {
+        primaryWorkspace: 'projects',
+        view: nextView,
+        selectedProjectId: nextView === 'hub' ? null : s.selectedProjectId,
+        projectsReturnView: nextView,
+      };
+    });
+  },
+
+  openSettings(section) {
+    set((s) => ({
+      settingsReturnView: s.view === 'settings' ? s.settingsReturnView : s.view,
+      settingsSection: section ?? s.settingsSection,
+      view: 'settings',
+    }));
+  },
+
+  closeSettings() {
+    set((s) => {
+      const target = s.settingsReturnView;
+      if (target === 'api') {
+        return { view: 'api', primaryWorkspace: 'api' };
+      }
+      if (target === 'project' && s.selectedProjectId) {
+        return {
+          view: 'project',
+          primaryWorkspace: 'projects',
+          projectsReturnView: 'project',
+        };
+      }
+      return {
+        view: 'hub',
+        primaryWorkspace: 'projects',
+        projectsReturnView: 'hub',
+        selectedProjectId: null,
+      };
+    });
   },
 
   setSettingsSection(section) {
-    set({ settingsSection: section, activeSection: 'settings', view: 'settings' });
+    get().openSettings(section);
   },
 
   async openAddDialog() {
@@ -835,7 +909,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set((s) => ({
       selectedProjectId: projectId,
       view: 'project',
-      activeSection: 'projects',
+      primaryWorkspace: 'projects',
+      projectsReturnView: 'project',
       projectTab: 'overview',
       expandedProcess: null,
       previewUrl: null,
@@ -873,7 +948,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   backToHub() {
     set({
       view: 'hub',
-      activeSection: 'projects',
+      primaryWorkspace: 'projects',
+      projectsReturnView: 'hub',
       selectedProjectId: null,
       previewFullscreen: false,
     });
@@ -1848,6 +1924,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
         return;
       }
     }
+    if (!(await useApiStore.getState().saveAllDirtyRequests())) {
+      get().pushToast(
+        'error',
+        'Bureau remains open because one or more API requests could not be saved.'
+      );
+      return;
+    }
     set({ closePrompt: null });
     await api().app.confirmQuit();
   },
@@ -1856,6 +1939,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     for (const [projectId, project] of Object.entries(get().filesByProject)) {
       for (const relativePath of [...project.tabs]) get().closeFile(projectId, relativePath, true);
     }
+    useApiStore.getState().discardAllDirtyDrafts();
     set({ closePrompt: null });
     void api().app.confirmQuit();
   },

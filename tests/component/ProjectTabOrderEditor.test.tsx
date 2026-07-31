@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@renderer/store/appStore';
 import { SettingsPage } from '@renderer/pages/SettingsPage';
 import type { PublicSettings, ProjectTabId } from '@shared/contracts/settings';
-import { DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
+import { DEFAULT_API_SETTINGS, DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
 
 const SETTINGS: PublicSettings = {
   schemaVersion: 1,
@@ -37,6 +37,7 @@ const SETTINGS: PublicSettings = {
   history: { commitLimit: 30 },
   confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
+  api: { ...DEFAULT_API_SETTINGS },
   onboarding: { completedVersion: '1.0.0' },
 };
 
@@ -53,6 +54,7 @@ function setSettings(appearance: Partial<PublicSettings['appearance']> = {}) {
   useAppStore.setState({
     status: 'ready',
     settings: { ...SETTINGS, appearance: { ...SETTINGS.appearance, ...appearance } },
+    primaryWorkspace: 'projects',
     settingsSection: 'appearance',
     view: 'settings',
   });

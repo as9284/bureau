@@ -1,6 +1,7 @@
 import logoUrl from '../../../assets/icons/icon-64.png';
 import { CloseIcon, MinusIcon, SquareIcon } from '../components/icons';
 import { useAppStore } from '../store/appStore';
+import { ApiNavButton } from './ApiNavButton';
 import { ProjectSwitcher } from './ProjectSwitcher';
 
 export function TitleBar() {
@@ -22,6 +23,7 @@ export function TitleBar() {
           <span className="title-brand__name">Bureau</span>
         </button>
         <ProjectSwitcher />
+        <ApiNavButton />
       </div>
 
       <button className="command-bar" type="button" onClick={openPalette}>

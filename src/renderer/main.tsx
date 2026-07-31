@@ -11,6 +11,7 @@ import './styles/overview.css';
 import './styles/android.css';
 import './styles/git.css';
 import './styles/files.css';
+import './styles/api.css';
 import 'katex/dist/katex.min.css';
 
 const container = document.getElementById('root');

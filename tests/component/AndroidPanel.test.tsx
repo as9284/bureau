@@ -5,7 +5,7 @@ import { AndroidPanel } from '@renderer/features/android/AndroidPanel';
 import { useAppStore } from '@renderer/store/appStore';
 import type { BureauApiV1 } from '@shared/contracts/api';
 import type { AndroidOverview } from '@shared/contracts/android';
-import { DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
+import { DEFAULT_API_SETTINGS, DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const overview: AndroidOverview = {
@@ -136,6 +136,7 @@ beforeEach(() => {
   history: { commitLimit: 30 },
   confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
+  api: { ...DEFAULT_API_SETTINGS },
   processes: { logBufferLines: 5000, maxCrashRestarts: 5 },
   preview: { defaultViewport: 'fill', captureConsole: true },
   embeddedTerminal: { fontSize: 12, scrollback: 1000, cursorStyle: 'block' },

@@ -16,7 +16,13 @@ const isPackagedMainRuntime = (filePath: string): boolean =>
   filePath.startsWith('/.vite') ||
   filePath === '/node_modules' ||
   filePath.startsWith('/node_modules/node-pty') ||
-  filePath.startsWith('/node_modules/node-addon-api');
+  filePath.startsWith('/node_modules/node-addon-api') ||
+  // The API script sandbox worker loads QuickJS by absolute path at runtime, so these must ship.
+  // The `singlefile` variant embeds its Wasm in the JS, so there is no separate asset to copy.
+  filePath === '/node_modules/@jitl' ||
+  filePath.startsWith('/node_modules/@jitl/quickjs-singlefile-cjs-release-sync') ||
+  filePath.startsWith('/node_modules/@jitl/quickjs-ffi-types') ||
+  filePath.startsWith('/node_modules/quickjs-emscripten-core');
 
 const config: ForgeConfig = {
   packagerConfig: {

@@ -10,6 +10,10 @@ interface DialogProps {
   actions: ReactNode;
   initialFocusRef?: React.RefObject<HTMLElement | null>;
   onClose?: () => void;
+  /** Extra classes appended to the dialog panel (e.g. feature layout hooks). */
+  className?: string;
+  /** `wide` raises max-width to 680px for denser forms (import / export / runner). */
+  size?: 'default' | 'wide';
 }
 
 export function Dialog({
@@ -20,6 +24,8 @@ export function Dialog({
   actions,
   initialFocusRef,
   onClose,
+  className,
+  size = 'default',
 }: DialogProps): ReactElement | null {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -46,11 +52,19 @@ export function Dialog({
 
   if (!open) return null;
 
+  const panelClass = [
+    'sg-dialog',
+    size === 'wide' ? 'sg-dialog--wide' : null,
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div className="sg-dialog-backdrop" role="presentation" onClick={onClose}>
       <div
         ref={dialogRef}
-        className="sg-dialog"
+        className={panelClass}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sg-dialog-title"

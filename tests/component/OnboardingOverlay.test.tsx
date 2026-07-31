@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PublicSettings } from '@shared/contracts/settings';
 import {
+  DEFAULT_API_SETTINGS,
   DEFAULT_APPEARANCE_SETTINGS,
   DEFAULT_CONFIRMATION_SETTINGS,
   DEFAULT_FILES_SETTINGS,
@@ -37,6 +38,7 @@ const SETTINGS: PublicSettings = {
   history: { commitLimit: 30 },
   confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
+  api: { ...DEFAULT_API_SETTINGS },
   files: { ...DEFAULT_FILES_SETTINGS },
   onboarding: { completedVersion: null },
 };

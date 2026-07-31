@@ -13,6 +13,8 @@ import type { TrackedProject } from '@shared/contracts/projects';
 import { STACK_TAGS } from '@shared/contracts/projects';
 import { processDefinitionSchema } from '@shared/validation/requests';
 import {
+  API_SIDEBAR_DEFAULT_WIDTH,
+  API_SIDEBAR_MAX_WIDTH,
   DEFAULT_ACCENT_COLOR,
   DEFAULT_ANDROID_SETTINGS,
   DEFAULT_APPEARANCE_SETTINGS,
@@ -29,6 +31,7 @@ import {
   DEFAULT_PREVIEW_SETTINGS,
   DEFAULT_EMBEDDED_TERMINAL_SETTINGS,
   DEFAULT_FILES_SETTINGS,
+  DEFAULT_API_SETTINGS,
   DEFAULT_ONBOARDING_SETTINGS,
 } from '@shared/contracts/settings';
 
@@ -121,6 +124,7 @@ export const settingsFileSchema = z.object({
       files: z.number().int().min(320),
       commit: z.number().int().min(200),
       filesExplorer: z.number().int().min(180).max(640),
+      apiSidebar: z.number().int().min(220).max(API_SIDEBAR_MAX_WIDTH),
     }),
   }),
   history: z.object({
@@ -200,6 +204,27 @@ export const settingsFileSchema = z.object({
     readerWidth: z.enum(['narrow', 'standard', 'wide']),
     editorFontSize: z.union([z.literal(12), z.literal(13), z.literal(14), z.literal(16)]),
     lineNumbers: z.boolean(),
+  }),
+  api: z.object({
+    requestTimeoutMs: z.number().int().min(1_000).max(600_000),
+    maxRedirects: z.number().int().min(0).max(50),
+    displayResponseBytes: z.number().int().min(64 * 1024).max(200 * 1024 * 1024),
+    persistResponseBytes: z.number().int().min(64 * 1024).max(500 * 1024 * 1024),
+    maxRequestBodyBytes: z.number().int().min(64 * 1024).max(500 * 1024 * 1024),
+    streamEventCap: z.number().int().min(100).max(50_000),
+    perMessageDisplayBytes: z.number().int().min(4 * 1024).max(50 * 1024 * 1024),
+    historyEntryCap: z.number().int().min(10).max(10_000),
+    historyAgeDays: z.number().int().min(1).max(365),
+    historyBodyStorageBytes: z.number().int().min(10 * 1024 * 1024).max(10 * 1024 * 1024 * 1024),
+    importFileBytes: z.number().int().min(64 * 1024).max(500 * 1024 * 1024),
+    importNodeCap: z.number().int().min(100).max(100_000),
+    autoFormatJson: z.boolean(),
+    lineWrap: z.boolean(),
+    importedScriptsDefaultEnabled: z.literal(false),
+    cookiesEnabled: z.boolean(),
+    scriptsEnabled: z.boolean(),
+    runDataRowCap: z.number().int().min(1).max(50_000),
+    runMaxIterations: z.number().int().min(1).max(1_000),
   }),
   onboarding: z.object({
     completedVersion: z.string().max(64).nullable(),
@@ -289,6 +314,7 @@ export function createDefaultSettings(): SettingsFileV1 {
         files: DEFAULT_LAYOUT_SETTINGS.paneWidths.files,
         commit: DEFAULT_LAYOUT_SETTINGS.paneWidths.commit,
         filesExplorer: DEFAULT_LAYOUT_SETTINGS.paneWidths.filesExplorer ?? 280,
+        apiSidebar: DEFAULT_LAYOUT_SETTINGS.paneWidths.apiSidebar ?? 280,
       },
     },
     history: { ...DEFAULT_HISTORY_SETTINGS },
@@ -301,6 +327,7 @@ export function createDefaultSettings(): SettingsFileV1 {
     preview: { ...DEFAULT_PREVIEW_SETTINGS },
     embeddedTerminal: { ...DEFAULT_EMBEDDED_TERMINAL_SETTINGS },
     files: { ...DEFAULT_FILES_SETTINGS },
+    api: { ...DEFAULT_API_SETTINGS },
     onboarding: { ...DEFAULT_ONBOARDING_SETTINGS },
   };
 }
@@ -367,6 +394,11 @@ export function validateSettings(value: unknown): SettingsFileV1 {
         ...(isRecord(incoming.layout) && isRecord(incoming.layout.paneWidths)
           ? incoming.layout.paneWidths
           : {}),
+        apiSidebar: normalizeApiSidebarWidth(
+          isRecord(incoming.layout) && isRecord(incoming.layout.paneWidths)
+            ? incoming.layout.paneWidths.apiSidebar
+            : undefined
+        ),
       },
     },
     history: { ...defaults.history, ...(isRecord(incoming.history) ? incoming.history : {}) },
@@ -394,6 +426,12 @@ export function validateSettings(value: unknown): SettingsFileV1 {
       ...(isRecord(incoming.embeddedTerminal) ? incoming.embeddedTerminal : {}),
     },
     files: { ...defaults.files, ...(isRecord(incoming.files) ? incoming.files : {}) },
+    api: {
+      ...defaults.api,
+      ...(isRecord(incoming.api) ? incoming.api : {}),
+      // Never allow a persisted true — imported scripts stay disabled by default.
+      importedScriptsDefaultEnabled: false,
+    },
     onboarding: {
       ...defaults.onboarding,
       ...(isRecord(incoming.onboarding) ? incoming.onboarding : {}),
@@ -442,6 +480,7 @@ export function settingsFileToPublic(file: SettingsFileV1): PublicSettings {
     preview: file.preview,
     embeddedTerminal: file.embeddedTerminal,
     files: file.files,
+    api: file.api,
     onboarding: file.onboarding,
   };
 }
@@ -454,6 +493,12 @@ export function makeProjectRecord(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeApiSidebarWidth(value: unknown): number {
+  const fallback = DEFAULT_LAYOUT_SETTINGS.paneWidths.apiSidebar ?? API_SIDEBAR_DEFAULT_WIDTH;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.min(API_SIDEBAR_MAX_WIDTH, Math.max(220, Math.round(value)));
 }
 
 function normalizeAccent(value: unknown): string {

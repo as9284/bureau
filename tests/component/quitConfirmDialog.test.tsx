@@ -50,4 +50,13 @@ describe('QuitConfirmDialog', () => {
     expect(confirmQuit).not.toHaveBeenCalled();
     expect(useAppStore.getState().closePrompt).toBeNull();
   });
+
+  it('mentions unsaved API requests', () => {
+    useAppStore.setState({
+      closePrompt: { processes: [], dirtyApiRequests: 1 },
+    });
+    render(<QuitConfirmDialog />);
+    expect(screen.getByText(/1 API request has unsaved changes/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Discard and Quit/ })).toBeInTheDocument();
+  });
 });

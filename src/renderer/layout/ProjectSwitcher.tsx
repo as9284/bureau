@@ -34,7 +34,8 @@ export function ProjectSwitcher() {
   const processesByProject = useAppStore((s) => s.processesByProject);
   const loadProcesses = useAppStore((s) => s.loadProcesses);
   const selectProject = useAppStore((s) => s.selectProject);
-  const setSection = useAppStore((s) => s.setSection);
+  const backToHub = useAppStore((s) => s.backToHub);
+  const openSettings = useAppStore((s) => s.openSettings);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
 
   const [open, setOpen] = useState(false);
@@ -46,8 +47,8 @@ export function ProjectSwitcher() {
   const listId = useId();
 
   const selected = projects.find((p) => p.projectId === selectedProjectId) ?? null;
-  const onHub = view === 'hub' || !selected;
-  const triggerLabel = onHub ? 'Projects' : selected.name;
+  const showingProject = view === 'project' && selected !== null;
+  const triggerLabel = showingProject ? selected.name : 'Projects';
 
   const warmedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -136,9 +137,9 @@ export function ProjectSwitcher() {
   };
 
   const footerActions = [
-    { id: 'hub', label: 'Open hub', run: () => closeAnd(() => setSection('projects')) },
+    { id: 'hub', label: 'Open hub', run: () => closeAnd(() => backToHub()) },
     { id: 'add', label: 'Add project…', run: () => closeAnd(() => void openAddDialog()) },
-    { id: 'settings', label: 'Settings', run: () => closeAnd(() => setSection('settings')) },
+    { id: 'settings', label: 'Settings', run: () => closeAnd(() => openSettings()) },
   ] as const;
 
   const selectableCount = flatProjects.length + footerActions.length;
@@ -307,24 +308,24 @@ export function ProjectSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
-        aria-label={onHub ? 'Projects' : `Current project: ${selected?.name ?? 'Projects'}`}
+        aria-label={showingProject ? `Current project: ${selected.name}` : 'Projects'}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onTriggerKeyDown}
       >
-        {onHub ? (
+        {!showingProject ? (
           <StackIcon size={14} />
         ) : (
           <span
             className={[
               'project-switcher__avatar',
               'project-switcher__avatar--sm',
-              selected && isRunning(selected.projectId) ? 'is-running' : '',
+              isRunning(selected.projectId) ? 'is-running' : '',
             ]
               .filter(Boolean)
               .join(' ')}
             aria-hidden
           >
-            {monogram(selected?.name ?? 'P')}
+            {monogram(selected.name)}
           </span>
         )}
         <span className="project-switcher__trigger-label">{triggerLabel}</span>

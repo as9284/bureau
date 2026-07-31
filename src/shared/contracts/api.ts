@@ -131,6 +131,69 @@ import type {
 import type { FilesApi } from './files';
 import type { AppUpdateState } from './updates';
 import type {
+  ApiCancelRequestInput,
+  ApiCloseStreamInput,
+  ApiCommitExportInput,
+  ApiCommitImportInput,
+  ApiCreateCollectionInput,
+  ApiExportPlan,
+  ApiExportPlanInput,
+  ApiImportPreview,
+  ApiImportReport,
+  ApiInspectImportInput,
+  ApiCreateEnvironmentInput,
+  ApiCreateWorkspaceInput,
+  ApiDeleteOAuthProfileInput,
+  ApiDeleteSecretInput,
+  ApiDeleteTlsProfileInput,
+  ApiEntityId,
+  ApiGraphqlSchemaSummary,
+  ApiHistorySummary,
+  ApiIntrospectGraphqlInput,
+  ApiOAuthProfileRefInput,
+  ApiOAuthStateEvent,
+  ApiOpenStreamInput,
+  ApiOpenStreamResult,
+  ApiSaveOAuthProfileInput,
+  ApiSaveTlsProfileInput,
+  ApiSendStreamMessageInput,
+  ApiStreamEntry,
+  ApiSaveRequestInput,
+  ApiSaveSecretInput,
+  ApiSecretSummary,
+  ApiSendRequestInput,
+  ApiSendRequestResult,
+  ApiSessionEvent,
+  ApiApproveScriptsInput,
+  ApiCancelRunInput,
+  ApiExportRunReportInput,
+  ApiRunConfig,
+  ApiRunDataSummary,
+  ApiRunEvent,
+  ApiRunReport,
+  ApiRunReportRefInput,
+  ApiScriptLocation,
+  ApiClearCookiesInput,
+  ApiCookie,
+  ApiCookieJarSummary,
+  ApiSaveCookieInput,
+  ApiCommitRestoreInput,
+  ApiDeleteCookieInput,
+  ApiDeleteProxyProfileInput,
+  ApiListCookiesInput,
+  ApiRestorePlan,
+  ApiRestoreReport,
+  ApiSaveProxyProfileInput,
+  ApiValidateScriptInput,
+  ApiValidateScriptResult,
+  ApiUpdateCollectionInput,
+  ApiUpdateEnvironmentInput,
+  ApiUpdateWorkspaceInput,
+  ApiWorkbenchStatus,
+  ApiWorkspaceIndex,
+  ApiWorkspaceSnapshot,
+} from './apiWorkbench';
+import type {
   CreateTerminalSessionRequest,
   RenameTerminalSessionRequest,
   ResizeTerminalRequest,
@@ -144,6 +207,114 @@ import type {
 } from './terminal';
 
 export type Unsubscribe = () => void;
+
+/** Frozen preload surface for the API workbench (`window.bureau.api`). */
+export type ApiWorkbenchApi = {
+  listWorkspaces(): Promise<ApiWorkspaceIndex>;
+  getStatus(): Promise<ApiWorkbenchStatus>;
+  getWorkspace(input: { workspaceId: ApiEntityId }): Promise<Result<{ snapshot: ApiWorkspaceSnapshot }>>;
+  createWorkspace(
+    input: ApiCreateWorkspaceInput
+  ): Promise<Result<{ workspaceId: ApiEntityId }>>;
+  updateWorkspace(
+    input: ApiUpdateWorkspaceInput
+  ): Promise<Result<{ revision: number }>>;
+  deleteWorkspace(input: {
+    workspaceId: ApiEntityId;
+    expectedRevision: number;
+  }): Promise<Result<void>>;
+  createCollection(
+    input: ApiCreateCollectionInput
+  ): Promise<Result<{ collectionId: ApiEntityId; requestId?: ApiEntityId }>>;
+  updateCollection(input: ApiUpdateCollectionInput): Promise<Result<{ revision: number }>>;
+  deleteCollection(input: {
+    workspaceId: ApiEntityId;
+    collectionId: ApiEntityId;
+    expectedRevision: number;
+  }): Promise<Result<void>>;
+  saveRequest(input: ApiSaveRequestInput): Promise<Result<{ revision: number }>>;
+  deleteRequest(input: {
+    workspaceId: ApiEntityId;
+    requestId: ApiEntityId;
+    expectedRevision: number;
+  }): Promise<Result<void>>;
+  createEnvironment(
+    input: ApiCreateEnvironmentInput
+  ): Promise<Result<{ environmentId: ApiEntityId }>>;
+  updateEnvironment(input: ApiUpdateEnvironmentInput): Promise<Result<{ revision: number }>>;
+  deleteEnvironment(input: {
+    workspaceId: ApiEntityId;
+    environmentId: ApiEntityId;
+    expectedRevision: number;
+  }): Promise<Result<void>>;
+  listSecrets(): Promise<{ secrets: ApiSecretSummary[] }>;
+  saveSecret(input: ApiSaveSecretInput): Promise<Result<{ secretId: ApiEntityId }>>;
+  deleteSecret(input: ApiDeleteSecretInput): Promise<Result<void>>;
+  listHistory(input: { workspaceId: ApiEntityId }): Promise<{ items: ApiHistorySummary[] }>;
+  getHistoryEntry(input: { historyId: ApiEntityId }): Promise<Result<{ entry: ApiHistorySummary }>>;
+  sendRequest(input: ApiSendRequestInput): Promise<ApiSendRequestResult>;
+  cancelRequest(input: ApiCancelRequestInput): Promise<Result<void>>;
+
+  // Phase 2 — streams, GraphQL, TLS profiles, and OAuth 2.
+  openStream(input: ApiOpenStreamInput): Promise<ApiOpenStreamResult>;
+  sendStreamMessage(input: ApiSendStreamMessageInput): Promise<Result<void>>;
+  closeStream(input: ApiCloseStreamInput): Promise<Result<void>>;
+  setStreamPaused(input: { sessionId: ApiEntityId; paused: boolean }): Promise<Result<void>>;
+  getStreamSnapshot(input: {
+    sessionId: ApiEntityId;
+  }): Promise<Result<{ entries: ApiStreamEntry[]; dropped: number; status: string }>>;
+  introspectGraphql(
+    input: ApiIntrospectGraphqlInput
+  ): Promise<Result<{ schema: ApiGraphqlSchemaSummary }>>;
+  saveTlsProfile(input: ApiSaveTlsProfileInput): Promise<Result<{ profileId: ApiEntityId }>>;
+  deleteTlsProfile(input: ApiDeleteTlsProfileInput): Promise<Result<void>>;
+  saveOAuthProfile(input: ApiSaveOAuthProfileInput): Promise<Result<{ profileId: ApiEntityId }>>;
+  deleteOAuthProfile(input: ApiDeleteOAuthProfileInput): Promise<Result<void>>;
+  authorizeOAuth(input: ApiOAuthProfileRefInput): Promise<Result<void>>;
+  cancelOAuth(input: ApiOAuthProfileRefInput): Promise<Result<void>>;
+  clearOAuthToken(input: ApiOAuthProfileRefInput): Promise<Result<void>>;
+
+  // Phase 3 — import and export. Paths never cross this boundary; main owns the pickers.
+  inspectImport(input: ApiInspectImportInput): Promise<Result<{ preview: ApiImportPreview }>>;
+  commitImport(input: ApiCommitImportInput): Promise<Result<{ report: ApiImportReport }>>;
+  discardImport(input: { previewId: ApiEntityId }): Promise<void>;
+  planExport(input: ApiExportPlanInput): Promise<Result<{ plan: ApiExportPlan }>>;
+  commitExport(input: ApiCommitExportInput): Promise<Result<{ written: boolean }>>;
+
+  // Phase 4 — script sandbox and collection runner.
+  validateScript(input: ApiValidateScriptInput): Promise<ApiValidateScriptResult>;
+  listScriptLocations(input: {
+    workspaceId: ApiEntityId;
+    collectionId: ApiEntityId | null;
+  }): Promise<Result<{ locations: ApiScriptLocation[] }>>;
+  approveScripts(input: ApiApproveScriptsInput): Promise<Result<{ changed: number }>>;
+  /** Opens a main-owned picker; rows stay in main and only this summary crosses IPC. */
+  loadRunData(input: {
+    workspaceId: ApiEntityId;
+  }): Promise<Result<{ data: ApiRunDataSummary | null }>>;
+  clearRunData(input: { dataSetId: ApiEntityId }): Promise<void>;
+  startRun(input: ApiRunConfig): Promise<Result<{ runId: ApiEntityId }>>;
+  cancelRun(input: ApiCancelRunInput): Promise<Result<void>>;
+  getRunReport(input: ApiRunReportRefInput): Promise<Result<{ report: ApiRunReport }>>;
+  exportRunReport(input: ApiExportRunReportInput): Promise<Result<{ written: boolean }>>;
+
+  // Phase 5 — proxy profiles, cookie inspection, backup and restore.
+  saveProxyProfile(input: ApiSaveProxyProfileInput): Promise<Result<{ profileId: ApiEntityId }>>;
+  deleteProxyProfile(input: ApiDeleteProxyProfileInput): Promise<Result<void>>;
+  listCookieJars(input: { workspaceId: ApiEntityId }): Promise<{ jars: ApiCookieJarSummary[] }>;
+  listCookies(input: ApiListCookiesInput): Promise<{ cookies: ApiCookie[] }>;
+  deleteCookie(input: ApiDeleteCookieInput): Promise<Result<void>>;
+  clearCookies(input: ApiClearCookiesInput): Promise<Result<void>>;
+  saveCookie(input: ApiSaveCookieInput): Promise<Result<void>>;
+  backupWorkspaces(): Promise<Result<{ written: boolean }>>;
+  planRestore(): Promise<Result<{ plan: ApiRestorePlan | null }>>;
+  commitRestore(input: ApiCommitRestoreInput): Promise<Result<{ report: ApiRestoreReport }>>;
+
+  onSessionEvent(listener: (event: ApiSessionEvent) => void): Unsubscribe;
+  onOAuthEvent(listener: (event: ApiOAuthStateEvent) => void): Unsubscribe;
+  onRunEvent(listener: (event: ApiRunEvent) => void): Unsubscribe;
+  setDirtyDraftCount?(input: { count: number }): Promise<void>;
+};
 
 export type PtyOutputEvent = {
   projectId: string;
@@ -370,4 +541,5 @@ export type BureauApiV1 = {
     list(input: ProjectIdRequest): Promise<ProjectTasks>;
     run(input: RunTaskRequest): Promise<OkResult>;
   };
+  api: ApiWorkbenchApi;
 };

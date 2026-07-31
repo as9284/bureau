@@ -16,8 +16,13 @@
 .commit-panel .sg-text-area {
   flex: 1 1 auto;
   min-height: 0;
-  /* Contain the input's min-height so a crushed flex item cannot paint over the checkboxes. */
+  /* Contain the input's min-height so a crushed flex item cannot paint over the checkboxes. The
+     3px inset gives the focus ring room inside the clip box: without it `overflow: hidden` cut the
+     ring off on every edge but the top, where the label gap happened to leave slack. The matching
+     negative margin keeps the panel's spacing unchanged. */
   overflow: hidden;
+  padding: 3px;
+  margin: -3px;
 }
 
 .commit-panel .sg-text-area__input {

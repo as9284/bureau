@@ -15,6 +15,7 @@ import { ProjectRemoveDialog } from '../components/ProjectRemoveDialog';
 import { HubOverview } from '../pages/HubOverview';
 import { SettingsPage } from '../pages/SettingsPage';
 import { ProjectWorkspace } from '../pages/ProjectWorkspace';
+import { ApiWorkspace } from '../features/api/ApiWorkspace';
 import { AddProjectDialog } from '../features/projects/AddProjectDialog';
 import { CloneDialog } from '../features/git/lifecycle/CloneDialog';
 import { InitDialog } from '../features/git/lifecycle/InitDialog';
@@ -29,7 +30,7 @@ export function WorkbenchShell() {
   const openContextMenu = useAppStore((s) => s.openContextMenu);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
   const backToHub = useAppStore((s) => s.backToHub);
-  const setSection = useAppStore((s) => s.setSection);
+  const openSettings = useAppStore((s) => s.openSettings);
   const openPalette = useAppStore((s) => s.openPalette);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
 
@@ -50,8 +51,8 @@ export function WorkbenchShell() {
       return;
     }
 
-    // Hub chrome actions do not belong inside a project workbench (Files, Processes, …).
-    if (view === 'project') {
+    // Hub chrome actions do not belong inside a project or API workbench.
+    if (view === 'project' || view === 'api') {
       event.preventDefault();
       return;
     }
@@ -62,7 +63,7 @@ export function WorkbenchShell() {
       { type: 'item', label: 'Go to Projects', onSelect: () => backToHub() },
       { type: 'separator' },
       { type: 'item', label: 'Command palette', onSelect: () => openPalette() },
-      { type: 'item', label: 'Settings', onSelect: () => setSection('settings') },
+      { type: 'item', label: 'Settings', onSelect: () => openSettings() },
       { type: 'separator' },
       { type: 'item', label: 'Toggle theme', onSelect: () => void toggleTheme() },
     ];
@@ -78,6 +79,7 @@ export function WorkbenchShell() {
             <div key={view} className="stage-page page-enter">
               {view === 'settings' && <SettingsPage />}
               {view === 'project' && <ProjectWorkspace />}
+              {view === 'api' && <ApiWorkspace />}
               {view === 'hub' && <HubOverview />}
             </div>
           </main>

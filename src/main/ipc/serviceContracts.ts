@@ -27,6 +27,7 @@ import type { GitHubPublishingService } from '../github/GitHubPublishingService'
 import type { GiteaPublishingService } from '../gitea/GiteaPublishingService';
 import type { FileApplicationService } from '../files/FileApplicationService';
 import type { ShellSessionService } from '../terminal/ShellSessionService';
+import type { ApiApplicationService } from '../api/ApiApplicationService';
 
 export type ProjectActionRequest = { projectId: string };
 
@@ -74,4 +75,5 @@ export type AppServices = {
   toolchains: ToolchainApplicationService;
   ports: PortsApplicationService;
   tasks: TaskApplicationService;
+  api: ApiApplicationService;
 };

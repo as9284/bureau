@@ -6,6 +6,10 @@ import {
   validateSettings,
 } from '@main/storage/schemas';
 import { settingsPatchSchema } from '@shared/validation/requests';
+import {
+  API_SIDEBAR_DEFAULT_WIDTH,
+  DEFAULT_API_SETTINGS,
+} from '@shared/contracts/settings';
 
 describe('validateSettings', () => {
   it('returns defaults for an empty object', () => {
@@ -19,6 +23,19 @@ describe('validateSettings', () => {
       reactNativeAutoReverse: true,
     });
     expect(settings.schemaVersion).toBe(1);
+  });
+
+  it('defaults API workbench settings and upgrades legacy files', () => {
+    const settings = validateSettings({});
+    expect(settings.api).toEqual(DEFAULT_API_SETTINGS);
+    expect(settings.layout.paneWidths.apiSidebar).toBe(API_SIDEBAR_DEFAULT_WIDTH);
+  });
+
+  it('forces importedScriptsDefaultEnabled to false even if a file claims otherwise', () => {
+    const settings = validateSettings({
+      api: { importedScriptsDefaultEnabled: true },
+    });
+    expect(settings.api.importedScriptsDefaultEnabled).toBe(false);
   });
 
   it('deep-merges partial sections over defaults', () => {
@@ -109,11 +126,24 @@ describe('validateSettings', () => {
     expect(settings.appearance).not.toHaveProperty('immersiveMode');
   });
 
+  it('preserves stored API sidebar widths below the tab-fit resize minimum', () => {
+    const settings = validateSettings({
+      layout: { paneWidths: { apiSidebar: 280 } },
+    });
+
+    expect(settings.layout.paneWidths.apiSidebar).toBe(280);
+  });
+
   it('silently removes the retired workspace sidebar width from v1 settings', () => {
     const settings = validateSettings({ layout: { sidebarWidth: 320 } });
 
     expect(settings.layout).toEqual({
-      paneWidths: { files: 340, commit: 280, filesExplorer: 280 },
+      paneWidths: {
+        files: 340,
+        commit: 280,
+        filesExplorer: 280,
+        apiSidebar: API_SIDEBAR_DEFAULT_WIDTH,
+      },
     });
   });
 

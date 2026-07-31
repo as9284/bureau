@@ -58,6 +58,7 @@ import { throwMappedError, toBureauError } from './errors';
 import type { AppServices } from './serviceContracts';
 import { registerGitHandlers } from './registerGitHandlers';
 import { registerFileHandlers } from './registerFileHandlers';
+import { registerApiHandlers } from './registerApiHandlers';
 import type { UpdateService } from '../app/UpdateService';
 
 export function registerHandlers(
@@ -340,6 +341,7 @@ export function registerHandlers(
   });
 
   registerGitHandlers(services, register);
+  registerApiHandlers(services, register);
 
   register(IPC_CHANNELS.ANDROID_GET_OVERVIEW, 'android.getOverview', async () =>
     services.android.getOverview()

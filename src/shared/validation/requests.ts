@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PROJECT_TAB_IDS, TERMINAL_CURSOR_STYLES, VIEWPORT_PRESETS } from '../contracts/settings';
+import { PROJECT_TAB_IDS, TERMINAL_CURSOR_STYLES, VIEWPORT_PRESETS, API_SIDEBAR_MAX_WIDTH } from '../contracts/settings';
 import { SHELL_IDS } from '../contracts/terminal';
 
 const MAX_PATH_LENGTH = 4096;
@@ -133,6 +133,7 @@ export const settingsPatchSchema = z
             files: z.number().int().min(320).optional(),
             commit: z.number().int().min(200).optional(),
             filesExplorer: z.number().int().min(180).max(640).optional(),
+            apiSidebar: z.number().int().min(220).max(API_SIDEBAR_MAX_WIDTH).optional(),
           })
           .optional(),
       })
@@ -246,6 +247,32 @@ export const settingsPatchSchema = z
           .union([z.literal(12), z.literal(13), z.literal(14), z.literal(16)])
           .optional(),
         lineNumbers: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+    api: z
+      .object({
+        requestTimeoutMs: z.number().int().min(1_000).max(600_000).optional(),
+        maxRedirects: z.number().int().min(0).max(50).optional(),
+        displayResponseBytes: z.number().int().min(64 * 1024).max(200 * 1024 * 1024).optional(),
+        persistResponseBytes: z.number().int().min(64 * 1024).max(500 * 1024 * 1024).optional(),
+        maxRequestBodyBytes: z.number().int().min(64 * 1024).max(500 * 1024 * 1024).optional(),
+        streamEventCap: z.number().int().min(100).max(50_000).optional(),
+        perMessageDisplayBytes: z.number().int().min(4 * 1024).max(50 * 1024 * 1024).optional(),
+        historyEntryCap: z.number().int().min(10).max(10_000).optional(),
+        historyAgeDays: z.number().int().min(1).max(365).optional(),
+        historyBodyStorageBytes: z
+          .number()
+          .int()
+          .min(10 * 1024 * 1024)
+          .max(10 * 1024 * 1024 * 1024)
+          .optional(),
+        importFileBytes: z.number().int().min(64 * 1024).max(500 * 1024 * 1024).optional(),
+        importNodeCap: z.number().int().min(100).max(100_000).optional(),
+        autoFormatJson: z.boolean().optional(),
+        lineWrap: z.boolean().optional(),
+        importedScriptsDefaultEnabled: z.literal(false).optional(),
+        cookiesEnabled: z.boolean().optional(),
       })
       .strict()
       .optional(),

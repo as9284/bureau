@@ -44,6 +44,8 @@ type CodeEditorProps = {
   /** Overrides the --font-size-body token when set. */
   fontSize?: number;
   lineNumbers?: boolean;
+  className?: string;
+  'aria-label'?: string;
   onChange(value: string): void;
   onCursor?(line: number, column: number): void;
 };
@@ -145,7 +147,18 @@ function tokenTheme(fontSize?: number): Extension {
   ];
 }
 
-export function CodeEditor({ value, languageId, readOnly, wordWrap = false, fontSize, lineNumbers: showLineNumbers = true, onChange, onCursor }: CodeEditorProps) {
+export function CodeEditor({
+  value,
+  languageId,
+  readOnly,
+  wordWrap = false,
+  fontSize,
+  lineNumbers: showLineNumbers = true,
+  className,
+  'aria-label': ariaLabel = 'File editor',
+  onChange,
+  onCursor,
+}: CodeEditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const changeRef = useRef(onChange);
@@ -226,5 +239,11 @@ export function CodeEditor({ value, languageId, readOnly, wordWrap = false, font
     return () => { cancelled = true; };
   }, [languageId]);
 
-  return <div ref={hostRef} className="files-editor" aria-label="File editor" />;
+  return (
+    <div
+      ref={hostRef}
+      className={['files-editor', className].filter(Boolean).join(' ')}
+      aria-label={ariaLabel}
+    />
+  );
 }

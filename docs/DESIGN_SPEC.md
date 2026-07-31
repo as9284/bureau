@@ -163,12 +163,12 @@ Provide `[data-theme='light']` with StarGit's light values (canvas `#f4f4f5`, ba
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
-│ TitleBar  ⬡ Bureau  [project ▾]   [⌘K command bar]        — ▢ ✕         │  drag region
+│ TitleBar  ⬡ Bureau  [project ▾] [API]  [⌘K command bar]    — ▢ ✕        │  drag region
 ├───────────────────────────────────────────────────────────────────────┤
 │ Main workspace (full-bleed)                                           │
-│  ┌─ tab strip: Overview │ Files │ Processes │ … ─────────────────────┐│
+│  ┌─ project tab strip: Overview │ Files │ Processes │ … ─────────────┐│  (Projects only)
 │  │                                                                    ││
-│  │   (active tab content)                                             ││
+│  │   (active tab / API workbench content)                             ││
 │  │                                                                    ││
 │  └────────────────────────────────────────────────────────────────────┘│
 ├───────────────────────────────────────────────────────────────────────┤
@@ -177,32 +177,51 @@ Provide `[data-theme='light']` with StarGit's light values (canvas `#f4f4f5`, ba
 ```
 
 ### 4.1 TitleBar (36px, `-webkit-app-region: drag`)
-- Left: app mark + "Bureau" wordmark + **project switcher** (current project or "Projects" on hub).
+- Left: app mark + "Bureau" wordmark + **project switcher** (current project or "Projects" on hub) +
+  the **API** nav item (§4.2).
 - Center: **command bar** — click / ⌘K opens the palette; mono hint chip. Width `min(360px, 42vw)`.
 - Right: window controls (46px each; close hover `#c42b1c`). Everything interactive is `no-drag`.
 
-### 4.2 Project switcher (titlebar)
+### 4.2 API nav item (titlebar, `.title-nav-item`)
+- The global **API** workspace is reached from a quiet chrome button sitting immediately right of the
+  project switcher — a peer of the switcher, not a per-project tab and not a second tab strip. There is
+  no primary tab row; the workspace stays full-bleed directly beneath the title bar.
+- Resting: transparent, `--color-text-secondary`. Hover: `--color-surface-hover`. Active:
+  `--color-surface-selected` + hairline `--color-border-default` + `aria-current="page"`.
+- It **toggles**: activating it opens API; activating it again returns to the last Projects destination
+  (hub, or the previously selected project and project tab). Selecting a project from the switcher also
+  returns to Projects and opens that project.
+- Settings is not a primary destination — opening it remembers whether Projects or API was active and
+  closing returns there, so the API item stays highlighted while Settings sits over the API workspace.
+
+### 4.3 Project switcher (titlebar)
 - Compact trigger with monogram (running ring when processes are live) + truncated name + chevron.
 - Popover (portalled): filter field, Pinned / Recent groups, footer actions — Open hub, Add project, Settings.
 - Hub remains the rich library for pin/reorder/remove. No persistent left rail; workspace is full-bleed.
 - Settings categories stay as compact horizontal local navigation inside the Settings page (wash cards).
 
-### 4.3 Tab strip (36px)
-- Per-project workspace tabs (Overview/Files/Processes/Terminal/Preview/Android/Git).
+### 4.4 Project tab strip (36px)
+- Per-project workspace tabs only (Overview/Files/Processes/Terminal/Preview/Android/Git). Not used for
+  the global API workspace.
 - Inactive on canvas (`#141414`), active merges into stage base (`#181818`) with hairline borders
   (`6px 6px 0 0` top radius).
 
-### 4.4 Status bar (24px)
+### 4.5 Status bar (24px)
 - Clusters: left = global running-process dot + count; center = active ports (mono); right = active
   toolchain versions + git branch of selected project. While Files is active it additionally reports the
   relative path, cursor, indentation, encoding, EOL, language, dirty/conflict state and Markdown reading data.
+  While API is active it reports the workspace count plus live-stream and in-flight session counts.
   Status dots reuse `.status-dot` colors.
 
-### 4.5 Command palette (⌘K)
+### 4.6 Command palette (⌘K)
 - Overlay at 12vh, `min(640px, 100vw-32px)`, `--radius-dialog`, `--shadow-dialog`, `overlay-in` animation.
 - Commands: switch project, start/stop process, open preview, boot AVD, run script, open Files /
-  Git panels, Quick Open, project search, Markdown modes/headings, toggle theme, etc. Grouped, mono meta
-  chips on the right.
+  Git panels, Quick Open, project search, Markdown modes/headings, Open API, toggle theme, etc.
+  Grouped, mono meta chips on the right.
+- API commands appear only while the API workspace is active, and are protocol-aware: New API request,
+  Save API request, Send API request **or** Connect stream, Cancel API request **or** Disconnect stream,
+  and Introspect GraphQL schema for GraphQL documents. (Import and Run collection arrive with their
+  owning phases.)
 
 ---
 
@@ -214,8 +233,8 @@ Port these from StarGit/Monocle with only cosmetic renaming:
 NumberField, Tooltip, Menu/DropdownMenu, ContextMenu, Dialog, ScrollArea, Separator, Badge, Banner,
 Skeleton, EmptyState, StatusLine, Toast stack.
 
-**Layout:** TitleBar (with ProjectSwitcher), TabStrip, StatusBar, CommandPalette, PaneSeparator
-(resizable splitters), WorkbenchShell.
+**Layout:** TitleBar (with ProjectSwitcher + ApiNavButton), TabStrip, StatusBar, CommandPalette,
+PaneSeparator (resizable splitters), WorkbenchShell.
 
 Button variants: `primary` (accent bg, `--color-text-on-accent`), `secondary` (raised + border), `ghost`,
 `danger`. Heights `--size-control`/`--size-control-compact`, `--radius-control`.
@@ -235,6 +254,75 @@ New components, all built from the tokens above.
   Machine text, paths, positions and byte counts remain mono with tabular numerals.
 - Markdown Preview/Split uses the same graphite stage, compact toolbar and tokenised prose treatment. Split
   collapses at narrow widths; image zoom/lightbox, focus reading and export controls remain keyboard reachable.
+
+### 6.0b API workspace
+- Global workspace reached from the title-bar API item (§4.2), not a per-project tab. Dense three-region layout: Collections /
+  History / Environments sidebar (220–440 px), request document tabs + composer, and a resizable response
+  inspector. Design variance 4 · motion 3 · visual density 9 — same graphite surfaces and periwinkle accent.
+- Mono for methods, URLs, headers, payloads, status codes, timings, byte counts, and stream frames.
+- Every pane implements loading, empty, error, and degraded/stale states. No raw OS controls — Bureau
+  Dropdown, Checkbox, TextField, TextArea, Button, IconButton, Dialog, Banner, Skeleton, EmptyState,
+  ResizablePanel, and CodeMirror only.
+- Inventory (phased): ApiWorkspace, ApiToolbar, ApiSidebar, ApiDocumentTabs, RequestComposer, RequestLine,
+  Params/Auth/Headers/Body/Scripts/Settings editors, ResponseInspector (+ body/headers/cookies/tests/
+  timeline views), GraphqlComposer, WebSocketConsole, SseConsole, EnvironmentEditor, CollectionRunner,
+  Import/Export/OAuth/Tls dialogs.
+- **Sidebar modes:** Collections · History · Environments · Secrets. Secrets are write-only — the value
+  field is masked, there is no reveal control, and a banner replaces the persist option when OS
+  encryption is unavailable.
+- **Request line** leads with a protocol selector (HTTP · GraphQL · WebSocket · SSE). The method picker
+  appears for HTTP only; GraphQL and SSE choose their own verb. The primary action is protocol-aware:
+  Send/Cancel for request protocols, Connect/Disconnect for streams.
+- **Editor tabs follow the protocol:** GraphQL replaces Body with Query (document + variables +
+  operation selector + explicit "Introspect schema"); WebSocket and SSE drop Body entirely.
+- **StreamConsole** (WebSocket + SSE) replaces the response inspector for stream protocols: a status
+  chip pairing a dot with a *word* (Connecting / Connected / Disconnected / Error), subprotocol and
+  close-code metadata in mono, a dropped-event counter, and a transcript of timestamped rows
+  (time · direction arrow · kind · payload · byte count, all mono/tabular). "Pause display" states
+  explicitly that the connection stays open. WebSocket adds a message composer (Text / JSON / Binary hex).
+- **Document tabs** carry a dirty dot plus a status *word* — `live`, `connecting`, `sending`, `error` —
+  so streaming state is never colour-only.
+- **Import and export are two-step, never one-click.** Import shows a preview (tree, counts, script
+  disclosure, collapsible warnings, conflict strategy) before any commit; conflicting names are tinted
+  with `--color-status-warning-soft` and labelled `name taken`, and choosing *Replace* raises a danger
+  banner naming how much will be deleted. Export shows an omission list and a "Secrets are not exported"
+  notice before the save dialog opens, with a danger banner for HAR's captured traffic. A post-import
+  summary strip reports created/renamed/replaced/skipped counts in mono.
+- **Scripts are opt-in and their provenance is visible.** The Scripts editor tab pairs a pre-request and
+  a test editor (mono, with a syntax error reported inline against the editor) with a single "Run these
+  scripts" toggle. Imported source renders a warning notice and *disables* that toggle: enabling untrusted
+  code is a per-collection decision made in the review dialog, which lists every script with its path,
+  phase, provenance (`Imported` / `Authored here`) and state before offering to enable them. A response
+  that ran a script grows Tests and Console tabs and a summary banner — success or danger — so a failed
+  assertion is visible without opening a tab. Console output and assertion messages are redacted in main,
+  never in the renderer.
+- **The runner states what it will do before it does it.** Target, environment, iterations, delay,
+  stop-on-failure, and an optional iteration-data file (name, row count, and columns only — the rows stay
+  in main). While running it shows a progress bar with a `completed/planned` mono count and each result as
+  it lands; a run with no enabled script says so in a warning banner rather than quietly asserting
+  nothing. Report export (JSON / JUnit) appears only once the run has finished.
+- **Sidebar modes:** Collections · History · Environments · Secrets · Cookies. The cookie inspector
+  shows values — a cookie inspector that hides them cannot debug a session — with domain, path,
+  `SameSite`, `Secure`/`HttpOnly`, and expiry in mono beside each. Per-cookie delete is inline; clearing a
+  jar is a confirmed danger action that says how many cookies go and that sessions will be signed out.
+  A named jar is chosen from the same header, so a second identity against one API is visibly separate.
+  Add/Edit opens a compact tokenised dialog; edits retain the cookie identity (name/domain/path) and
+  surface the `SameSite=None` plus `Secure` constraint inline.
+- **A proxy is never invisible.** The proxy profile dialog includes HTTP, HTTPS, and SOCKS5 modes, spells out that `system` mode reads Bureau's
+  own launch environment and that no other mode does, and a response carried by a proxy names it in the
+  response chrome the same way a TLS exception is named. Bypass entries are one host per line.
+- **Restore is two-step and says what it will destroy.** Choosing a backup only produces a plan listing
+  every workspace, its counts, and an `already exists` tag; overwriting raises a danger banner naming the
+  workspaces that will be replaced. Backups never contain secret values, and the dialog says so before
+  the save dialog opens.
+- **Large payloads are bounded, not silently truncated.** A JSON body over 1 MiB is shown as received
+  with an explicit *Format anyway*; the body view renders at most 2 MiB and states how much of how much.
+  A stream transcript shows its tail with the count of earlier entries and *Show more* / *Show all*.
+- **TLS and OAuth are danger surfaces.** A TLS profile that lists invalid-certificate hosts renders a
+  danger banner naming every host and gates Save behind an explicit acknowledgement checkbox; a request
+  bound to such a profile shows a persistent warning in Settings, and its responses carry one in the
+  response chrome. The OAuth dialog shows the loopback redirect URI in mono and reports token state
+  (`Access token stored · expires …`) without ever rendering token material.
 
 ### 6.1 ProjectCard (hub) — `--size-hub-row`+ tall
 - Grid: name (body) + path (mono, muted) · stack badges · git/status pills · idle/last-opened foot.

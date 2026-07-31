@@ -6,6 +6,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { useAppStore } from '../store/appStore';
+import { useApiStore } from '../store/apiStore';
 import { useGitStore } from '../store/gitStore';
 import { markdownOutline } from '../features/files/markdown';
 
@@ -19,8 +20,21 @@ type Command = {
 export function CommandPalette() {
   const open = useAppStore((s) => s.paletteOpen);
   const closePalette = useAppStore((s) => s.closePalette);
-  const setSection = useAppStore((s) => s.setSection);
+  const openSettings = useAppStore((s) => s.openSettings);
+  const setPrimaryWorkspace = useAppStore((s) => s.setPrimaryWorkspace);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
+  const view = useAppStore((s) => s.view);
+  const apiActiveRequestId = useApiStore((s) => s.activeRequestId);
+  const apiDocuments = useApiStore((s) => s.documents);
+  const apiSessions = useApiStore((s) => s.sessions);
+  const apiCreateCollection = useApiStore((s) => s.createCollection);
+  const apiSendRequest = useApiStore((s) => s.sendRequest);
+  const apiOpenStream = useApiStore((s) => s.openStream);
+  const apiCancelRequest = useApiStore((s) => s.cancelRequest);
+  const apiCloseStream = useApiStore((s) => s.closeStream);
+  const apiSaveRequest = useApiStore((s) => s.saveRequest);
+  const apiIntrospect = useApiStore((s) => s.introspectGraphql);
+  const apiInspectImport = useApiStore((s) => s.inspectImport);
   const openAddDialog = useAppStore((s) => s.openAddDialog);
   const backToHub = useAppStore((s) => s.backToHub);
   const selectProject = useAppStore((s) => s.selectProject);
@@ -249,6 +263,84 @@ export function CommandPalette() {
         ]
       : [];
 
+    // API commands are protocol-aware: a stream request connects and disconnects rather
+    // than sending and cancelling, and they only appear while the API workspace is active.
+    const apiDocument = apiActiveRequestId ? apiDocuments[apiActiveRequestId] : null;
+    const apiSession = apiActiveRequestId
+      ? Object.values(apiSessions).find((session) => session.requestId === apiActiveRequestId)
+      : undefined;
+    const apiProtocol = apiDocument?.draft.protocol;
+    const apiIsStream = apiProtocol === 'websocket' || apiProtocol === 'sse';
+    const apiCommands: Command[] =
+      view !== 'api'
+        ? []
+        : [
+            {
+              id: 'api-new-request',
+              title: 'New API request',
+              hint: 'API',
+              run: () =>
+                void apiCreateCollection({ parentId: null, kind: 'request', name: 'New request' }),
+            },
+            {
+              id: 'api-import',
+              title: 'Import into API workspace…',
+              hint: 'API',
+              // Opens the main-owned file picker; the preview still requires an explicit commit.
+              run: () => void apiInspectImport({ format: 'auto', fromFile: true }),
+            },
+            ...(apiDocument
+              ? [
+                  apiIsStream
+                    ? {
+                        id: 'api-connect',
+                        title: 'Connect stream',
+                        hint: 'API',
+                        run: () => void apiOpenStream(apiDocument.requestId),
+                      }
+                    : {
+                        id: 'api-send',
+                        title: 'Send API request',
+                        hint: 'API',
+                        run: () => void apiSendRequest(apiDocument.requestId),
+                      },
+                  {
+                    id: 'api-save',
+                    title: 'Save API request',
+                    hint: 'API',
+                    run: () => void apiSaveRequest(apiDocument.requestId),
+                  },
+                ]
+              : []),
+            ...(apiProtocol === 'graphql' && apiDocument
+              ? [
+                  {
+                    id: 'api-introspect',
+                    title: 'Introspect GraphQL schema',
+                    hint: 'API',
+                    run: () => void apiIntrospect(apiDocument.requestId),
+                  },
+                ]
+              : []),
+            ...(apiSession && (apiSession.inFlight || apiSession.streamStatus === 'open')
+              ? [
+                  apiIsStream
+                    ? {
+                        id: 'api-disconnect',
+                        title: 'Disconnect stream',
+                        hint: 'API',
+                        run: () => void apiCloseStream(apiSession.sessionId),
+                      }
+                    : {
+                        id: 'api-cancel',
+                        title: 'Cancel API request',
+                        hint: 'API',
+                        run: () => void apiCancelRequest(apiSession.sessionId),
+                      },
+                ]
+              : []),
+          ];
+
     return [
       {
         id: 'add-project',
@@ -258,10 +350,17 @@ export function CommandPalette() {
       },
       { id: 'go-hub', title: 'Go to Projects hub', hint: 'Navigation', run: () => backToHub() },
       {
+        id: 'open-api',
+        title: 'Open API',
+        hint: 'API',
+        run: () => setPrimaryWorkspace('api'),
+      },
+      ...apiCommands,
+      {
         id: 'open-settings',
         title: 'Open Settings',
         hint: 'Navigation',
-        run: () => setSection('settings'),
+        run: () => openSettings(),
       },
       {
         id: 'toggle-theme',
@@ -324,7 +423,20 @@ export function CommandPalette() {
       })),
     ];
   }, [
-    setSection,
+    openSettings,
+    setPrimaryWorkspace,
+    view,
+    apiActiveRequestId,
+    apiDocuments,
+    apiSessions,
+    apiCreateCollection,
+    apiSendRequest,
+    apiOpenStream,
+    apiCancelRequest,
+    apiCloseStream,
+    apiSaveRequest,
+    apiIntrospect,
+    apiInspectImport,
     toggleTheme,
     openAddDialog,
     backToHub,

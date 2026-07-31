@@ -61,6 +61,62 @@ export type PreviewSettings = {
   captureConsole: boolean;
 };
 
+/** Local-first API workbench limits and display defaults (see docs/API_WORKSPACE_PLAN.md §8.2 / §20). */
+export type ApiSettings = {
+  requestTimeoutMs: number;
+  maxRedirects: number;
+  displayResponseBytes: number;
+  persistResponseBytes: number;
+  maxRequestBodyBytes: number;
+  streamEventCap: number;
+  perMessageDisplayBytes: number;
+  historyEntryCap: number;
+  historyAgeDays: number;
+  historyBodyStorageBytes: number;
+  importFileBytes: number;
+  importNodeCap: number;
+  autoFormatJson: boolean;
+  lineWrap: boolean;
+  /**
+   * Whether newly imported scripts are enabled. Fixed `false` until a future
+   * security review permits otherwise — the settings UI must not offer a true default.
+   */
+  importedScriptsDefaultEnabled: false;
+  cookiesEnabled: boolean;
+  /**
+   * Master switch. When false no script runs regardless of its own `enabled` flag, so a user who
+   * never wants local scripting can turn the sandbox off entirely.
+   */
+  scriptsEnabled: boolean;
+  /** Iteration-data bounds for the collection runner. */
+  runDataRowCap: number;
+  runMaxIterations: number;
+};
+
+const MIB = 1024 * 1024;
+
+export const DEFAULT_API_SETTINGS: ApiSettings = {
+  requestTimeoutMs: 30_000,
+  maxRedirects: 10,
+  displayResponseBytes: 10 * MIB,
+  persistResponseBytes: 25 * MIB,
+  maxRequestBodyBytes: 50 * MIB,
+  streamEventCap: 5_000,
+  perMessageDisplayBytes: 1 * MIB,
+  historyEntryCap: 500,
+  historyAgeDays: 30,
+  historyBodyStorageBytes: 250 * MIB,
+  importFileBytes: 50 * MIB,
+  importNodeCap: 10_000,
+  autoFormatJson: true,
+  lineWrap: false,
+  importedScriptsDefaultEnabled: false,
+  cookiesEnabled: true,
+  scriptsEnabled: true,
+  runDataRowCap: 1_000,
+  runMaxIterations: 100,
+};
+
 export type TerminalFontSize = 11 | 12 | 13 | 14;
 export const TERMINAL_FONT_SIZES: readonly TerminalFontSize[] = [11, 12, 13, 14];
 export type TerminalScrollback = 1000 | 5000 | 10000;
@@ -86,10 +142,20 @@ export type EmbeddedTerminalSettings = {
 export type EditorFontSize = 12 | 13 | 14 | 16;
 export const EDITOR_FONT_SIZES: readonly EditorFontSize[] = [12, 13, 14, 16];
 
+/**
+ * Absolute floor for persisted / resize widths. The live resize minimum is measured from the
+ * mode-tab row so labels stay fully visible without padding the pane wider than the tabs need.
+ */
+export const API_SIDEBAR_MIN_WIDTH = 260;
+export const API_SIDEBAR_MAX_WIDTH = 520;
+export const API_SIDEBAR_DEFAULT_WIDTH = 300;
+
 export type PaneWidthSettings = {
   files: number;
   commit: number;
   filesExplorer?: number;
+  /** API workbench sidebar width ({@link API_SIDEBAR_MIN_WIDTH}–{@link API_SIDEBAR_MAX_WIDTH}). */
+  apiSidebar?: number;
 };
 
 export type FilesSettings = {
@@ -291,6 +357,7 @@ export type PublicSettings = {
   preview: PreviewSettings;
   embeddedTerminal: EmbeddedTerminalSettings;
   files?: FilesSettings;
+  api: ApiSettings;
   onboarding: OnboardingSettings;
 };
 
@@ -316,6 +383,9 @@ export type SettingsPatch = {
   preview?: Partial<PreviewSettings>;
   embeddedTerminal?: Partial<EmbeddedTerminalSettings>;
   files?: Partial<FilesSettings>;
+  api?: Partial<Omit<ApiSettings, 'importedScriptsDefaultEnabled'>> & {
+    importedScriptsDefaultEnabled?: false;
+  };
   onboarding?: Partial<OnboardingSettings>;
 };
 
@@ -394,7 +464,12 @@ export const DEFAULT_TOOLS_SETTINGS: ToolsVisibilitySettings = {
 };
 
 export const DEFAULT_LAYOUT_SETTINGS: LayoutSettings = {
-  paneWidths: { files: 340, commit: 280, filesExplorer: 280 },
+  paneWidths: {
+    files: 340,
+    commit: 280,
+    filesExplorer: 280,
+    apiSidebar: API_SIDEBAR_DEFAULT_WIDTH,
+  },
 };
 
 export const DEFAULT_FILES_SETTINGS: FilesSettings = {

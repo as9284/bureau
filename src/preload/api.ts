@@ -95,6 +95,7 @@ import type { ProjectToolchains, SetActiveVersionRequest } from '@shared/contrac
 import type { KillPortRequest, ProjectPorts } from '@shared/contracts/ports';
 import type { ProjectTasks, RunTaskRequest } from '@shared/contracts/tasks';
 import { createFilesBridge } from './filesBridge';
+import { createApiWorkbenchBridge } from './apiWorkbenchBridge';
 import type { AppUpdateState } from '@shared/contracts/updates';
 
 function invoke<T>(channel: string, arg?: unknown): Promise<T> {
@@ -110,9 +111,11 @@ function subscribe<T>(channel: string, listener: (payload: T) => void): Unsubscr
 }
 
 const filesBridge = createFilesBridge(invoke, subscribe);
+const apiBridge = createApiWorkbenchBridge(invoke, subscribe);
 
 export const bureauApi = Object.freeze({
   files: filesBridge,
+  api: apiBridge,
   app: {
     getCapabilities: () => invoke<AppCapabilities>(IPC_CHANNELS.APP_GET_CAPABILITIES),
     minimizeWindow: () => invoke<void>(IPC_CHANNELS.APP_WINDOW_MINIMIZE),

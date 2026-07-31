@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createSdkResolver } from '@main/android/SdkResolver';
 import type { SettingsStore } from '@main/settings/SettingsStore';
-import type { PublicSettings } from '@shared/contracts/settings';
+import { DEFAULT_API_SETTINGS, type PublicSettings } from '@shared/contracts/settings';
 
 const tempDirs: string[] = [];
 afterEach(async () =>
@@ -26,6 +26,7 @@ function settings(sdkPath?: string): SettingsStore {
     layout: { paneWidths: { files: 340, commit: 280 } },
     notifications: { enabled: false, longRunningOnly: true },
     android: { sdkPath, defaultLogcatPriority: 'V', defaultLogcatFilter: '' },
+    api: { ...DEFAULT_API_SETTINGS },
   } as PublicSettings;
   return { get: () => value } as SettingsStore;
 }

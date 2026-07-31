@@ -111,6 +111,13 @@ function applyPatch(current: SettingsFileV1, patch: SettingsPatch): SettingsFile
     next.embeddedTerminal = { ...current.embeddedTerminal, ...patch.embeddedTerminal };
   }
   if (patch.files) next.files = { ...current.files, ...patch.files };
+  if (patch.api) {
+    next.api = {
+      ...current.api,
+      ...patch.api,
+      importedScriptsDefaultEnabled: false,
+    };
+  }
   if (patch.onboarding) next.onboarding = { ...current.onboarding, ...patch.onboarding };
 
   return validateSettings(next);

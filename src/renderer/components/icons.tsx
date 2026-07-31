@@ -314,5 +314,26 @@ export function GripIcon(props: IconProps) {
   );
 }
 
+/** Keyboard-shortcut affordance. */
+export function KeyboardIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
+    </Icon>
+  );
+}
+
+/** Credential/secret marker. */
+export function KeyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M10.9 12.1 20 3" />
+      <path d="M17 6l2.5 2.5" />
+    </Icon>
+  );
+}
+
 export { BranchIcon as GitMark };
 

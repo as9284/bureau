@@ -22,7 +22,9 @@ app
     const mainWindow = createMainWindow(settingsStore, {
       canClose: () =>
         closeState === 'quitting' ||
-        (supervisor.runningCount() === 0 && services.files.dirtyFileCount() === 0),
+        (supervisor.runningCount() === 0 &&
+          services.files.dirtyFileCount() === 0 &&
+          services.api.dirtyDraftCount() === 0),
     });
 
     updates.onState((state) => {
@@ -83,6 +85,18 @@ app
       if (!mainWindow.isDestroyed())
         mainWindow.webContents.send(IPC_CHANNELS.FILES_SEARCH_EVENT, batch);
     });
+    services.api.onSessionEvent((event) => {
+      if (!mainWindow.isDestroyed())
+        mainWindow.webContents.send(IPC_CHANNELS.API_SESSION_EVENT, event);
+    });
+    services.api.onOAuthEvent((event) => {
+      if (!mainWindow.isDestroyed())
+        mainWindow.webContents.send(IPC_CHANNELS.API_OAUTH_EVENT, event);
+    });
+    services.api.onRunEvent((event) => {
+      if (!mainWindow.isDestroyed())
+        mainWindow.webContents.send(IPC_CHANNELS.API_RUN_EVENT, event);
+    });
 
     setupLifecycle(settingsStore);
 
@@ -129,13 +143,20 @@ app
 
     mainWindow.on('close', (event) => {
       if (closeState === 'quitting') return; // confirmed — allow the real close.
-      if (supervisor.runningCount() === 0 && services.files.dirtyFileCount() === 0) return;
+      if (
+        supervisor.runningCount() === 0 &&
+        services.files.dirtyFileCount() === 0 &&
+        services.api.dirtyDraftCount() === 0
+      ) {
+        return;
+      }
       event.preventDefault();
       if (closeState === 'prompting') return; // dialog already open.
       closeState = 'prompting';
       mainWindow.webContents.send(IPC_CHANNELS.APP_CLOSE_REQUESTED, {
         processes: supervisor.listRunning(),
         dirtyFiles: services.files.dirtyFileCount(),
+        dirtyApiRequests: services.api.dirtyDraftCount(),
       });
     });
 
@@ -154,7 +175,7 @@ app
     ipcMain.handle(IPC_CHANNELS.APP_UPDATES_INSTALL, (event) => {
       if (!fromMainWindow(event) || closeState !== 'idle' || !updates.canInstall()) return false;
       installDownloadedUpdate = true;
-      if (supervisor.runningCount() === 0 && services.files.dirtyFileCount() === 0) {
+      if (supervisor.runningCount() === 0 && services.files.dirtyFileCount() === 0 && services.api.dirtyDraftCount() === 0) {
         closeState = 'quitting';
         return updates.quitAndInstall();
       }
@@ -168,6 +189,7 @@ app
       void services.terminal.dispose();
       void services.android.dispose();
       void services.files.dispose();
+      services.api.dispose();
     });
   })
   .catch((error) => {

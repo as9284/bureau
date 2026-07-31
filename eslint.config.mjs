@@ -18,6 +18,19 @@ export default tseslint.config(
     },
   },
   {
+    // The API script sandbox worker is standalone CommonJS inlined with `?raw` and started with
+    // `new Worker(source, { eval: true })` — never imported as a module, so it is genuinely a
+    // CommonJS script with Node globals rather than part of the main bundle's module graph.
+    files: ['src/main/api/script/scriptWorker.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { require: 'readonly', module: 'writable', globalThis: 'readonly' },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     files: ['src/main/**/*.ts', 'src/preload/**/*.ts'],
     rules: {
       'no-restricted-globals': ['error', 'require', 'module', 'exports'],

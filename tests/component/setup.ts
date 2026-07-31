@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { createElement } from 'react';
+import { createElement, type ChangeEvent } from 'react';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
@@ -7,6 +7,28 @@ import { cleanup } from '@testing-library/react';
 // "Not implemented: HTMLCanvasElement.prototype.getContext" into stderr.
 vi.mock('@renderer/components/XtermSurface', () => ({
   XtermSurface: () => createElement('div', { 'data-testid': 'xterm-surface' }),
+}));
+
+// CodeMirror measures DOM geometry that jsdom does not implement (getClientRects).
+vi.mock('@renderer/features/files/CodeEditor', () => ({
+  CodeEditor: ({
+    value,
+    onChange,
+    readOnly,
+    'aria-label': ariaLabel,
+  }: {
+    value: string;
+    onChange(value: string): void;
+    readOnly?: boolean;
+    'aria-label'?: string;
+  }) =>
+    createElement('textarea', {
+      'aria-label': ariaLabel,
+      className: 'cm-editor-mock',
+      value,
+      readOnly,
+      onChange: (event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
+    }),
 }));
 
 // Unmount every rendered tree after each test, globally. Without this, a file

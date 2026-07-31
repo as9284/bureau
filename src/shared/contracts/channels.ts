@@ -262,6 +262,78 @@ export const IPC_CHANNELS = {
 
   TASKS_LIST: 'bureau:tasks:list',
   TASKS_RUN: 'bureau:tasks:run',
+
+  /** API workbench — Phase 1 persistence and REST. */
+  API_LIST_WORKSPACES: 'bureau:api:listWorkspaces',
+  API_GET_STATUS: 'bureau:api:getStatus',
+  API_GET_WORKSPACE: 'bureau:api:getWorkspace',
+  API_CREATE_WORKSPACE: 'bureau:api:createWorkspace',
+  API_UPDATE_WORKSPACE: 'bureau:api:updateWorkspace',
+  API_DELETE_WORKSPACE: 'bureau:api:deleteWorkspace',
+  API_CREATE_COLLECTION: 'bureau:api:createCollection',
+  API_UPDATE_COLLECTION: 'bureau:api:updateCollection',
+  API_DELETE_COLLECTION: 'bureau:api:deleteCollection',
+  API_SAVE_REQUEST: 'bureau:api:saveRequest',
+  API_DELETE_REQUEST: 'bureau:api:deleteRequest',
+  API_CREATE_ENVIRONMENT: 'bureau:api:createEnvironment',
+  API_UPDATE_ENVIRONMENT: 'bureau:api:updateEnvironment',
+  API_DELETE_ENVIRONMENT: 'bureau:api:deleteEnvironment',
+  API_LIST_SECRETS: 'bureau:api:listSecrets',
+  API_SAVE_SECRET: 'bureau:api:saveSecret',
+  API_DELETE_SECRET: 'bureau:api:deleteSecret',
+  API_LIST_HISTORY: 'bureau:api:listHistory',
+  API_GET_HISTORY_ENTRY: 'bureau:api:getHistoryEntry',
+  API_SEND_REQUEST: 'bureau:api:sendRequest',
+  API_CANCEL_REQUEST: 'bureau:api:cancelRequest',
+  API_SET_DIRTY_DRAFT_COUNT: 'bureau:api:setDirtyDraftCount',
+  API_SESSION_EVENT: 'bureau:api:sessionEvent',
+
+  /** API workbench — Phase 2 streams, GraphQL, OAuth 2, and TLS profiles. */
+  API_OPEN_STREAM: 'bureau:api:openStream',
+  API_SEND_STREAM_MESSAGE: 'bureau:api:sendStreamMessage',
+  API_CLOSE_STREAM: 'bureau:api:closeStream',
+  API_SET_STREAM_PAUSED: 'bureau:api:setStreamPaused',
+  API_GET_STREAM_SNAPSHOT: 'bureau:api:getStreamSnapshot',
+  API_INTROSPECT_GRAPHQL: 'bureau:api:introspectGraphql',
+  API_SAVE_TLS_PROFILE: 'bureau:api:saveTlsProfile',
+  API_DELETE_TLS_PROFILE: 'bureau:api:deleteTlsProfile',
+  API_SAVE_OAUTH_PROFILE: 'bureau:api:saveOauthProfile',
+  API_DELETE_OAUTH_PROFILE: 'bureau:api:deleteOauthProfile',
+  API_AUTHORIZE_OAUTH: 'bureau:api:authorizeOauth',
+  API_CANCEL_OAUTH: 'bureau:api:cancelOauth',
+  API_CLEAR_OAUTH_TOKEN: 'bureau:api:clearOauthToken',
+  API_OAUTH_EVENT: 'bureau:api:oauthEvent',
+
+  /** API workbench — Phase 3 import and export interoperability. */
+  API_INSPECT_IMPORT: 'bureau:api:inspectImport',
+  API_COMMIT_IMPORT: 'bureau:api:commitImport',
+  API_DISCARD_IMPORT: 'bureau:api:discardImport',
+  API_PLAN_EXPORT: 'bureau:api:planExport',
+  API_COMMIT_EXPORT: 'bureau:api:commitExport',
+
+  /** API workbench — Phase 4 script sandbox and collection runner. */
+  API_VALIDATE_SCRIPT: 'bureau:api:validateScript',
+  API_APPROVE_SCRIPTS: 'bureau:api:approveScripts',
+  API_LIST_SCRIPT_LOCATIONS: 'bureau:api:listScriptLocations',
+  API_LOAD_RUN_DATA: 'bureau:api:loadRunData',
+  API_CLEAR_RUN_DATA: 'bureau:api:clearRunData',
+  API_START_RUN: 'bureau:api:startRun',
+  API_CANCEL_RUN: 'bureau:api:cancelRun',
+  API_GET_RUN_REPORT: 'bureau:api:getRunReport',
+  API_EXPORT_RUN_REPORT: 'bureau:api:exportRunReport',
+  API_RUN_EVENT: 'bureau:api:runEvent',
+
+  /** API workbench — Phase 5 proxy, cookie inspection, and backup/restore. */
+  API_SAVE_PROXY_PROFILE: 'bureau:api:saveProxyProfile',
+  API_DELETE_PROXY_PROFILE: 'bureau:api:deleteProxyProfile',
+  API_LIST_COOKIE_JARS: 'bureau:api:listCookieJars',
+  API_LIST_COOKIES: 'bureau:api:listCookies',
+  API_DELETE_COOKIE: 'bureau:api:deleteCookie',
+  API_CLEAR_COOKIES: 'bureau:api:clearCookies',
+  API_SAVE_COOKIE: 'bureau:api:saveCookie',
+  API_BACKUP_WORKSPACES: 'bureau:api:backupWorkspaces',
+  API_PLAN_RESTORE: 'bureau:api:planRestore',
+  API_COMMIT_RESTORE: 'bureau:api:commitRestore',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

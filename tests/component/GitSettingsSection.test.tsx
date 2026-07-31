@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GiteaStatus } from '@shared/contracts/gitea';
 import type { PublicSettings } from '@shared/contracts/settings';
-import { DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
+import { DEFAULT_API_SETTINGS, DEFAULT_CONFIRMATION_SETTINGS } from '@shared/contracts/settings';
 import { SettingsPage } from '@renderer/pages/SettingsPage';
 import { useAppStore } from '@renderer/store/appStore';
 
@@ -43,6 +43,7 @@ const SETTINGS: PublicSettings = {
   history: { commitLimit: 30 },
   confirmations: { ...DEFAULT_CONFIRMATION_SETTINGS },
   commit: { defaultSignOff: false, signingPreference: 'off' },
+  api: { ...DEFAULT_API_SETTINGS },
   onboarding: { completedVersion: '1.0.0' },
 };
 
@@ -66,8 +67,8 @@ function mountGitSettings(gitea: Partial<Record<string, unknown>>) {
   useAppStore.setState({
     status: 'ready',
     settings: SETTINGS,
+    primaryWorkspace: 'projects',
     view: 'settings',
-    activeSection: 'settings',
     settingsSection: 'git',
   });
   return render(<SettingsPage />);

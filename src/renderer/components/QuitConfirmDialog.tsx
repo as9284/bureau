@@ -24,7 +24,25 @@ export function QuitConfirmDialog() {
 
   const { processes } = closePrompt;
   const dirtyFiles = closePrompt.dirtyFiles ?? 0;
+  const dirtyApiRequests = closePrompt.dirtyApiRequests ?? 0;
+  const dirtyCount = dirtyFiles + dirtyApiRequests;
   const count = processes.length;
+
+  const dirtyParts: string[] = [];
+  if (dirtyFiles > 0) {
+    dirtyParts.push(
+      `${dirtyFiles} ${dirtyFiles === 1 ? 'file has' : 'files have'} unsaved changes`
+    );
+  }
+  if (dirtyApiRequests > 0) {
+    dirtyParts.push(
+      `${dirtyApiRequests} API ${dirtyApiRequests === 1 ? 'request has' : 'requests have'} unsaved changes`
+    );
+  }
+  const dirtyText =
+    dirtyParts.length > 0
+      ? `${dirtyParts.join(', and ')}.`
+      : 'No files or API requests have unsaved changes.';
 
   return (
     <div className="overlay-root" onMouseDown={cancelQuit}>
@@ -40,23 +58,33 @@ export function QuitConfirmDialog() {
         </div>
         <div className="dialog__body">
           <p className="dialog__text">
-            {dirtyFiles > 0 ? `${dirtyFiles} ${dirtyFiles === 1 ? 'file has' : 'files have'} unsaved changes.` : 'No files have unsaved changes.'}{' '}
-            {count > 0 ? `${count} ${count === 1 ? 'process is' : 'processes are'} still running and will be stopped before quitting.` : 'No project processes are running.'}
+            {dirtyText}{' '}
+            {count > 0
+              ? `${count} ${count === 1 ? 'process is' : 'processes are'} still running and will be stopped before quitting.`
+              : 'No project processes are running.'}
           </p>
-          {count > 0 ? <ul className="dialog__list">
-            {processes.map((p) => (
-              <li key={`${p.projectId}:${p.processId}`} className="mono">
-                {p.label}
-              </li>
-            ))}
-          </ul> : null}
+          {count > 0 ? (
+            <ul className="dialog__list">
+              {processes.map((p) => (
+                <li key={`${p.projectId}:${p.processId}`} className="mono">
+                  {p.label}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <div className="dialog__footer">
           <Button variant="ghost" onClick={cancelQuit}>
             Cancel
           </Button>
-          {dirtyFiles > 0 ? <Button variant="danger" onClick={discardAllAndQuit}>Discard and Quit</Button> : null}
-          <Button variant="primary" onClick={() => void saveAllAndQuit()}>{dirtyFiles > 0 ? 'Save All and Quit' : count > 0 ? 'End all and quit' : 'Quit'}</Button>
+          {dirtyCount > 0 ? (
+            <Button variant="danger" onClick={discardAllAndQuit}>
+              Discard and Quit
+            </Button>
+          ) : null}
+          <Button variant="primary" onClick={() => void saveAllAndQuit()}>
+            {dirtyCount > 0 ? 'Save All and Quit' : count > 0 ? 'End all and quit' : 'Quit'}
+          </Button>
         </div>
       </div>
     </div>

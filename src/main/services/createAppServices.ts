@@ -40,6 +40,7 @@ import { createToolchainApplicationService } from '../toolchains/ToolchainApplic
 import { createPortScanner } from '../ports/PortScanner';
 import { createPortsApplicationService } from '../ports/PortsApplicationService';
 import { createTaskApplicationService } from '../tasks/TaskApplicationService';
+import { createApiApplicationService } from '../api/ApiApplicationService';
 import { createOrphanStore, createOrphanStoreApi } from '../processes/orphanState';
 import { createGitExecutableResolver } from '../git/GitExecutableResolver';
 import { createSettingsGitResolver } from '../git/SettingsGitResolver';
@@ -102,6 +103,8 @@ export async function createAppServices(
     pickerAdapter?: ExecutablePickerAdapter;
     executableAdapter?: ExecutableAdapter;
     trashItem?(targetPath: string): Promise<void>;
+    /** Injected so headless tests never launch a real browser during OAuth. */
+    openExternal?(url: string): Promise<void>;
     documentExport?: {
       exportHtml(html: string, suggestedName: string): Promise<OkResult>;
       exportPdf(html: string, suggestedName: string): Promise<OkResult>;
@@ -314,13 +317,23 @@ export async function createAppServices(
     resolver: gitResolver,
     pickerAdapter,
   });
+  const api = await createApiApplicationService({
+    dataPath,
+    cipher: safeStorageCipher,
+    settingsStore,
+    catalogue,
+    // OAuth authorization opens the system browser, never an embedded privileged view (RFC 8252).
+    openExternal: overrides?.openExternal ?? ((url) => shell.openExternal(url)),
+    // Import and export paths come from main-owned pickers only.
+    dialog: dialogAdapter,
+  });
+
   const projectsService = createProjectApplicationService(catalogue, projectConfigStore);
   const projects: ProjectApplicationService = {
     ...projectsService,
     async remove(input) {
-      // Once the project is gone its Terminal tab is unreachable, so any shell still open
-      // there — and whatever it is running — could never be stopped from the UI again.
       await terminal.closeProject(input.projectId);
+      await api.unlinkProject(input.projectId);
       return projectsService.remove(input);
     },
   };
@@ -392,6 +405,7 @@ export async function createAppServices(
   };
 
   const processes = createProcessApplicationService(catalogue, supervisor, projectConfigStore);
+  const tasks = createTaskApplicationService({ catalogue, processes });
   const preview = createPreviewViewManager();
   const executableAdapter = overrides?.executableAdapter ?? createExecutableAdapter();
   const sdkResolver = createSdkResolver(settingsStore);
@@ -431,7 +445,6 @@ export async function createAppServices(
   const ports = createPortsApplicationService(
     createPortScanner({ catalogue, supervisor, processes })
   );
-  const tasks = createTaskApplicationService({ catalogue, processes });
   const operations = createOperationApplicationService(operationRegistry);
 
   const services: AppServices = {
@@ -446,6 +459,7 @@ export async function createAppServices(
     toolchains,
     ports,
     tasks,
+    api,
     github,
     gitea,
     system: {

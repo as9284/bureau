@@ -126,6 +126,8 @@ export function CommitPanel({ projectId, snapshot, readOnly }: Props): ReactElem
         placeholder="Commit message"
         rows={8}
         disabled={readOnly}
+        // The box already grows to fill the panel, so a drag handle only offered to shrink it.
+        resizable={false}
       />
       <div className="commit-panel__options">
         <Checkbox

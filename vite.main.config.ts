@@ -18,7 +18,7 @@ export default defineConfig({
       fileName: () => 'main.js',
     },
     rollupOptions: {
-      external: ['electron', 'node:*', 'node-pty'],
+      external: ['electron', 'node:*', 'node-pty', 'ws'],
     },
     sourcemap: true,
     minify: false,

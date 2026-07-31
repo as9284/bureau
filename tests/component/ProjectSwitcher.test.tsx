@@ -32,7 +32,7 @@ beforeEach(() => {
       'project-one': { definitions: [], runtimes: [] },
       'project-two': { definitions: [], runtimes: [] },
     },
-    activeSection: 'projects',
+    primaryWorkspace: 'projects',
     view: 'hub',
     selectedProjectId: null,
     projectQuery: '',
@@ -93,7 +93,7 @@ describe('ProjectSwitcher', () => {
     await user.click(screen.getByRole('button', { name: 'Settings' }));
 
     expect(useAppStore.getState()).toMatchObject({
-      activeSection: 'settings',
+      primaryWorkspace: 'projects',
       view: 'settings',
     });
   });

@@ -23,3 +23,21 @@ jobs:
       # component or integration break from surfacing only when a tag is pushed.
       - run: npm run test:integration
       - run: npm run test:component
+
+  package-smoke:
+    name: Package smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Forge's package step exercises the asar allowlist and native-module placement without
+      # publishing a release. Running it on each host catches a platform-specific runtime omission.
+      - run: npm run package

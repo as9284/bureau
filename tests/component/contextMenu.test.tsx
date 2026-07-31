@@ -46,16 +46,63 @@ describe('ContextMenu', () => {
   });
 });
 
-describe('projects navigation', () => {
-  it('setSection("projects") always returns to the hub and clears selection', () => {
+describe('primary workspace navigation', () => {
+  it('backToHub returns to the hub and clears selection', () => {
     useAppStore.setState({
       view: 'project',
       selectedProjectId: 'proj-1',
-      activeSection: 'projects',
+      primaryWorkspace: 'projects',
+      projectsReturnView: 'project',
     });
-    useAppStore.getState().setSection('projects');
+    useAppStore.getState().backToHub();
     const state = useAppStore.getState();
     expect(state.view).toBe('hub');
     expect(state.selectedProjectId).toBeNull();
+    expect(state.primaryWorkspace).toBe('projects');
+    expect(state.projectsReturnView).toBe('hub');
+  });
+
+  it('setPrimaryWorkspace("api") opens the API workspace without clearing the project', () => {
+    useAppStore.setState({
+      view: 'project',
+      selectedProjectId: 'proj-1',
+      primaryWorkspace: 'projects',
+      projectsReturnView: 'project',
+    });
+    useAppStore.getState().setPrimaryWorkspace('api');
+    const state = useAppStore.getState();
+    expect(state.view).toBe('api');
+    expect(state.primaryWorkspace).toBe('api');
+    expect(state.selectedProjectId).toBe('proj-1');
+  });
+
+  it('setPrimaryWorkspace("projects") restores the previous project destination', () => {
+    useAppStore.setState({
+      view: 'api',
+      selectedProjectId: 'proj-1',
+      primaryWorkspace: 'api',
+      projectsReturnView: 'project',
+    });
+    useAppStore.getState().setPrimaryWorkspace('projects');
+    const state = useAppStore.getState();
+    expect(state.view).toBe('project');
+    expect(state.selectedProjectId).toBe('proj-1');
+    expect(state.primaryWorkspace).toBe('projects');
+  });
+
+  it('openSettings remembers the prior view and closeSettings restores it', () => {
+    useAppStore.setState({
+      view: 'api',
+      primaryWorkspace: 'api',
+      settingsReturnView: 'hub',
+    });
+    useAppStore.getState().openSettings('api');
+    expect(useAppStore.getState().view).toBe('settings');
+    expect(useAppStore.getState().settingsSection).toBe('api');
+    expect(useAppStore.getState().settingsReturnView).toBe('api');
+
+    useAppStore.getState().closeSettings();
+    expect(useAppStore.getState().view).toBe('api');
+    expect(useAppStore.getState().primaryWorkspace).toBe('api');
   });
 });

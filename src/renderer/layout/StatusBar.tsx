@@ -1,5 +1,6 @@
 import { useAppStore, selectRunningCount } from '../store/appStore';
 import { useGitStore } from '../store/gitStore';
+import { useApiStore } from '../store/apiStore';
 import {
   formatAttentionLabel,
   formatSyncLabel,
@@ -56,6 +57,16 @@ export function StatusBar() {
   const mismatchCount = toolchains?.rows.filter((row) => row.mismatch || row.missing).length ?? 0;
   const activePorts = ports ? bureauPorts(ports.ports) : [];
   const conflictCount = ports?.ports.filter((p) => p.conflict).length ?? 0;
+  const view = useAppStore((s) => s.view);
+  const apiWorkspaceCount = useApiStore((s) => s.workspaces.length);
+  const apiLoadState = useApiStore((s) => s.loadState);
+  const apiOpenStreams = useApiStore(
+    (s) => Object.values(s.sessions).filter((session) => session.streamStatus === 'open').length
+  );
+  const apiInFlight = useApiStore(
+    (s) =>
+      Object.values(s.sessions).filter((session) => session.inFlight && !session.streamStatus).length
+  );
 
   return (
     <footer className="status-bar">
@@ -66,6 +77,32 @@ export function StatusBar() {
       <div className="cluster">
         <span className="mono">{projects.length} projects</span>
       </div>
+      {view === 'api' ? (
+        <div className="cluster mono">
+          {apiLoadState === 'loading' || apiLoadState === 'idle' ? (
+            <span className="status-bar__muted">API loading…</span>
+          ) : apiLoadState === 'error' ? (
+            <span className="status-bar__attention">API unavailable</span>
+          ) : (
+            <>
+              <span>
+                {apiWorkspaceCount} workspace{apiWorkspaceCount === 1 ? '' : 's'}
+              </span>
+              {/* Live sockets are the one API state worth surfacing globally. */}
+              {apiOpenStreams > 0 ? (
+                <span className="status-bar__attention">
+                  {apiOpenStreams} live stream{apiOpenStreams === 1 ? '' : 's'}
+                </span>
+              ) : null}
+              {apiInFlight > 0 ? (
+                <span className="status-bar__muted">
+                  {apiInFlight} in flight
+                </span>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
       {selectedProjectId && ports ? (
         <div className="cluster status-bar__ports mono">
           {activePorts.length > 0 ? (

@@ -9,6 +9,8 @@ export type ShutdownProcess = {
 export type CloseRequestedEvent = {
   processes: ShutdownProcess[];
   dirtyFiles?: number;
+  /** Unsaved API request drafts (Phase 1 workbench). */
+  dirtyApiRequests?: number;
 };
 
 export type ShutdownBeginEvent = {

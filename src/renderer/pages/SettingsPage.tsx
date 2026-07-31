@@ -160,6 +160,7 @@ const SETTINGS_NAV: Array<{ id: SettingsSection; label: string }> = [
   { id: 'processes', label: 'Processes' },
   { id: 'toolchains', label: 'Toolchains' },
   { id: 'files', label: 'Files' },
+  { id: 'api', label: 'API' },
   { id: 'git', label: 'Git' },
   { id: 'android', label: 'Android' },
 ];
@@ -216,10 +217,142 @@ export function SettingsPage() {
         {section === 'processes' && <ProcessesSettingsSection />}
         {section === 'toolchains' && <ToolchainsSettingsSection />}
         {section === 'files' && <FilesSettingsSection />}
+        {section === 'api' && <ApiSettingsSection />}
         {section === 'git' && <GitSettingsSection />}
         {section === 'android' && <AndroidSection />}
       </div>
     </div>
+  );
+}
+
+function ApiSettingsSection() {
+  const settings = useAppStore((s) => s.settings);
+  const updateSettings = useAppStore((s) => s.updateSettings);
+  if (!settings?.api) return null;
+  const api = settings.api;
+
+  return (
+    <section className="settings-section">
+      <h2>API</h2>
+      <p className="settings-help">
+        Limits and defaults for the local API workbench. Networking arrives in a later phase; these
+        values are stored now so Phase 1 can enforce them in main.
+      </p>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Request timeout</div>
+          <div className="settings-row__desc">Wall-clock limit for a single HTTP send (seconds).</div>
+        </div>
+        <Dropdown
+          label="Request timeout"
+          value={String(api.requestTimeoutMs / 1000)}
+          options={[
+            { value: '15', label: '15 s' },
+            { value: '30', label: '30 s' },
+            { value: '60', label: '60 s' },
+            { value: '120', label: '120 s' },
+          ]}
+          onChange={(value) =>
+            void updateSettings({ api: { requestTimeoutMs: Number(value) * 1000 } })
+          }
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Max redirects</div>
+          <div className="settings-row__desc">Follow at most this many redirects per request.</div>
+        </div>
+        <Dropdown
+          label="Max redirects"
+          value={String(api.maxRedirects)}
+          options={[
+            { value: '0', label: '0' },
+            { value: '5', label: '5' },
+            { value: '10', label: '10' },
+            { value: '20', label: '20' },
+          ]}
+          onChange={(value) => void updateSettings({ api: { maxRedirects: Number(value) } })}
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Pretty-print JSON</div>
+          <div className="settings-row__desc">
+            Automatically format JSON request and response bodies in the editor.
+          </div>
+        </div>
+        <Checkbox
+          checked={api.autoFormatJson}
+          onChange={(autoFormatJson) => void updateSettings({ api: { autoFormatJson } })}
+          label="Format JSON"
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Line wrapping</div>
+          <div className="settings-row__desc">Wrap long lines in API editors and inspectors.</div>
+        </div>
+        <Checkbox
+          checked={api.lineWrap}
+          onChange={(lineWrap) => void updateSettings({ api: { lineWrap } })}
+          label="Wrap lines"
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Cookie jar</div>
+          <div className="settings-row__desc">
+            Accept and send cookies per API workspace using an isolated jar.
+          </div>
+        </div>
+        <Checkbox
+          checked={api.cookiesEnabled}
+          onChange={(cookiesEnabled) => void updateSettings({ api: { cookiesEnabled } })}
+          label="Enable cookies"
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Scripts</div>
+          <div className="settings-row__desc">
+            Run pre-request and test scripts in an isolated runtime with no network, filesystem, or
+            module access. Turning this off stops every script regardless of its own setting.
+          </div>
+        </div>
+        <Checkbox
+          checked={api.scriptsEnabled}
+          onChange={(scriptsEnabled) => void updateSettings({ api: { scriptsEnabled } })}
+          label="Allow scripts"
+        />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">Imported scripts</div>
+          <div className="settings-row__desc">
+            Scripts from imports stay disabled until you review them. This default cannot be changed
+            yet.
+          </div>
+        </div>
+        <Checkbox checked={false} disabled onChange={() => undefined} label="Disabled by default" />
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row__label">History retention</div>
+          <div className="settings-row__desc">
+            Keep at most {api.historyEntryCap} entries for {api.historyAgeDays} days (enforced when
+            history lands in Phase 1).
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
