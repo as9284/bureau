@@ -55,6 +55,7 @@ export function VariableField({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
+  const blurCloseTimerRef = useRef<number | null>(null);
   const [menu, setMenu] = useState<{ start: number; query: string } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -76,6 +77,18 @@ export function VariableField({
   useEffect(() => {
     setActiveIndex(0);
   }, [menu?.query]);
+
+  // Blur closes the menu on a short delay so a suggestion click can land first. Cancel that
+  // timer on unmount — otherwise a torn-down jsdom environment sees `window is not defined`
+  // when the deferred setState fires after cleanup (CI caught this as an unhandled error).
+  useEffect(() => {
+    return () => {
+      if (blurCloseTimerRef.current !== null) {
+        window.clearTimeout(blurCloseTimerRef.current);
+        blurCloseTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const closeMenu = (): void => setMenu(null);
 
@@ -165,7 +178,13 @@ export function VariableField({
         onScroll={syncScroll}
         onBlur={() => {
           // A click on a suggestion lands after blur; let it through first.
-          window.setTimeout(closeMenu, 120);
+          if (blurCloseTimerRef.current !== null) {
+            window.clearTimeout(blurCloseTimerRef.current);
+          }
+          blurCloseTimerRef.current = window.setTimeout(() => {
+            blurCloseTimerRef.current = null;
+            closeMenu();
+          }, 120);
         }}
       />
 
