@@ -24,6 +24,7 @@ import type { GitExtendedMutationService } from '../git/GitExtendedMutationServi
 import type { GitAdvancedService } from '../git/GitAdvancedService';
 import type { GitLifecycleService } from '../git/GitLifecycleService';
 import type { GitHubPublishingService } from '../github/GitHubPublishingService';
+import type { GitHubChecksService } from '../github/GitHubChecksService';
 import type { GiteaPublishingService } from '../gitea/GiteaPublishingService';
 import type { FileApplicationService } from '../files/FileApplicationService';
 import type { ShellSessionService } from '../terminal/ShellSessionService';
@@ -69,7 +70,7 @@ export type AppServices = {
   operations: OperationApplicationService;
   system: SystemService;
   git: GitAppService;
-  github: GitHubPublishingService;
+  github: GitHubPublishingService & GitHubChecksService;
   gitea: GiteaPublishingService;
   android: AndroidApplicationService;
   toolchains: ToolchainApplicationService;

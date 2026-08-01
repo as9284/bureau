@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import type { GraphConnector, HistoryCommit } from '@shared/contracts/history';
 import type { CommitFileChange } from '@shared/contracts/operations';
+import type { CommitCheckSummary } from '@shared/contracts/github';
 import { useGitStore } from '@renderer/store/gitStore';
 import { Button } from '@renderer/components/Button';
 import { Checkbox } from '@renderer/components/Checkbox';
@@ -17,6 +18,7 @@ import {
   MergeParentDialog,
   type MergeParentAction,
 } from '@renderer/features/git/history/MergeParentDialog';
+import { CheckStatusIndicator } from '@renderer/features/git/CheckStatusIndicator';
 import './HistoryPanel.css';
 
 function relativeTime(iso: string): string {
@@ -153,6 +155,7 @@ type HistoryCommitRowProps = {
   readOnly: boolean;
   busy: boolean;
   selected: boolean;
+  checkSummary?: CommitCheckSummary;
   onSelect: () => void;
   onCreateBranch: () => void;
   onCreateTag: () => void;
@@ -171,6 +174,7 @@ function HistoryCommitRow({
   readOnly,
   busy,
   selected,
+  checkSummary,
   onSelect,
   onCreateBranch,
   onCreateTag,
@@ -219,6 +223,9 @@ function HistoryCommitRow({
           <code className="history-panel__hash" title={commit.oid}>
             {commit.abbreviatedOid}
           </code>
+          <span className="history-panel__check">
+            <CheckStatusIndicator summary={checkSummary} compact />
+          </span>
           <span className="history-panel__copy">
             <span className="history-panel__subject">{commit.subject}</span>
             <span className="history-panel__meta">
@@ -242,6 +249,7 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
   const historyLoading = useGitStore((s) => s.historyLoading);
   const historyError = useGitStore((s) => s.historyError);
   const historyHasMore = useGitStore((s) => s.historyHasMore);
+  const checkSummariesByOid = useGitStore((s) => s.checkSummariesByOid);
   const loadHistory = useGitStore((s) => s.loadHistory);
   const selectedCommitOid = useGitStore((s) => s.selectedCommitOid);
   const commitFiles = useGitStore((s) => s.commitFiles);
@@ -423,6 +431,7 @@ export function HistoryPanel({ projectId, readOnly = false }: Props): ReactEleme
                   readOnly={readOnly}
                   busy={busy}
                   selected={selectedCommitOid === commit.oid}
+                  checkSummary={checkSummariesByOid[commit.oid.toLowerCase()]}
                   onSelect={() => selectCommit(projectId, commit.oid)}
                   onCreateBranch={() => {
                     setBranchTarget(commit);

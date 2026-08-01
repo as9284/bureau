@@ -25,7 +25,7 @@ import type { OperationRecord } from '@shared/contracts/operationLog';
 import type { OperationStateDetails } from '@shared/contracts/recovery';
 import type { BlameLine, SubmoduleEntry } from '@shared/contracts/advanced';
 import type { TagDetail } from '@shared/contracts/history';
-import type { GitHubPublishRequest, GitHubPublishResult } from '@shared/contracts/github';
+import type { GitHubPublishRequest, GitHubPublishResult, CommitCheckSummary, GitHubChecksAvailability } from '@shared/contracts/github';
 import type { GiteaPublishRequest, GiteaPublishResult } from '@shared/contracts/gitea';
 
 const branchLoadRequest = createLatestRequestWins();
@@ -42,6 +42,7 @@ const tagsLoadRequest = createLatestRequestWins();
 const blameLoadRequest = createLatestRequestWins();
 const reflogLoadRequest = createLatestRequestWins();
 const remotesLoadRequest = createLatestRequestWins();
+const commitChecksLoadRequest = createLatestRequestWins();
 
 export type RepoPanel =
   | 'changes'
@@ -138,6 +139,12 @@ type AppStore = {
   historyFilters: HistoryFilters;
   historyLoading: boolean;
   historyError?: BureauError;
+  /** CI/check rollups keyed by lowercase full OID (GitHub.com via `gh`). */
+  checkSummariesByOid: Record<string, CommitCheckSummary>;
+  checksAvailability?: GitHubChecksAvailability;
+  checksRepository?: string;
+  checksLoading: boolean;
+  checksProjectId?: string;
   newBranchName: string;
   commitOptionsByRepo: Record<string, CommitOptions>;
   cloneDialogOpen: boolean;
@@ -408,6 +415,15 @@ type AppStore = {
   pruneWorktrees: (projectId: string, revision: string) => Promise<void>;
   loadHistory: (projectId: string) => Promise<void>;
   loadMoreHistory: (projectId: string) => Promise<void>;
+  /**
+   * Fetch GitHub check rollups for the given OIDs. Skips OIDs that already have a
+   * terminal (non-pending) cached summary unless `force` is set.
+   */
+  loadCommitChecks: (
+    projectId: string,
+    oids: string[],
+    options?: { force?: boolean }
+  ) => Promise<void>;
   loadReflog: (projectId: string, append?: boolean) => Promise<void>;
   /**
    * Move the current branch to `commitOid`. Gated on `resetHard` for `hard` (which
@@ -510,6 +526,11 @@ export const useGitStore = create<AppStore>((set, get) => ({
   historyFilters: {},
   historyLoading: false,
   historyError: undefined,
+  checkSummariesByOid: {},
+  checksAvailability: undefined,
+  checksRepository: undefined,
+  checksLoading: false,
+  checksProjectId: undefined,
   newBranchName: '',
   commitOptionsByRepo: {},
   cloneDialogOpen: false,
@@ -858,6 +879,10 @@ export const useGitStore = create<AppStore>((set, get) => ({
           [projectId]: { ...s.repos[projectId], snapshot, error: undefined, refreshing: false },
         },
       }));
+      const headOid = snapshot.latestCommit?.oid;
+      if (headOid) {
+        void get().loadCommitChecks(projectId, [headOid], { force: true });
+      }
     } catch (err) {
       set((s) => ({
         repos: {
@@ -1630,6 +1655,8 @@ export const useGitStore = create<AppStore>((set, get) => ({
         historyLoading: false,
         historyError: undefined,
       });
+      const oids = result.items.map((c) => c.oid);
+      if (oids.length > 0) void get().loadCommitChecks(projectId, oids);
     } catch (err) {
       if (historyLoadRequest.isCurrent(generation)) {
         set({ historyLoading: false, historyError: toError(err, 'listHistory') });
@@ -1657,10 +1684,80 @@ export const useGitStore = create<AppStore>((set, get) => ({
           historyError: undefined,
         };
       });
+      const oids = result.items.map((c) => c.oid);
+      if (oids.length > 0) void get().loadCommitChecks(projectId, oids);
     } catch (err) {
       if (historyLoadRequest.isCurrent(generation)) {
         set({ historyLoading: false, historyError: toError(err, 'listHistory') });
       }
+    }
+  },
+
+  loadCommitChecks: async (projectId, oids, options) => {
+    const force = options?.force === true;
+    const unique = [...new Set(oids.map((oid) => oid.toLowerCase()).filter(Boolean))];
+    if (unique.length === 0) return;
+
+    const cached = get().checkSummariesByOid;
+    const needed = force
+      ? unique
+      : unique.filter((oid) => {
+          const existing = cached[oid];
+          return !existing || existing.state === 'pending';
+        });
+    if (needed.length === 0) return;
+
+    const generation = commitChecksLoadRequest.nextGeneration();
+    const sameProject = get().checksProjectId === projectId;
+    set({
+      checksLoading: true,
+      checksProjectId: projectId,
+      ...(sameProject ? {} : { checkSummariesByOid: {}, checksAvailability: undefined }),
+    });
+
+    try {
+      // Zod caps at 40; chunk just in case a caller overshoots after HEAD+history merge.
+      const chunks: string[][] = [];
+      for (let i = 0; i < needed.length; i += 40) {
+        chunks.push(needed.slice(i, i + 40));
+      }
+
+      let availability: GitHubChecksAvailability | undefined = get().checksAvailability;
+      let repository = get().checksRepository;
+      const merged: Record<string, CommitCheckSummary> = sameProject
+        ? { ...get().checkSummariesByOid }
+        : {};
+
+      for (const chunk of chunks) {
+        if (!commitChecksLoadRequest.isCurrent(generation)) return;
+        const result = await api().github.getCommitChecks({ projectId, oids: chunk });
+        if (!commitChecksLoadRequest.isCurrent(generation)) return;
+        if (!result.ok) {
+          set({
+            checksLoading: false,
+            checksAvailability: 'unavailable',
+          });
+          return;
+        }
+        availability = result.availability;
+        repository = result.repository ?? repository;
+        for (const summary of result.summaries) {
+          merged[summary.oid.toLowerCase()] = summary;
+        }
+        if (availability !== 'ready') break;
+      }
+
+      if (!commitChecksLoadRequest.isCurrent(generation)) return;
+      set({
+        checkSummariesByOid: merged,
+        checksAvailability: availability,
+        checksRepository: repository,
+        checksLoading: false,
+        checksProjectId: projectId,
+      });
+    } catch {
+      if (!commitChecksLoadRequest.isCurrent(generation)) return;
+      set({ checksLoading: false, checksAvailability: 'unavailable' });
     }
   },
 

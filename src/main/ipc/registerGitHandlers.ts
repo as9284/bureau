@@ -53,6 +53,7 @@ import {
   cloneRequestSchema,
   initRepositoryRequestSchema,
   githubPublishRequestSchema,
+  githubCommitChecksRequestSchema,
   githubOpenUrlRequestSchema,
   giteaConnectRequestSchema,
   giteaPublishRequestSchema,
@@ -74,6 +75,9 @@ export function registerGitHandlers(services: AppServices, register: RegisterFn)
   register(IPC_CHANNELS.GITHUB_SIGN_IN, 'github.signIn', async () => services.github.signIn());
   register(IPC_CHANNELS.GITHUB_PUBLISH, 'github.publish', async (args: unknown) =>
     services.github.publish(githubPublishRequestSchema.parse(args))
+  );
+  register(IPC_CHANNELS.GITHUB_GET_COMMIT_CHECKS, 'github.getCommitChecks', async (args: unknown) =>
+    services.github.getCommitChecks(githubCommitChecksRequestSchema.parse(args))
   );
   register(IPC_CHANNELS.GITHUB_OPEN_URL, 'github.openUrl', async (args: unknown) => {
     const input = githubOpenUrlRequestSchema.parse(args);

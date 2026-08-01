@@ -8,6 +8,8 @@ import { Select } from '@renderer/components/Select';
 import { ArrowDownIcon, ArrowUpIcon, RefreshIcon } from '@renderer/components/icons';
 import { BranchActionConfirmation } from '@renderer/features/git/BranchActionConfirmation';
 import { PublishBranchDialog } from '@renderer/features/git/branches/PublishBranchDialog';
+import { CheckStatusIndicator } from '@renderer/features/git/CheckStatusIndicator';
+import { CheckDetailsDialog } from '@renderer/features/git/CheckDetailsDialog';
 import './SyncBar.css';
 
 type Props = {
@@ -44,6 +46,11 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
   const loadRemotes = useGitStore((s) => s.loadRemotes);
   const publishBranch = useGitStore((s) => s.publishBranch);
   const announce = useAppStore((s) => s.announce);
+  const checkSummariesByOid = useGitStore((s) => s.checkSummariesByOid);
+  const checksAvailability = useGitStore((s) => s.checksAvailability);
+  const checksLoading = useGitStore((s) => s.checksLoading);
+  const checksProjectId = useGitStore((s) => s.checksProjectId);
+  const checksRepository = useGitStore((s) => s.checksRepository);
   const lastCounts = useRef<{ projectId: string; ahead: number; behind: number } | undefined>(
     undefined
   );
@@ -54,6 +61,7 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishRemoteName, setPublishRemoteName] = useState('origin');
   const [publishRemoteUrl, setPublishRemoteUrl] = useState('');
+  const [checksDialogOpen, setChecksDialogOpen] = useState(false);
 
   useEffect(() => {
     listBranches(projectId).catch(() => undefined);
@@ -67,6 +75,11 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
 
   const ahead = snapshot.upstream.kind === 'tracking' ? snapshot.upstream.ahead : 0;
   const behind = snapshot.upstream.kind === 'tracking' ? snapshot.upstream.behind : 0;
+  const headOid = snapshot.latestCommit?.oid?.toLowerCase();
+  const headCheck = headOid ? checkSummariesByOid[headOid] : undefined;
+  const showHeadChecks =
+    checksProjectId === projectId &&
+    (checksAvailability === 'ready' || checksAvailability === 'unavailable' || checksLoading);
 
   // Fetch/pull/push move these counts and nothing said so out loud — this bar is the
   // primary sync feedback. Announce only real changes, and treat a project switch as a
@@ -155,6 +168,21 @@ export function SyncBar({ projectId, snapshot, readOnly }: Props): ReactElement 
           ) : null}
         </div>
       ) : null}
+      {showHeadChecks ? (
+        <CheckStatusIndicator
+          summary={headCheck}
+          loading={checksLoading && !headCheck}
+          onOpenDetails={
+            headCheck && headCheck.state !== 'none' ? () => setChecksDialogOpen(true) : undefined
+          }
+        />
+      ) : null}
+      <CheckDetailsDialog
+        open={checksDialogOpen}
+        summary={headCheck}
+        repository={checksRepository}
+        onClose={() => setChecksDialogOpen(false)}
+      />
       <div className="sync-bar__actions">
         <Button
           variant="ghost"

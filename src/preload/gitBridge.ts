@@ -39,6 +39,8 @@ export function createGitBridge(
     signIn: () => invoke(IPC_CHANNELS.GITHUB_SIGN_IN),
     publish: (input: import('@shared/contracts/github').GitHubPublishRequest) =>
       invoke(IPC_CHANNELS.GITHUB_PUBLISH, input),
+    getCommitChecks: (input: import('@shared/contracts/github').GitHubCommitChecksRequest) =>
+      invoke(IPC_CHANNELS.GITHUB_GET_COMMIT_CHECKS, input),
     openUrl: (input: { url: string }) => invoke(IPC_CHANNELS.GITHUB_OPEN_URL, input),
     },
     gitea: {

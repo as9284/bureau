@@ -193,6 +193,7 @@ export const IPC_CHANNELS = {
   GITHUB_GET_STATUS: 'bureau:github:getStatus',
   GITHUB_SIGN_IN: 'bureau:github:signIn',
   GITHUB_PUBLISH: 'bureau:github:publish',
+  GITHUB_GET_COMMIT_CHECKS: 'bureau:github:getCommitChecks',
   GITHUB_OPEN_URL: 'bureau:github:openUrl',
 
   GITEA_GET_STATUS: 'bureau:gitea:getStatus',

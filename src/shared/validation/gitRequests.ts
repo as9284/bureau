@@ -115,6 +115,14 @@ export const githubPublishRequestSchema = repoMutationRequestSchema
   })
   .strict();
 
+export const githubCommitChecksRequestSchema = z
+  .object({
+    projectId: projectIdSchema,
+    // History pages are typically ≤30; SyncBar adds HEAD. Cap keeps GraphQL aliases bounded.
+    oids: z.array(oidSchema).min(1).max(40),
+  })
+  .strict();
+
 export const githubOpenUrlRequestSchema = z
   .object({
     url: z

@@ -661,6 +661,7 @@ export {
   branchCreateRequestSchema,
   branchDeleteRequestSchema,
   githubPublishRequestSchema,
+  githubCommitChecksRequestSchema,
   githubOpenUrlRequestSchema,
   stashPushRequestSchema,
   stashIndexRequestSchema,

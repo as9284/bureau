@@ -412,6 +412,9 @@ export type BureauApiV1 = {
     getStatus(): Promise<GitHubCliStatus>;
     signIn(): Promise<GitHubCliStatus>;
     publish(input: GitHubPublishRequest): Promise<GitHubPublishResult>;
+    getCommitChecks(
+      input: import('./github').GitHubCommitChecksRequest
+    ): Promise<import('./github').GitHubCommitChecksResult>;
     openUrl(input: { url: string }): Promise<void>;
   };
   gitea: {

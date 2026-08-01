@@ -7,6 +7,7 @@ import {
   cherryPickRequestSchema,
   cloneRequestSchema,
   diffRequestSchema,
+  githubCommitChecksRequestSchema,
   listCommitFilesRequestSchema,
   mergeBranchRequestSchema,
   rebaseBranchRequestSchema,
@@ -243,5 +244,34 @@ describe('git request validation — argument-injection hardening', () => {
       }).success
     ).toBe(false);
     expect(removeRemoteRequestSchema.safeParse({ ...base, force: true }).success).toBe(false);
+  });
+});
+
+describe('githubCommitChecksRequestSchema', () => {
+  it('accepts a bounded list of hex OIDs', () => {
+    expect(
+      githubCommitChecksRequestSchema.safeParse({
+        projectId: PROJECT_ID,
+        oids: ['abcdef0', '1234567890abcdef1234567890abcdef12345678'],
+      }).success
+    ).toBe(true);
+  });
+
+  it('rejects empty oids, oversize batches, and non-hex', () => {
+    expect(
+      githubCommitChecksRequestSchema.safeParse({ projectId: PROJECT_ID, oids: [] }).success
+    ).toBe(false);
+    expect(
+      githubCommitChecksRequestSchema.safeParse({
+        projectId: PROJECT_ID,
+        oids: Array.from({ length: 41 }, (_, i) => i.toString(16).padStart(7, '0')),
+      }).success
+    ).toBe(false);
+    expect(
+      githubCommitChecksRequestSchema.safeParse({
+        projectId: PROJECT_ID,
+        oids: ['--output=/tmp/x'],
+      }).success
+    ).toBe(false);
   });
 });

@@ -86,11 +86,19 @@
 }
 
 .history-panel__commit {
-  grid-template-columns: 28px 72px 1fr;
+  grid-template-columns: 28px 72px 14px 1fr;
   gap: var(--space-2);
   align-items: start;
   min-height: var(--size-list-row);
   padding: var(--space-2) var(--space-4);
+}
+
+.history-panel__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.2em;
+  padding-top: 2px;
 }
 
 .history-panel__graph-svg {

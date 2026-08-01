@@ -61,6 +61,7 @@ import { createGitExtendedMutationService } from '../git/GitExtendedMutationServ
 import { createGitLifecycleService } from '../git/GitLifecycleService';
 import { createGitAdvancedService } from '../git/GitAdvancedService';
 import { createGitHubPublishingService } from '../github/GitHubPublishingService';
+import { createGitHubChecksService } from '../github/GitHubChecksService';
 import { createGiteaPublishingService } from '../gitea/GiteaPublishingService';
 import {
   createGiteaCredentialStore,
@@ -259,7 +260,7 @@ export async function createAppServices(
     statusService: gitStatusService,
     coordinator: gitCoordinator,
   });
-  const github = createGitHubPublishingService({
+  const githubPublishing = createGitHubPublishingService({
     catalogue,
     snapshotCache,
     resolver: gitResolver,
@@ -267,6 +268,12 @@ export async function createAppServices(
     statusService: gitStatusService,
     coordinator: gitCoordinator,
   });
+  const githubChecks = createGitHubChecksService({
+    catalogue,
+    resolver: gitResolver,
+    runner: gitRunner,
+  });
+  const github = { ...githubPublishing, ...githubChecks };
   const gitea = createGiteaPublishingService({
     catalogue,
     snapshotCache,
